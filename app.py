@@ -86,10 +86,15 @@ with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        # 精準對應圖源，使用超高穩定度 CDN 圖片
-        sample_img = "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
+        # 判斷是否為鞋底需求，帶入專屬「單獨鞋底/底盤」的寫實展示圖
+        if "鞋底" in product_name or "鞋底" in desc or "底" in product_name:
+            # 專屬單獨鞋底寫實圖 (Shoe Outsole / Sole)
+            sample_img = "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&auto=format&fit=crop"
+        else:
+            # 一般塑膠成型件寫實圖
+            sample_img = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop"
         
-        st.image(sample_img, caption=f"AI 匹配之 {product_name} 示意圖", width=500)
+        st.image(sample_img, caption=f"AI 匹配之 {product_name} 射出成型示意圖", width=500)
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
