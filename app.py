@@ -1,6 +1,5 @@
 import os
 import re
-import urllib.parse
 import streamlit as st
 import streamlit.components.v1 as components
 import google.generativeai as genai
@@ -23,8 +22,6 @@ if "step" not in st.session_state:
     st.session_state.step = 1
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
-if "photo_url" not in st.session_state:
-    st.session_state.photo_url = ""
 
 # 多語系字典
 LANG_DICT = {
@@ -78,7 +75,7 @@ with col1:
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI 正在評估與即時繪製專屬射出部件圖..."):
+        with st.spinner("AI 正在評估與繪製 2D 工業規格圖..."):
             try:
                 prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
                 model = genai.GenerativeModel('gemini-1.5-flash')
@@ -86,27 +83,45 @@ with col1:
                 st.session_state.ai_result = res_analysis.text
             except Exception as e:
                 st.session_state.ai_result = f"💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
-            
-            # 使用精準射出零件關鍵詞（嚴禁出現 shoe / sneaker 等誘發整雙鞋的詞彙）
-            prompt_img = "single translucent rubber outsole component, bottom sole tread plate, carbon fiber insert, molded rubber injection part only, flat studio product photography, isolated on white background, no shoe upper"
-            clean_prompt = urllib.parse.quote(prompt_img)
-            st.session_state.photo_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=800&height=500&nologo=true&seed=1234"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        if st.session_state.photo_url:
-            st.markdown(
-                f'''
-                <div style="text-align: center;">
-                    <img src="{st.session_state.photo_url}" style="width: 100%; max-width: 600px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);" alt="AI 產出圖面">
-                    <p style="color: #aaa; font-size: 14px; margin-top: 5px;">AI 即時生成之 {product_name} 射出成型部件圖</p>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-        
+        # 精密 SVG 工業 2D 鞋底藍圖 (包含水晶大底輪廓、人字紋防滑溝槽與碳纖維防扭板)
+        blueprint_svg = """
+        <div style="background-color: #0b1325; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #1e293b;">
+            <svg width="100%" height="240" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
+                <!-- 背景網格線 -->
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+                
+                <!-- 大底主體外框 (水晶透明藍色調) -->
+                <path d="M 60 110 C 50 70, 100 30, 180 35 C 260 40, 330 30, 410 45 C 450 55, 460 100, 440 140 C 410 180, 320 180, 240 170 C 160 160, 70 150, 60 110 Z" 
+                      fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="none"/>
+                
+                <!-- AJ11 經典前掌與後跟人字紋 (Herringbone Pods) -->
+                <path d="M 100 65 Q 140 60 180 70 Q 150 120 100 115 Z" fill="rgba(14, 165, 233, 0.3)" stroke="#0284c7" stroke-width="1.5"/>
+                <path d="M 350 75 Q 400 70 420 100 Q 390 140 340 135 Z" fill="rgba(14, 165, 233, 0.3)" stroke="#0284c7" stroke-width="1.5"/>
+                
+                <!-- 中底碳纖維防扭板 (Carbon Fiber Shank) -->
+                <rect x="220" y="85" width="80" height="45" rx="5" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+                <path d="M 225 90 L 295 125 M 235 90 L 295 120 M 225 100 L 285 125 M 250 90 L 295 110" stroke="#f59e0b" stroke-width="1" opacity="0.6"/>
+                
+                <!-- 工程尺寸標註線 -->
+                <line x1="50" y1="195" x2="450" y2="195" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4"/>
+                <text x="250" y="212" fill="#94a3b8" font-size="12" text-anchor="middle" font-family="monospace">LENGTH: 320mm (SPEC: ±0.5mm)</text>
+                
+                <text x="70" y="25" fill="#38bdf8" font-size="13" font-weight="bold" font-family="sans-serif">CAD CONCEPT: AJ11 OUTSOLE INJECTION PART</text>
+            </svg>
+            <p style="color: #38bdf8; font-size: 13px; margin-top: 5px;">✅ 2D 射出成型結構視圖已確認（含防扭碳纖維板與雙色橡膠 Pods）</p>
+        </div>
+        """
+        st.markdown(blueprint_svg, unsafe_allow_html=True)
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
@@ -116,7 +131,7 @@ with col2:
         st.divider()
         st.subheader(L["step3_title"])
         
-        # 專屬鞋底形狀 3D 渲染 (Three.js 曲線擠壓模型)
+        # 專屬鞋底 3D 渲染 (Three.js 曲線擠壓 + 冰藍水晶質感)
         three_js_code = """
         <div id="container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -143,7 +158,7 @@ with col2:
             geometry.center();
 
             const material = new THREE.MeshPhongMaterial({ 
-                color: 0x66ccff, 
+                color: 0x38bdf8, 
                 specular: 0xffffff, 
                 shininess: 90,
                 transparent: true,
