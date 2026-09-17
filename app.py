@@ -94,7 +94,7 @@ with col2:
     # 階段 2：顯示 2D 圖面供客戶確認
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
-        st.image(st.session_state.image_url, caption="AI 產出之 2D 概念設計示意圖", use_column_width=True)
+        st.image(st.session_state.image_url, caption="AI 產出之 2D 概念設計示意圖", use_container_width=True)
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
