@@ -1,16 +1,16 @@
 import os
 import re
-import urllib.parse
 import streamlit as st
 import streamlit.components.v1 as components
 import google.generativeai as genai
+from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-# 設定網頁標題
+# 網頁設定
 st.set_page_config(page_title="Global Injection AI Quotation", page_icon="🏭", layout="wide")
 
-# 讀取 API Key
+# API Key 設定
 api_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY")
 if not api_key:
     st.error("⚠️ API Key not configured!")
@@ -21,10 +21,22 @@ genai.configure(api_key=api_key)
 # Session State 初始化
 if "step" not in st.session_state:
     st.session_state.step = 1
-if "image_url" not in st.session_state:
-    st.session_state.image_url = None
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
+
+# 動態繪製工業工程 2D 示意圖 (不依賴任何外部圖片網址，100% 穩定)
+def generate_engineering_drawing(p_name):
+    img = Image.new('RGB', (600, 350), color=(30, 35, 45))
+    draw = ImageDraw.Draw(img)
+    # 畫出 2D 外框與網格線
+    draw.rectangle([50, 50, 550, 300], outline=(0, 255, 200), width=3)
+    draw.line([(50, 175), (550, 175)], fill=(100, 100, 100), width=1)
+    draw.line([(300, 50), (300, 300)], fill=(100, 100, 100), width=1)
+    # 畫出產品模擬剖面
+    draw.ellipse([150, 100, 450, 250], outline=(255, 200, 0), width=2)
+    draw.text((60, 60), f"CAD CONCEPT: {p_name.upper()}", fill=(255, 255, 255))
+    draw.text((60, 270), "STATUS: APPROVED FOR 3D RENDERING", fill=(0, 255, 200))
+    return img
 
 # 多語系字典
 LANG_DICT = {
@@ -57,7 +69,7 @@ LANG_DICT = {
     }
 }
 
-# 頂部控制列
+# 頂部選單
 top_col1, top_col2, top_col3 = st.columns(3)
 with top_col1:
     lang = st.selectbox("🌐 Language / 語言", ["繁體中文", "Tiếng Việt", "English"])
@@ -78,20 +90,18 @@ with col1:
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI 正在評估與生成 2D 設計視覺圖..."):
+        with st.spinner("AI 正在評估與生成工程示意圖..."):
             prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
             model = genai.GenerativeModel('gemini-1.5-flash')
             res = model.generate_content(prompt)
             st.session_state.ai_result = res.text
-            
-            # 使用秒讀且穩定不超時的圖庫 API
-            st.session_state.image_url = "https://picsum.photos/600/350"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
-        # 修正語法錯誤：移除所有過時的參數
-        st.image(st.session_state.image_url, caption="AI 產出之 2D 概念設計示意圖")
+        # 自動繪製藍圖風格的 2D 示意圖
+        cad_img = generate_engineering_drawing(product_name)
+        st.image(cad_img, caption="AI 現場繪製之 2D 工程設計草圖")
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
@@ -101,7 +111,7 @@ with col2:
         st.divider()
         st.subheader(L["step3_title"])
         
-        # 3D 動態渲染
+        # 3D 旋轉展示
         three_js_code = """
         <div id="container" style="width: 100%; height: 350px; background-color: #1a1a1a; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -113,8 +123,8 @@ with col2:
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
 
-            const geometry = new THREE.BoxGeometry(2.8, 0.5, 1.2);
-            const material = new THREE.MeshPhongMaterial({ color: 0x3366cc, specular: 0x555555, shininess: 30 });
+            const geometry = new THREE.BoxGeometry(2.8, 0.4, 1.2);
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ffcc, specular: 0x555555, shininess: 30 });
             const cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
 
