@@ -79,25 +79,32 @@ with col1:
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
         with st.spinner("AI 正在評估與即時繪製專屬部件圖..."):
-            # 1. 工程評估
             prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
             model = genai.GenerativeModel('gemini-1.5-flash')
             res_analysis = model.generate_content(prompt_analysis)
             st.session_state.ai_result = res_analysis.text
             
-            # 2. 自動將需求翻譯成精準生圖 prompt（強調單獨鞋底部件、無整雙鞋）
-            prompt_img = f"Air Jordan 11 rubber outsole sole component only, clear translucent rubber, carbon fiber shank, top view, studio isolated product shot, no shoes, no human, photorealistic"
+            # 強調精準繪製獨立鞋底部件
+            prompt_img = "Air Jordan 11 sneaker translucent rubber outsole component only, carbon fiber shank plate, top view, studio isolated product shot, no shoes, photorealistic"
             clean_prompt = urllib.parse.quote(prompt_img)
-            
-            # 3. 帶入正確的字串格式（加上雙引號）
-            st.session_state.photo_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=800&height=500&nologo=true&seed=202"
+            st.session_state.photo_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=800&height=500&nologo=true&seed=999"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        # 顯示 AI 即時畫出的產品部件圖
-        st.image(st.session_state.photo_url, caption=f"AI 即時生成之 {product_name} 示意圖")
+        # 關鍵修改：改用 HTML 標籤讓瀏覽器直接渲染，避開 Streamlit 伺服器下載限制與 FileNotFoundError 錯誤
+        if st.session_state.photo_url:
+            st.markdown(
+                f'''
+                <div style="text-align: center;">
+                    <img src="{st.session_state.photo_url}" style="width: 100%; max-width: 600px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);" alt="AI 產出圖面">
+                    <p style="color: #aaa; font-size: 14px; margin-top: 5px;">AI 即時生成之 {product_name} 示意圖</p>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+        
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
@@ -107,7 +114,6 @@ with col2:
         st.divider()
         st.subheader(L["step3_title"])
         
-        # 3D 旋轉展示
         three_js_code = """
         <div id="container" style="width: 100%; height: 350px; background-color: #1a1a1a; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
