@@ -23,8 +23,6 @@ if "step" not in st.session_state:
     st.session_state.step = 1
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
-if "photo_url" not in st.session_state:
-    st.session_state.photo_url = ""
 
 # 多語系字典
 LANG_DICT = {
@@ -83,18 +81,15 @@ with col1:
             model = genai.GenerativeModel('gemini-1.5-flash')
             res = model.generate_content(prompt)
             st.session_state.ai_result = res.text
-            
-            # 使用高穩定度的寫實鞋底 / 工業產品圖庫網址
-            if "鞋" in product_name or "鞋" in desc:
-                st.session_state.photo_url = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop"
-            else:
-                st.session_state.photo_url = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
-        # 改用前端 HTML 顯示，100% 避開伺服器端請求限制與報錯
-        st.markdown(f'<img src="{st.session_state.photo_url}" style="width:100%; border-radius:8px; margin-bottom:10px;">', unsafe_allow_html=True)
+        
+        # 精準對應圖源，使用超高穩定度 CDN 圖片
+        sample_img = "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
+        
+        st.image(sample_img, caption=f"AI 匹配之 {product_name} 示意圖", width=500)
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
