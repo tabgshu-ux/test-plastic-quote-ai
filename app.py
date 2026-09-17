@@ -1,9 +1,9 @@
 import os
 import re
+import urllib.parse
 import streamlit as st
 import streamlit.components.v1 as components
 import google.generativeai as genai
-from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -23,20 +23,8 @@ if "step" not in st.session_state:
     st.session_state.step = 1
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
-
-# 動態繪製工業工程 2D 示意圖 (不依賴任何外部圖片網址，100% 穩定)
-def generate_engineering_drawing(p_name):
-    img = Image.new('RGB', (600, 350), color=(30, 35, 45))
-    draw = ImageDraw.Draw(img)
-    # 畫出 2D 外框與網格線
-    draw.rectangle([50, 50, 550, 300], outline=(0, 255, 200), width=3)
-    draw.line([(50, 175), (550, 175)], fill=(100, 100, 100), width=1)
-    draw.line([(300, 50), (300, 300)], fill=(100, 100, 100), width=1)
-    # 畫出產品模擬剖面
-    draw.ellipse([150, 100, 450, 250], outline=(255, 200, 0), width=2)
-    draw.text((60, 60), f"CAD CONCEPT: {p_name.upper()}", fill=(255, 255, 255))
-    draw.text((60, 270), "STATUS: APPROVED FOR 3D RENDERING", fill=(0, 255, 200))
-    return img
+if "photo_url" not in st.session_state:
+    st.session_state.photo_url = ""
 
 # 多語系字典
 LANG_DICT = {
@@ -90,18 +78,21 @@ with col1:
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI 正在評估與生成工程示意圖..."):
-            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
+        with st.spinner("AI 正在評估與匹配產品圖像..."):
+            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage, and a 1-word English search term for photo (e.g. shoe, connector)."
             model = genai.GenerativeModel('gemini-1.5-flash')
             res = model.generate_content(prompt)
             st.session_state.ai_result = res.text
+            
+            # 根據輸入判斷並匹配高畫質寫實圖片
+            search_term = "shoe,sole" if "鞋" in product_name or "鞋" in desc else "plastic,molding"
+            st.session_state.photo_url = f"https://source.unsplash.com/600x350/?{search_term}"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
-        # 自動繪製藍圖風格的 2D 示意圖
-        cad_img = generate_engineering_drawing(product_name)
-        st.image(cad_img, caption="AI 現場繪製之 2D 工程設計草圖")
+        # 顯示寫實圖片
+        st.image(st.session_state.photo_url, caption=f"AI 匹配之 {product_name} 設計示意圖")
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
@@ -124,7 +115,7 @@ with col2:
             container.appendChild(renderer.domElement);
 
             const geometry = new THREE.BoxGeometry(2.8, 0.4, 1.2);
-            const material = new THREE.MeshPhongMaterial({ color: 0x00ffcc, specular: 0x555555, shininess: 30 });
+            const material = new THREE.MeshPhongMaterial({ color: 0x3366cc, specular: 0x555555, shininess: 30 });
             const cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
 
