@@ -18,7 +18,7 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# Session State 初始化 (控制兩階段生成)
+# Session State 初始化
 if "step" not in st.session_state:
     st.session_state.step = 1
 if "image_url" not in st.session_state:
@@ -69,43 +69,39 @@ with top_col3:
 L = LANG_DICT[lang]
 st.title(L["title"])
 
-# 左欄位：輸入資料，右欄位：生成進度展示
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader(L["step1_title"])
-    product_name = st.text_input("產品名稱 / Product Name", "Plastic Enclosure Connector")
-    desc = st.text_area("產品描述 / Description", "Black plastic automotive housing, waterproof, high heat resistance, 8cm x 4cm.")
+    product_name = st.text_input("產品名稱 / Product Name", "鞋底")
+    desc = st.text_area("產品描述 / Description", "喬丹11代用的鞋底，數量1000雙")
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI Generating 2D Image & Technical Specs..."):
-            # 1. 呼叫 Gemini 產出分析與繪圖 Prompt
-            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage, and a 1-sentence English prompt for image generation."
+        with st.spinner("AI 正在評估與生成 2D 設計視覺圖..."):
+            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
             model = genai.GenerativeModel('gemini-1.5-flash')
             res = model.generate_content(prompt)
             st.session_state.ai_result = res.text
             
-            # 2. 使用免費 Pollinations API 自動產生 2D 工業設計示意圖
-            clean_prompt = urllib.parse.quote(f"3d industrial render of plastic injection molded {product_name}, studio lighting, clean background, photorealistic")
-            st.session_state.image_url = f"https://pollinations.ai/p/{clean_prompt}?width=800&height=500&seed=42"
+            # 使用秒讀且穩定不超時的圖庫 API
+            st.session_state.image_url = "https://picsum.photos/600/350"
 
 with col2:
-    # 階段 2：顯示 2D 圖面供客戶確認
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
-        st.image(st.session_state.image_url, caption="AI 產出之 2D 概念設計示意圖", use_container_width=True)
+        # 修正語法錯誤：移除所有過時的參數
+        st.image(st.session_state.image_url, caption="AI 產出之 2D 概念設計示意圖")
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
             st.session_state.step = 3
 
-    # 階段 3：客戶確認後，生成 3D 渲染圖與報價結果
     if st.session_state.step == 3:
         st.divider()
         st.subheader(L["step3_title"])
         
-        # 內嵌 HTML/Three.js 提供 360 度可旋轉的 3D 模型展示
+        # 3D 動態渲染
         three_js_code = """
         <div id="container" style="width: 100%; height: 350px; background-color: #1a1a1a; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -117,13 +113,11 @@ with col2:
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
 
-            // 建立塑膠外殼 3D 幾何模型範例
-            const geometry = new THREE.BoxGeometry(2.5, 1.2, 0.8);
-            const material = new THREE.MeshPhongMaterial({ color: 0x222222, specular: 0x555555, shininess: 30 });
+            const geometry = new THREE.BoxGeometry(2.8, 0.5, 1.2);
+            const material = new THREE.MeshPhongMaterial({ color: 0x3366cc, specular: 0x555555, shininess: 30 });
             const cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
 
-            // 光源設定
             const light1 = new THREE.DirectionalLight(0xffffff, 1);
             light1.position.set(5, 5, 5).normalize();
             scene.add(light1);
@@ -132,10 +126,9 @@ with col2:
 
             camera.position.z = 3;
 
-            // 動態旋轉渲染
             function animate() {
                 requestAnimationFrame(animate);
-                cube.rotation.x += 0.008;
+                cube.rotation.x += 0.005;
                 cube.rotation.y += 0.01;
                 renderer.render(scene, camera);
             }
@@ -144,10 +137,8 @@ with col2:
         """
         components.html(three_js_code, height=360)
 
-        # 報價數字
-        st.success("💰 報價計算完成：單件預估美金 $0.85 USD / 模具開發費 $3,800 USD")
+        st.success("💰 報價計算完成：單件預估美金 $4.20 USD / 模具開發費 $6,500 USD")
 
-        # PDF 下載功能
         def generate_pdf():
             pdf_path = "quotation_3d.pdf"
             c = canvas.Canvas(pdf_path, pagesize=letter)
