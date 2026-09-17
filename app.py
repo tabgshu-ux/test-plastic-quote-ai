@@ -1,6 +1,5 @@
 import os
 import re
-import urllib.parse
 import streamlit as st
 import streamlit.components.v1 as components
 import google.generativeai as genai
@@ -25,53 +24,60 @@ if "step" not in st.session_state:
     st.session_state.step = 1
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
+if "matched_image" not in st.session_state:
+    st.session_state.matched_image = ""
 
-# 多語系字典 (網頁與 PDF 共用)
+# 📁 建立「模擬企業內部圖庫 / 授權圖庫」
+# 存放各類高品質的真實塑膠/橡膠零件照片
+IMAGE_DATABASE = {
+    "sole": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&auto=format&fit=crop", # 獨立鞋底/大底特寫
+    "case": "https://images.unsplash.com/photo-1527443195645-1133f7f28990?w=800&auto=format&fit=crop", # 塑膠外殼/機殼
+    "gear": "https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=800&auto=format&fit=crop", # 齒輪/精密機械零件
+    "bottle": "https://images.unsplash.com/photo-1585338107529-13afc5f02586?w=800&auto=format&fit=crop", # 塑膠瓶器
+    "connector": "https://images.unsplash.com/photo-1611078712613-2d24f0c43666?w=800&auto=format&fit=crop", # 連接器/電子塑膠件
+    "default": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop"  # 預設通用射出件
+}
+
+# 多語系字典
 LANG_DICT = {
     "繁體中文": {
         "title": "🏭 塑膠射出 — 跨國智慧估價與報價系統",
-        "btn_gen_2d": "🎨 第一步：AI 評估並生成 2D 示意圖",
-        "btn_confirm_3d": "✅ 確認 2D 圖面，下一步：生成 3D 渲染圖與報價",
+        "btn_gen_2d": "🔍 第一步：AI 語意分析與圖庫智能比對",
+        "btn_confirm_3d": "✅ 確認產品樣式，下一步：生成 3D 渲染圖與報價",
         "step1_title": "1. 產品需求輸入",
-        "step2_title": "2. 2D 外觀示意圖確認",
+        "step2_title": "2. AI 圖庫比對結果確認",
         "step3_title": "3. 3D 可視化模型與自動報價單",
         "pdf_btn": "📄 下載正式 PDF 報價單",
-        "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION (正式塑膠射出報價單)",
-        "item_mold": "Custom Mold Development (客製化射出模具開發)",
-        "item_part": "Production Part Unit Cost (產品射出單價 - 高階TPU/橡膠)",
-        "item_total": "Total Order Amount (首批訂單總金額)",
-        "unit_set": "1 套 / Set",
-        "unit_pcs": "50,000 雙 / Pairs"
+        "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
+        "item_mold": "Custom Mold Development",
+        "item_part": "Production Part Unit Cost",
+        "item_total": "Total Initial Order Amount",
     },
     "Tiếng Việt": {
         "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Thông Minh AI Global",
-        "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Tạo ảnh 2D",
-        "btn_confirm_3d": "✅ Xác nhận bản vẽ 2D, Bước tiếp: Tạo mô hình 3D & Báo giá",
+        "btn_gen_2d": "🔍 Bước 1: AI Phân tích & Tìm kiếm hình ảnh",
+        "btn_confirm_3d": "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá",
         "step1_title": "1. Nhập yêu cầu sản phẩm",
-        "step2_title": "2. Xác nhận hình ảnh 2D",
+        "step2_title": "2. Kết quả tìm kiếm từ thư viện AI",
         "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
         "pdf_btn": "📄 Tải bản thảo báo giá PDF",
-        "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION (BÁO GIÁ ĐƠN HÀNG ÉP NHỰA)",
-        "item_mold": "Chi phí phát triển khuôn mẫu (Custom Mold Development)",
-        "item_part": "Đơn giá sản phẩm ép nhựa (Production Part Unit Cost)",
-        "item_total": "Tổng giá trị đơn hàng đầu tiên (Total Order Amount)",
-        "unit_set": "1 Bộ / Set",
-        "unit_pcs": "50,000 Đôi / Pairs"
+        "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
+        "item_mold": "Chi phí phát triển khuôn mẫu",
+        "item_part": "Đơn giá sản phẩm ép nhựa",
+        "item_total": "Tổng giá trị đơn hàng đầu tiên",
     },
     "English": {
         "title": "🏭 Global Plastic Injection — AI Quotation System",
-        "btn_gen_2d": "🎨 Step 1: Run AI Analysis & Generate 2D Concept",
-        "btn_confirm_3d": "✅ Confirm 2D Image, Next: Render 3D Model & Quote",
+        "btn_gen_2d": "🔍 Step 1: AI Semantic Analysis & Database Search",
+        "btn_confirm_3d": "✅ Confirm Reference, Next: Render 3D Model & Quote",
         "step1_title": "1. Product Specifications",
-        "step2_title": "2. 2D Visual Concept Confirmation",
+        "step2_title": "2. AI Database Match Result",
         "step3_title": "3. Interactive 3D Render & Final Quote",
         "pdf_btn": "📄 Download Official PDF Quote",
         "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
         "item_mold": "Custom Mold Development",
-        "item_part": "Production Part Unit Cost (High-grade TPU/Rubber)",
+        "item_part": "Production Part Unit Cost",
         "item_total": "Total Initial Order Amount",
-        "unit_set": "1 Set",
-        "unit_pcs": "50,000 Pairs"
     }
 }
 
@@ -96,41 +102,46 @@ with col1:
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI 正在評估與繪製 2D 工業規格圖..."):
+        with st.spinner("AI 正在解析需求並從圖庫比對相似零件..."):
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
             try:
+                # 任務 1：工程分析
                 prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
-                model = genai.GenerativeModel('gemini-1.5-flash')
                 res_analysis = model.generate_content(prompt_analysis, request_options={"timeout": 10})
                 st.session_state.ai_result = res_analysis.text
-            except Exception as e:
+            except:
                 st.session_state.ai_result = f"💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
+
+            # 任務 2：圖庫關鍵字分類 (讓 AI 決定要撈哪張圖)
+            try:
+                prompt_category = f"Classify this product '{product_name}, {desc}' into EXACTLY ONE of these categories: [sole, case, gear, bottle, connector, default]. Reply ONLY with the category word."
+                res_category = model.generate_content(prompt_category).text.strip().lower()
+                # 確保回傳的值在我們的資料庫中
+                match_key = res_category if res_category in IMAGE_DATABASE else "default"
+            except:
+                match_key = "default"
+            
+            # 從圖庫中取出對應的真實產品圖
+            st.session_state.matched_image = IMAGE_DATABASE[match_key]
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        svg_code = """
-        <div style="background-color: #0b1325; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #1e293b; font-family: sans-serif;">
-            <svg width="100%" height="220" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="1"/>
-                    </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid)" />
-                <path d="M 60 110 C 50 70, 100 30, 180 35 C 260 40, 330 30, 410 45 C 450 55, 460 100, 440 140 C 410 180, 320 180, 240 170 C 160 160, 70 150, 60 110 Z" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="2.5"/>
-                <path d="M 100 65 Q 140 60 180 70 Q 150 120 100 115 Z" fill="rgba(14, 165, 233, 0.3)" stroke="#0284c7" stroke-width="1.5"/>
-                <path d="M 350 75 Q 400 70 420 100 Q 390 140 340 135 Z" fill="rgba(14, 165, 233, 0.3)" stroke="#0284c7" stroke-width="1.5"/>
-                <rect x="220" y="85" width="80" height="45" rx="5" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-                <path d="M 225 90 L 295 125 M 235 90 L 295 120 M 225 100 L 285 125 M 250 90 L 295 110" stroke="#f59e0b" stroke-width="1" opacity="0.6"/>
-                <line x1="50" y1="195" x2="450" y2="195" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4"/>
-                <text x="250" y="212" fill="#94a3b8" font-size="12" text-anchor="middle" font-family="monospace">LENGTH: 320mm (SPEC: +-0.5mm)</text>
-                <text x="20" y="25" fill="#38bdf8" font-size="13" font-weight="bold">CAD CONCEPT: AJ11 OUTSOLE INJECTION PART</text>
-            </svg>
-            <p style="color: #38bdf8; font-size: 13px; margin-top: 5px; margin-bottom: 0;">2D 射出成型結構視圖已確認（含防扭碳纖維板與雙色橡膠 Pods）</p>
-        </div>
-        """
-        components.html(svg_code, height=270)
+        # 顯示從圖庫比對出來的真實照片
+        if st.session_state.matched_image:
+            st.markdown(
+                f'''
+                <div style="background-color: #1e293b; padding: 10px; border-radius: 8px; text-align: center;">
+                    <img src="{st.session_state.matched_image}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 4px;" alt="AI 比對圖庫結果">
+                    <p style="color: #38bdf8; font-size: 13px; margin-top: 8px; margin-bottom: 0;">
+                        🔍 AI 已從歷史模具圖庫中比對出高度相似的零件參考圖
+                    </p>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
         
         st.info(st.session_state.ai_result)
         
@@ -141,6 +152,7 @@ with col2:
         st.divider()
         st.subheader(L["step3_title"])
         
+        # 3D 渲染
         three_js_code = """
         <div id="container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -165,14 +177,7 @@ with col2:
             const geometry = new THREE.ExtrudeGeometry(soleShape, extrudeSettings);
             geometry.center();
 
-            const material = new THREE.MeshPhongMaterial({ 
-                color: 0x38bdf8, 
-                specular: 0xffffff, 
-                shininess: 90,
-                transparent: true,
-                opacity: 0.85
-            });
-
+            const material = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.85 });
             const soleMesh = new THREE.Mesh(geometry, material);
             soleMesh.rotation.x = -Math.PI / 3;
             scene.add(soleMesh);
@@ -198,26 +203,16 @@ with col2:
 
         st.success(f"💰 報價計算完成 ({curr} - {site})：單件預估 $4.20 USD / 模具開發費 $6,500 USD")
 
-        # 動態多語系 PDF 報價單生成函式
         def generate_multilingual_pdf():
             pdf_path = "official_quotation.pdf"
             doc = SimpleDocTemplate(pdf_path, pagesize=letter)
             styles = getSampleStyleSheet()
             story = []
 
-            # 報價單標題
-            title_style = ParagraphStyle(
-                'TitleStyle',
-                parent=styles['Heading1'],
-                fontSize=14,
-                leading=18,
-                textColor=colors.HexColor('#0f172a'),
-                fontName='Helvetica-Bold'
-            )
+            title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=14, textColor=colors.HexColor('#0f172a'), fontName='Helvetica-Bold')
             story.append(Paragraph(f"<b>{L['pdf_title']}</b>", title_style))
             story.append(Spacer(1, 15))
 
-            # 基本資訊
             info_data = [
                 ["Manufacturing Site:", site, "Date:", "2026-09-18"],
                 ["Quotation Currency:", curr, "Language:", lang]
@@ -232,11 +227,10 @@ with col2:
             story.append(t_info)
             story.append(Spacer(1, 15))
 
-            # 報價明細表格 (多語系對應)
             table_data = [
                 ["Item Description", "Qty / Unit", f"Unit Price ({curr})", f"Ext. Amount ({curr})"],
-                [L["item_mold"], L["unit_set"], "$6,500.00", "$6,500.00"],
-                [L["item_part"], L["unit_pcs"], "$4.20", "$210,000.00"],
+                [L["item_mold"], "1 Set", "$6,500.00", "$6,500.00"],
+                [L["item_part"], "50,000", "$4.20", "$210,000.00"],
                 [L["item_total"], "", "", f"{curr} $216,500.00"]
             ]
             t_detail = Table(table_data, colWidths=[220, 80, 100, 100])
