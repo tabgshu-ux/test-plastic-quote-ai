@@ -23,6 +23,8 @@ if "step" not in st.session_state:
     st.session_state.step = 1
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
+if "photo_url" not in st.session_state:
+    st.session_state.photo_url = ""
 
 # 多語系字典
 LANG_DICT = {
@@ -71,30 +73,32 @@ col1, col2 = st.columns([1, 1])
 
 with col1:
     st.subheader(L["step1_title"])
-    product_name = st.text_input("產品名稱 / Product Name", "鞋底")
-    desc = st.text_area("產品描述 / Description", "喬丹11代用的鞋底，數量1000雙")
+    product_name = st.text_input("產品名稱 / Product Name", "橡膠大底")
+    desc = st.text_area("產品描述 / Description", "喬丹11代用的橡膠大底，數量1000雙")
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI 正在評估與匹配產品圖像..."):
-            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
+        with st.spinner("AI 正在繪製即時 2D 產品概念圖..."):
+            # 1. 讓 Gemini 做出工程評估，並將中文需求轉換為生圖專用的英文提示詞
+            prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
+            prompt_image = f"Translate and create a highly specific 1-sentence English image prompt for: {product_name}, {desc}. Focus ONLY on the part/component itself (e.g. 'Air Jordan 11 sneaker rubber outsole component only, clear translucent outsole, carbon fiber shank plate, isolated studio product shot, top-down view, photorealistic'). Do NOT include full shoes or human."
+
             model = genai.GenerativeModel('gemini-1.5-flash')
-            res = model.generate_content(prompt)
-            st.session_state.ai_result = res.text
+            res_analysis = model.generate_content(prompt_analysis)
+            res_img_prompt = model.generate_content(prompt_image)
+            
+            st.session_state.ai_result = res_analysis.text
+            
+            # 2. 將英文提示詞進行 URL 編碼，送入生圖 API 現場繪製
+            clean_prompt = urllib.parse.quote(res_img_prompt.text.strip())
+            st.session_state.photo_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=800&height=500&nologo=true&seed=101"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        # 判斷是否為鞋底需求，帶入專屬「單獨鞋底/底盤」的寫實展示圖
-        if "鞋底" in product_name or "鞋底" in desc or "底" in product_name:
-            # 專屬單獨鞋底寫實圖 (Shoe Outsole / Sole)
-            sample_img = "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&auto=format&fit=crop"
-        else:
-            # 一般塑膠成型件寫實圖
-            sample_img = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop"
-        
-        st.image(sample_img, caption=f"AI 匹配之 {product_name} 射出成型示意圖", width=500)
+        # 顯示 AI 即時畫出的寫實照片
+        st.image(st.session_state.photo_url, caption=f"AI 即時生成之 {product_name} 示意圖", use_column_width=True)
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
