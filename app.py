@@ -5,7 +5,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # 網頁設定
 st.set_page_config(page_title="Global Injection AI Quotation", page_icon="🏭", layout="wide")
@@ -24,7 +26,7 @@ if "step" not in st.session_state:
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
 
-# 多語系字典
+# 多語系字典 (網頁與 PDF 共用)
 LANG_DICT = {
     "繁體中文": {
         "title": "🏭 塑膠射出 — 跨國智慧估價與報價系統",
@@ -33,7 +35,13 @@ LANG_DICT = {
         "step1_title": "1. 產品需求輸入",
         "step2_title": "2. 2D 外觀示意圖確認",
         "step3_title": "3. 3D 可視化模型與自動報價單",
-        "pdf_btn": "📄 下載正式 PDF 報價單"
+        "pdf_btn": "📄 下載正式 PDF 報價單",
+        "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION (正式塑膠射出報價單)",
+        "item_mold": "Custom Mold Development (客製化射出模具開發)",
+        "item_part": "Production Part Unit Cost (產品射出單價 - 高階TPU/橡膠)",
+        "item_total": "Total Order Amount (首批訂單總金額)",
+        "unit_set": "1 套 / Set",
+        "unit_pcs": "50,000 雙 / Pairs"
     },
     "Tiếng Việt": {
         "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Thông Minh AI Global",
@@ -42,7 +50,13 @@ LANG_DICT = {
         "step1_title": "1. Nhập yêu cầu sản phẩm",
         "step2_title": "2. Xác nhận hình ảnh 2D",
         "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
-        "pdf_btn": "📄 Tải bản thảo báo giá PDF"
+        "pdf_btn": "📄 Tải bản thảo báo giá PDF",
+        "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION (BÁO GIÁ ĐƠN HÀNG ÉP NHỰA)",
+        "item_mold": "Chi phí phát triển khuôn mẫu (Custom Mold Development)",
+        "item_part": "Đơn giá sản phẩm ép nhựa (Production Part Unit Cost)",
+        "item_total": "Tổng giá trị đơn hàng đầu tiên (Total Order Amount)",
+        "unit_set": "1 Bộ / Set",
+        "unit_pcs": "50,000 Đôi / Pairs"
     },
     "English": {
         "title": "🏭 Global Plastic Injection — AI Quotation System",
@@ -51,7 +65,13 @@ LANG_DICT = {
         "step1_title": "1. Product Specifications",
         "step2_title": "2. 2D Visual Concept Confirmation",
         "step3_title": "3. Interactive 3D Render & Final Quote",
-        "pdf_btn": "📄 Download Official PDF Quote"
+        "pdf_btn": "📄 Download Official PDF Quote",
+        "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
+        "item_mold": "Custom Mold Development",
+        "item_part": "Production Part Unit Cost (High-grade TPU/Rubber)",
+        "item_total": "Total Initial Order Amount",
+        "unit_set": "1 Set",
+        "unit_pcs": "50,000 Pairs"
     }
 }
 
@@ -89,7 +109,6 @@ with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        # 使用獨立的 HTML/SVG 視窗渲染，確保文字程式碼絕對不外漏
         svg_code = """
         <div style="background-color: #0b1325; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #1e293b; font-family: sans-serif;">
             <svg width="100%" height="220" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
@@ -177,17 +196,67 @@ with col2:
         """
         components.html(three_js_code, height=390)
 
-        st.success("💰 報價計算完成：單件預估美金 $4.20 USD / 模具開發費 $6,500 USD")
+        st.success(f"💰 報價計算完成 ({curr} - {site})：單件預估 $4.20 USD / 模具開發費 $6,500 USD")
 
-        def generate_pdf():
-            pdf_path = "quotation_3d.pdf"
-            c = canvas.Canvas(pdf_path, pagesize=letter)
-            c.drawString(100, 750, f"OFFICIAL INJECTION QUOTATION: {product_name}")
-            c.drawString(100, 720, f"Factory Site: {site}")
-            c.drawString(100, 700, "3D Model & Concept Approved by Client.")
-            c.save()
+        # 動態多語系 PDF 報價單生成函式
+        def generate_multilingual_pdf():
+            pdf_path = "official_quotation.pdf"
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            story = []
+
+            # 報價單標題
+            title_style = ParagraphStyle(
+                'TitleStyle',
+                parent=styles['Heading1'],
+                fontSize=14,
+                leading=18,
+                textColor=colors.HexColor('#0f172a'),
+                fontName='Helvetica-Bold'
+            )
+            story.append(Paragraph(f"<b>{L['pdf_title']}</b>", title_style))
+            story.append(Spacer(1, 15))
+
+            # 基本資訊
+            info_data = [
+                ["Manufacturing Site:", site, "Date:", "2026-09-18"],
+                ["Quotation Currency:", curr, "Language:", lang]
+            ]
+            t_info = Table(info_data, colWidths=[120, 160, 80, 140])
+            t_info.setStyle(TableStyle([
+                ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor('#334155')),
+                ('FONTNAME', (0,0), (-1,-1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0,0), (-1,-1), 9),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ]))
+            story.append(t_info)
+            story.append(Spacer(1, 15))
+
+            # 報價明細表格 (多語系對應)
+            table_data = [
+                ["Item Description", "Qty / Unit", f"Unit Price ({curr})", f"Ext. Amount ({curr})"],
+                [L["item_mold"], L["unit_set"], "$6,500.00", "$6,500.00"],
+                [L["item_part"], L["unit_pcs"], "$4.20", "$210,000.00"],
+                [L["item_total"], "", "", f"{curr} $216,500.00"]
+            ]
+            t_detail = Table(table_data, colWidths=[220, 80, 100, 100])
+            t_detail.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1e293b')),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0,0), (-1,-1), 9),
+                ('ALIGN', (1,0), (-1,-1), 'CENTER'),
+                ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor('#cbd5e1')),
+                ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#f1f5f9')),
+                ('TEXTCOLOR', (0,-1), (-1,-1), colors.HexColor('#0f172a')),
+                ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ]))
+            story.append(t_detail)
+            
+            doc.build(story)
             return pdf_path
 
-        pdf_file = generate_pdf()
+        pdf_file = generate_multilingual_pdf()
         with open(pdf_file, "rb") as f:
-            st.download_button(L["pdf_btn"], f, file_name=f"{product_name}_Quote.pdf")
+            st.download_button(L["pdf_btn"], f, file_name=f"Quotation_{lang}_{curr}.pdf")
