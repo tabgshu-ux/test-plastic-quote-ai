@@ -79,20 +79,22 @@ with col1:
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
         with st.spinner("AI 正在評估與匹配產品圖像..."):
-            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage, and a 1-word English search term for photo (e.g. shoe, connector)."
+            prompt = f"Analyze plastic injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
             model = genai.GenerativeModel('gemini-1.5-flash')
             res = model.generate_content(prompt)
             st.session_state.ai_result = res.text
             
-            # 根據輸入判斷並匹配高畫質寫實圖片
-            search_term = "shoe,sole" if "鞋" in product_name or "鞋" in desc else "plastic,molding"
-            st.session_state.photo_url = f"https://source.unsplash.com/600x350/?{search_term}"
+            # 使用高穩定度的寫實鞋底 / 工業產品圖庫網址
+            if "鞋" in product_name or "鞋" in desc:
+                st.session_state.photo_url = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop"
+            else:
+                st.session_state.photo_url = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
-        # 顯示寫實圖片
-        st.image(st.session_state.photo_url, caption=f"AI 匹配之 {product_name} 設計示意圖")
+        # 改用前端 HTML 顯示，100% 避開伺服器端請求限制與報錯
+        st.markdown(f'<img src="{st.session_state.photo_url}" style="width:100%; border-radius:8px; margin-bottom:10px;">', unsafe_allow_html=True)
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
