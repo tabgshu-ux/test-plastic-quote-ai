@@ -1,5 +1,6 @@
 import os
 import re
+import urllib.parse
 import streamlit as st
 import streamlit.components.v1 as components
 import google.generativeai as genai
@@ -88,40 +89,30 @@ with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        # 精密 SVG 工業 2D 鞋底藍圖 (包含水晶大底輪廓、人字紋防滑溝槽與碳纖維防扭板)
-        blueprint_svg = """
-        <div style="background-color: #0b1325; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #1e293b;">
-            <svg width="100%" height="240" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
-                <!-- 背景網格線 -->
+        # 使用獨立的 HTML/SVG 視窗渲染，確保文字程式碼絕對不外漏
+        svg_code = """
+        <div style="background-color: #0b1325; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #1e293b; font-family: sans-serif;">
+            <svg width="100%" height="220" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
                         <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="1"/>
                     </pattern>
                 </defs>
                 <rect width="100%" height="100%" fill="url(#grid)" />
-                
-                <!-- 大底主體外框 (水晶透明藍色調) -->
-                <path d="M 60 110 C 50 70, 100 30, 180 35 C 260 40, 330 30, 410 45 C 450 55, 460 100, 440 140 C 410 180, 320 180, 240 170 C 160 160, 70 150, 60 110 Z" 
-                      fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="none"/>
-                
-                <!-- AJ11 經典前掌與後跟人字紋 (Herringbone Pods) -->
+                <path d="M 60 110 C 50 70, 100 30, 180 35 C 260 40, 330 30, 410 45 C 450 55, 460 100, 440 140 C 410 180, 320 180, 240 170 C 160 160, 70 150, 60 110 Z" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="2.5"/>
                 <path d="M 100 65 Q 140 60 180 70 Q 150 120 100 115 Z" fill="rgba(14, 165, 233, 0.3)" stroke="#0284c7" stroke-width="1.5"/>
                 <path d="M 350 75 Q 400 70 420 100 Q 390 140 340 135 Z" fill="rgba(14, 165, 233, 0.3)" stroke="#0284c7" stroke-width="1.5"/>
-                
-                <!-- 中底碳纖維防扭板 (Carbon Fiber Shank) -->
                 <rect x="220" y="85" width="80" height="45" rx="5" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
                 <path d="M 225 90 L 295 125 M 235 90 L 295 120 M 225 100 L 285 125 M 250 90 L 295 110" stroke="#f59e0b" stroke-width="1" opacity="0.6"/>
-                
-                <!-- 工程尺寸標註線 -->
                 <line x1="50" y1="195" x2="450" y2="195" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4"/>
-                <text x="250" y="212" fill="#94a3b8" font-size="12" text-anchor="middle" font-family="monospace">LENGTH: 320mm (SPEC: ±0.5mm)</text>
-                
-                <text x="70" y="25" fill="#38bdf8" font-size="13" font-weight="bold" font-family="sans-serif">CAD CONCEPT: AJ11 OUTSOLE INJECTION PART</text>
+                <text x="250" y="212" fill="#94a3b8" font-size="12" text-anchor="middle" font-family="monospace">LENGTH: 320mm (SPEC: +-0.5mm)</text>
+                <text x="20" y="25" fill="#38bdf8" font-size="13" font-weight="bold">CAD CONCEPT: AJ11 OUTSOLE INJECTION PART</text>
             </svg>
-            <p style="color: #38bdf8; font-size: 13px; margin-top: 5px;">✅ 2D 射出成型結構視圖已確認（含防扭碳纖維板與雙色橡膠 Pods）</p>
+            <p style="color: #38bdf8; font-size: 13px; margin-top: 5px; margin-bottom: 0;">2D 射出成型結構視圖已確認（含防扭碳纖維板與雙色橡膠 Pods）</p>
         </div>
         """
-        st.markdown(blueprint_svg, unsafe_allow_html=True)
+        components.html(svg_code, height=270)
+        
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
@@ -131,7 +122,6 @@ with col2:
         st.divider()
         st.subheader(L["step3_title"])
         
-        # 專屬鞋底 3D 渲染 (Three.js 曲線擠壓 + 冰藍水晶質感)
         three_js_code = """
         <div id="container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -143,7 +133,6 @@ with col2:
             renderer.setSize(container.clientWidth, container.clientHeight);
             container.appendChild(renderer.domElement);
 
-            // 繪製鞋底輪廓
             const soleShape = new THREE.Shape();
             soleShape.moveTo(-1.2, -0.4);
             soleShape.bezierCurveTo(-1.4, -0.4, -1.5, -0.2, -1.4, 0.2);
