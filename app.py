@@ -158,3 +158,4 @@ with col2:
         pdf_file = generate_pdf()
         with open(pdf_file, "rb") as f:
             st.download_button(L["pdf_btn"], f, file_name=f"{product_name}_Quote.pdf")
+            https://image.pollinations.ai/prompt/Air%20Jordan%2011%20rubber%20outsole%20sole%20only?width=800&height=500&nologo=true
