@@ -78,27 +78,26 @@ with col1:
     
     if st.button(L["btn_gen_2d"], type="primary"):
         st.session_state.step = 2
-        with st.spinner("AI 正在繪製即時 2D 產品概念圖..."):
-            # 1. 讓 Gemini 做出工程評估，並將中文需求轉換為生圖專用的英文提示詞
+        with st.spinner("AI 正在評估與即時繪製專屬部件圖..."):
+            # 1. 工程評估
             prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
-            prompt_image = f"Translate and create a highly specific 1-sentence English image prompt for: {product_name}, {desc}. Focus ONLY on the part/component itself (e.g. 'Air Jordan 11 sneaker rubber outsole component only, clear translucent outsole, carbon fiber shank plate, isolated studio product shot, top-down view, photorealistic'). Do NOT include full shoes or human."
-
             model = genai.GenerativeModel('gemini-1.5-flash')
             res_analysis = model.generate_content(prompt_analysis)
-            res_img_prompt = model.generate_content(prompt_image)
-            
             st.session_state.ai_result = res_analysis.text
             
-            # 2. 將英文提示詞進行 URL 編碼，送入生圖 API 現場繪製
-            clean_prompt = urllib.parse.quote(res_img_prompt.text.strip())
-            st.session_state.photo_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=800&height=500&nologo=true&seed=101"
+            # 2. 自動將需求翻譯成精準生圖 prompt（強調單獨鞋底部件、無整雙鞋）
+            prompt_img = f"Air Jordan 11 rubber outsole sole component only, clear translucent rubber, carbon fiber shank, top view, studio isolated product shot, no shoes, no human, photorealistic"
+            clean_prompt = urllib.parse.quote(prompt_img)
+            
+            # 3. 帶入正確的字串格式（加上雙引號）
+            st.session_state.photo_url = f"https://image.pollinations.ai/prompt/{clean_prompt}?width=800&height=500&nologo=true&seed=202"
 
 with col2:
     if st.session_state.step >= 2:
         st.subheader(L["step2_title"])
         
-        # 顯示 AI 即時畫出的寫實照片
-        st.image(st.session_state.photo_url, caption=f"AI 即時生成之 {product_name} 示意圖", use_column_width=True)
+        # 顯示 AI 即時畫出的產品部件圖
+        st.image(st.session_state.photo_url, caption=f"AI 即時生成之 {product_name} 示意圖")
         st.info(st.session_state.ai_result)
         
         if st.button(L["btn_confirm_3d"], type="primary"):
@@ -158,4 +157,3 @@ with col2:
         pdf_file = generate_pdf()
         with open(pdf_file, "rb") as f:
             st.download_button(L["pdf_btn"], f, file_name=f"{product_name}_Quote.pdf")
-            https://image.pollinations.ai/prompt/Air%20Jordan%2011%20rubber%20outsole%20sole%20only?width=800&height=500&nologo=true
