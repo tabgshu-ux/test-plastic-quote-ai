@@ -135,7 +135,6 @@ else:
                     res_analysis = model.generate_content(prompt_analysis, request_options={"timeout": 10})
                     st.session_state.ai_result = res_analysis.text
                 except:
-                    st.session_state.ai_result = "💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1
                     st.session_state.ai_result = """💡 **預估材料建議**：
                      建議採用高耐磨透明 TPU / 橡膠複合材質。
                      - **預估單個重量**：180g
