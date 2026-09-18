@@ -21,11 +21,40 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# 💾 全局資料庫 (Session State 記錄業務員開單歷程)
+# 🔐 1. 建立使用者帳號密碼與角色資料庫 (使用者表)
+USER_DATABASE = {
+    "admin": {
+        "password": "admin123",
+        "name": "系統主管 (Manager)",
+        "role": "admin"
+    },
+    "alex": {
+        "password": "alex123",
+        "name": "Alex Chen (S-001)",
+        "role": "sales"
+    },
+    "david": {
+        "password": "david123",
+        "name": "David Wang (S-002)",
+        "role": "sales"
+    },
+    "nguyen": {
+        "password": "nguyen123",
+        "name": "Nguyen Van A (S-005)",
+        "role": "sales"
+    }
+}
+
+# 💾 2. Session State 初始化 (登入狀態與報價單紀錄)
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
+
 if "quotation_db" not in st.session_state:
     st.session_state.quotation_db = [
         {"quote_id": "QT-20260918-001", "sales_rep": "Alex Chen (S-001)", "client_product": "喬丹11代風格水晶橡膠大底", "site": "Vietnam (Binh Duong)", "amount": 216500, "curr": "USD", "date": "2026-09-18"},
-        {"quote_id": "QT-20260918-002", "sales_rep": "Nguyen Van A (S-005)", "client_product": "車用電子耐熱外殼", "site": "China (Dongguan)", "amount": 85000, "curr": "USD", "date": "2026-09-18"}
+        {"quote_id": "QT-20260918-002", "sales_rep": "David Wang (S-002)", "client_product": "車用電子耐熱外殼", "site": "China (Dongguan)", "amount": 85000, "curr": "USD", "date": "2026-09-18"}
     ]
 
 if "step" not in st.session_state:
@@ -33,43 +62,90 @@ if "step" not in st.session_state:
 if "ai_result" not in st.session_state:
     st.session_state.ai_result = ""
 
-# 🎯 精準橡膠大底 / 工業射出件照片庫 (100% 精準寫實大底，絕不出現整雙鞋)
+# 🎯 精準橡膠大底特寫照片庫
 ACCURATE_GALLERY = {
-    "sole": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop", # 正宗橡膠大底/底盤特寫
+    "sole": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop", 
     "housing": "https://images.unsplash.com/photo-1527443195645-1133f7f28990?w=800&auto=format&fit=crop",
     "gear": "https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=800&auto=format&fit=crop",
     "default": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop"
 }
 
-# 側邊欄：身份與權限切換
-st.sidebar.title("🏢 企業權限與系統切換")
-user_role = st.sidebar.radio("請選擇操作模式 / Mode", ["👤 業務員前台報價 (Sales)", "🔑 後台管理員中心 (Admin Portal)"])
-
-# 業務員清單管理
-SALES_TEAM = ["Alex Chen (S-001)", "David Wang (S-002)", "Nguyen Van A (S-005)", "Jessica Lee (S-008)"]
-
 # ==========================================
-# 情況 A：後台管理員中心 (Admin Dashboard)
+# 🔓 3. 登入介面 (未登入時顯示)
 # ==========================================
-if user_role == "🔑 後台管理員中心 (Admin Portal)":
-    st.header("📊 塑膠射出 — 後台管理與業務訂單總覽")
+if not st.session_state.authenticated:
+    st.title("🏭 塑膠射出跨國 AI 報價系統 — 用戶登入")
+    st.caption("請輸入您的企業帳號與密碼以進行身份驗證")
     
-    # 統計指標
+    col_login, _ = st.columns([1, 1])
+    with col_login:
+        with st.form("login_form"):
+            username_input = st.text_input("帳號 / Username")
+            password_input = st.text_input("密碼 / Password", type="password")
+            submit_button = st.form_submit_button("🔑 登入系統", type="primary")
+            
+            if submit_button:
+                # 帳密比對邏輯
+                if username_input in USER_DATABASE and USER_DATABASE[username_input]["password"] == password_input:
+                    st.session_state.authenticated = True
+                    st.session_state.user_info = USER_DATABASE[username_input]
+                    st.success(f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}")
+                    st.rerun()
+                else:
+                    st.error("❌ 帳號或密碼錯誤，請重新輸入！")
+                    
+        st.info("""
+        💡 **Demo 測試帳號提示：**
+        - **主管帳號**：`admin` / 密碼：`admin123`
+        - **業務帳號 1**：`alex` / 密碼：`alex123`
+        - **業務帳號 2**：`david` / 密碼：`david123`
+        """)
+    st.stop() # 未登入前停止執行後續畫面
+
+# ==========================================
+# 🔒 4. 已登入的主系統介面
+# ==========================================
+
+# 側邊欄：使用者資訊與登出按鈕
+st.sidebar.title("👤 使用者資訊")
+st.sidebar.write(f"**當前使用者**：{st.session_state.user_info['name']}")
+st.sidebar.write(f"**權限角色**：{'🔑 系統主管' if st.session_state.user_info['role'] == 'admin' else '💼 業務人員'}")
+
+if st.sidebar.button("🚪 登出系統"):
+    st.session_state.authenticated = False
+    st.session_state.user_info = None
+    st.session_state.step = 1
+    st.rerun()
+
+st.sidebar.divider()
+
+# 根據角色（主管 / 業務）跳轉不同的功能畫面
+user_role = st.session_state.user_info["role"]
+
+# ==========================================
+# 👑 畫面 A：主管管理後台 (Admin Panel)
+# ==========================================
+if user_role == "admin":
+    st.header("📊 系統主管中心 — 業務報價總覽與資料庫")
+    st.caption("您可以檢視全公司所有業務員的報價歷程、總金額統計，並匯出報表。")
+    
     df = pd.DataFrame(st.session_state.quotation_db)
     total_sales = df["amount"].sum()
     total_orders = len(df)
     
     col_a, col_b, col_c = st.columns(3)
-    col_a.metric("總歷史報價單數", f"{total_orders} 筆")
-    col_b.metric("總報價累積金額", f"${total_sales:,.2f} USD")
-    col_c.metric("活躍業務員人數", f"{len(df['sales_rep'].unique())} 位")
+    col_a.metric("全廠歷史報價單數", f"{total_orders} 筆")
+    col_b.metric("全廠估算總報價金額", f"${total_sales:,.2f} USD")
+    col_c.metric("團隊業務人數", f"{len(df['sales_rep'].unique())} 位")
     
     st.divider()
-    st.subheader("📋 所有業務員報價歷史紀錄")
+    st.subheader("📋 跨國業務報價總明細表")
     
-    # 業務員篩選器
-    selected_sales = st.selectbox("🔍 按業務員篩選紀錄", ["全部業務員 (All)"] + SALES_TEAM)
-    if selected_sales != "全部業務員 (All)":
+    # 篩選業務員
+    all_sales = ["全部業務 (All)"] + list(df["sales_rep"].unique())
+    selected_sales = st.selectbox("🔍 依業務員篩選紀錄", all_sales)
+    
+    if selected_sales != "全部業務 (All)":
         filtered_df = df[df["sales_rep"] == selected_sales]
     else:
         filtered_df = df
@@ -78,13 +154,12 @@ if user_role == "🔑 後台管理員中心 (Admin Portal)":
     
     # 匯出 CSV 報表
     csv_data = filtered_df.to_csv(index=False).encode('utf-8-sig')
-    st.download_button("📥 匯出業務報價歷史報表 (CSV)", csv_data, file_name=f"Sales_Report_{datetime.date.today()}.csv")
+    st.download_button("📥 匯出業務報價總表 (CSV)", csv_data, file_name=f"Admin_Sales_Report_{datetime.date.today()}.csv")
 
 # ==========================================
-# 情況 B：業務員前台報價系統 (Sales Agent)
+# 💼 畫面 B：業務員前台報價系統 (Sales Agent)
 # ==========================================
 else:
-    # 多語系字典
     LANG_DICT = {
         "繁體中文": {
             "title": "🏭 塑膠射出 — 業務智慧估價系統",
@@ -144,8 +219,9 @@ else:
     with col1:
         st.subheader(L["step1_title"])
         
-        # 👤 業務員身份綁定區
-        current_sales = st.selectbox("👤 經辦業務員 / Sales Representative", SALES_TEAM)
+        # 📌 自動綁定登入者姓名
+        current_sales = st.session_state.user_info['name']
+        st.text_input("經辦業務員 / Sales Rep", current_sales, disabled=True)
         
         product_name = st.text_input("產品名稱 / Product Name", "喬丹11代風格水晶橡膠大底 (AJ11 Translucent Outsole)")
         desc = st.text_area("產品描述 / Description", "需求數量 50,000 雙，採用耐磨透明橡膠與中底碳纖維板複合射出成型。要求高度透光性、防黃變，尺寸 32cm x 12cm。")
@@ -155,7 +231,6 @@ else:
             with st.spinner("AI 正在解析業務需求並比對廠內模具資料庫..."):
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
-                # 1. 工程評估
                 try:
                     prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
                     res_analysis = model.generate_content(prompt_analysis, request_options={"timeout": 10})
@@ -163,14 +238,12 @@ else:
                 except:
                     st.session_state.ai_result = f"💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
 
-                # 2. 寫實橡膠大底圖片鎖定
                 st.session_state.matched_image = ACCURATE_GALLERY["sole"]
 
     with col2:
         if st.session_state.step >= 2:
             st.subheader(L["step2_title"])
             
-            # 顯示 100% 正宗橡膠大底寫實照片
             st.markdown(
                 f'''
                 <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; text-align: center;">
@@ -188,7 +261,7 @@ else:
             if st.button(L["btn_confirm_3d"], type="primary"):
                 st.session_state.step = 3
                 
-                # 📌 自動寫入後台資料庫
+                # 自動寫入該業務員的單號至資料庫
                 new_quote_id = f"QT-{datetime.date.today().strftime('%Y%m%d')}-{len(st.session_state.quotation_db)+1:03d}"
                 st.session_state.quotation_db.append({
                     "quote_id": new_quote_id,
@@ -199,13 +272,12 @@ else:
                     "curr": curr,
                     "date": str(datetime.date.today())
                 })
-                st.toast(f"✅ 報價單 {new_quote_id} 已成功存入後台資料庫！", icon="💾")
+                st.toast(f"✅ 報價單 {new_quote_id} 已成功上傳後台主管系統！", icon="💾")
 
         if st.session_state.step == 3:
             st.divider()
             st.subheader(L["step3_title"])
             
-            # 3D 渲染展示
             three_js_code = """
             <div id="container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -256,7 +328,6 @@ else:
 
             st.success(f"💰 報價計算完成 (經辦業務: {current_sales})：單件預估 $4.20 USD / 模具開發費 $6,500 USD")
 
-            # 包含業務員說明的 PDF 生成
             def generate_multilingual_pdf():
                 pdf_path = "official_quotation.pdf"
                 doc = SimpleDocTemplate(pdf_path, pagesize=letter)
