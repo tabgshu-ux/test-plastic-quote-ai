@@ -44,7 +44,7 @@ ACCURATE_GALLERY = {
 }
 
 # ==============================
-# 🌐 多語系字典（移到全域）
+# 🌐 多語系字典
 # ==============================
 LANG_DICT = {
     "繁體中文": {
@@ -54,14 +54,6 @@ LANG_DICT = {
         "step1_title": "1. 業務資訊與需求輸入",
         "step2_title": "2. 歷史大底打樣圖比對",
         "step3_title": "3. 3D 可視化模型與自動報價單",
-    },
-    "Tiếng Việt": {
-        "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
-        "btn_gen_2d": "🔍 Bước 1: Phân tích AI & Tìm kiếm hình ảnh",
-        "btn_confirm_3d": "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá",
-        "step1_title": "1. Nhập thông tin NVKD & Yêu cầu",
-        "step2_title": "2. Kết quả tìm kiếm từ thư viện AI",
-        "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
     },
     "English": {
         "title": "🏭 Global Plastic Injection — Sales Quotation System",
@@ -110,7 +102,7 @@ if user_role == "🔑 後台管理員中心 (Admin Portal)":
 else:
     top_col1, top_col2, top_col3 = st.columns(3)
     with top_col1:
-        lang = st.selectbox("🌐 Language / 語言", ["繁體中文", "Tiếng Việt", "English"])
+        lang = st.selectbox("🌐 Language / 語言", ["繁體中文", "English"])
     with top_col2:
         site = st.selectbox("🏭 Manufacturing Site", ["Taiwan (HQ)", "China (Dongguan)", "Vietnam (Binh Duong)"])
     with top_col3:
@@ -123,8 +115,8 @@ else:
     with col1:
         st.subheader(L["step1_title"])
         current_sales = st.selectbox("👤 經辦業務員 / Sales Representative", SALES_TEAM)
-        product_name = st.text_input("產品名稱 / Product Name", "喬丹11代風格水晶橡膠大底 (AJ11 Translucent Outsole)")
-        desc = st.text_area("產品描述 / Description", "需求數量 50,000 雙，採用耐磨透明橡膠與中底碳纖維板複合射出成型。要求高度透光性、防黃變，尺寸 32cm x 12cm。")
+        product_name = st.text_input("產品名稱 / Product Name", "喬丹11代風格水晶橡膠大底")
+        desc = st.text_area("產品描述 / Description", "需求數量 50,000 雙，採用耐磨透明橡膠與中底碳纖維板複合射出成型。")
 
         if st.button(L["btn_gen_2d"], type="primary"):
             st.session_state.step = 2
@@ -136,8 +128,22 @@ else:
                     st.session_state.ai_result = res_analysis.text
                 except:
                     st.session_state.ai_result = """💡 **預估材料建議**：
-                     建議採用高耐磨透明 TPU / 橡膠複合材質。
-                     - **預估單個重量**：180g
-                     - **建議模具穴數**：1 開 2
-                     - **建議機台噸數**：250 噸"""
+建議採用高耐磨透明 TPU / 橡膠複合材質。
+- **預估單個重量**：180g
+- **建議模具穴數**：1 開 2
+- **建議機台噸數**：250 噸"""
 
+                # 圖片匹配邏輯
+                if "大底" in product_name:
+                    st.session_state.matched_image = ACCURATE_GALLERY["sole"]
+                elif "外殼" in product_name:
+                    st.session_state.matched_image = ACCURATE_GALLERY["housing"]
+                elif "齒輪" in product_name:
+                    st.session_state.matched_image = ACCURATE_GALLERY["gear"]
+                else:
+                    st.session_state.matched_image = ACCURATE_GALLERY["default"]
+
+    with col2:
+        if st.session_state.step >= 2:
+            st.subheader(L["step2_title"])
+            st.image(st.session_state.matched_image, caption="AI 匹配圖片", use_container
