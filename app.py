@@ -84,7 +84,48 @@ if user_role == "🔑 後台管理員中心 (Admin Portal)":
 # 情況 B：業務員前台報價系統 (Sales Agent)
 # ==========================================
 else:
-    # 多語系字典 (略，保持原本的 LANG_DICT)
+    # 多語系字典
+    LANG_DICT = {
+        "繁體中文": {
+            "title": "🏭 塑膠射出 — 業務智慧估價系統",
+            "btn_gen_2d": "🔍 第一步：AI 分析與歷史模具庫比對",
+            "btn_confirm_3d": "✅ 確認產品樣式，下一步：生成 3D 渲染圖與報價",
+            "step1_title": "1. 業務資訊與需求輸入",
+            "step2_title": "2. 歷史大底打樣圖比對",
+            "step3_title": "3. 3D 可視化模型與自動報價單",
+            "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
+            "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
+            "item_mold": "Custom Mold Development",
+            "item_part": "Production Part Unit Cost",
+            "item_total": "Total Initial Order Amount",
+        },
+        "Tiếng Việt": {
+            "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
+            "btn_gen_2d": "🔍 Bước 1: Phân tích AI & Tìm kiếm hình ảnh",
+            "btn_confirm_3d": "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá",
+            "step1_title": "1. Nhập thông tin NVKD & Yêu cầu",
+            "step2_title": "2. Kết quả tìm kiếm từ thư viện AI",
+            "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
+            "pdf_btn": "📄 Tải bản thảo báo giá PDF",
+            "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
+            "item_mold": "Chi phí phát triển khuôn mẫu",
+            "item_part": "Đơn giá sản phẩm ép nhựa",
+            "item_total": "Tổng giá trị đơn hàng đầu tiên",
+        },
+        "English": {
+            "title": "🏭 Global Plastic Injection — Sales Quotation System",
+            "btn_gen_2d": "🔍 Step 1: AI Analysis & Database Match",
+            "btn_confirm_3d": "✅ Confirm Reference, Next: Render 3D Model & Quote",
+            "step1_title": "1. Sales Info & Specifications",
+            "step2_title": "2. AI Database Match Result",
+            "step3_title": "3. Interactive 3D Render & Final Quote",
+            "pdf_btn": "📄 Download Official PDF Quote",
+            "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
+            "item_mold": "Custom Mold Development",
+            "item_part": "Production Part Unit Cost",
+            "item_total": "Total Initial Order Amount",
+        }
+    }
 
     # 頂部選單
     top_col1, top_col2, top_col3 = st.columns(3)
@@ -122,37 +163,8 @@ else:
                 except:
                     st.session_state.ai_result = f"💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
 
-                # 2. 圖片匹配邏輯
-                if "大底" in product_name:
-                    st.session_state.matched_image = ACCURATE_GALLERY["sole"]
-                elif "外殼" in product_name:
-                    st.session_state.matched_image = ACCURATE_GALLERY["housing"]
-                elif "齒輪" in product_name:
-                    st.session_state.matched_image = ACCURATE_GALLERY["gear"]
-                else:
-                    st.session_state.matched_image = ACCURATE_GALLERY["default"]
-
-    with col2:
-        if st.session_state.step >= 2:
-            st.subheader(L["step2_title"])
-            
-            # 顯示圖片
-            st.markdown(
-                f'''
-                <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; text-align: center;">
-                    <img src="{st.session_state.matched_image}" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 6px;" alt="橡膠大底歷史圖庫">
-                    <p style="color: #38bdf8; font-size: 13px; margin-top: 8px; margin-bottom: 0;">
-                        🔍 AI 比對成功：調出廠內模具圖庫視圖
-                    </p>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-            
-            st.info(st.session_state.ai_result)
-            
-            if st.button(L["btn_confirm_3d"], type="primary"):
-                st.session_state.step = 3
+                # 2. 寫實橡膠大底圖片鎖定
+                st.session_state.matched_image = ACCURATE_GALLERY["sole"]
 
     with col2:
         if st.session_state.step >= 2:
