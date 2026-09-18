@@ -146,4 +146,5 @@ else:
     with col2:
         if st.session_state.step >= 2:
             st.subheader(L["step2_title"])
-            st.image(st.session_state.matched_image, caption="AI 匹配圖片", use_container
+            st.image(st.session_state.matched_image, caption="AI 匹配圖片", use_container_width=True)
+
