@@ -1,7 +1,6 @@
 import datetime
 import os
-import re
-
+import xml.etree.ElementTree as ET
 import google.generativeai as genai
 import pandas as pd
 from reportlab.lib import colors
@@ -24,7 +23,7 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# 🔐 1. 初始化使用者帳號資料庫 (寫入 Session State 以支援動態新增/修改/刪除)
+# 🔐 1. 初始化使用者帳號資料庫
 if "user_database" not in st.session_state:
   st.session_state.user_database = {
       "admin": {
@@ -49,7 +48,7 @@ if "user_database" not in st.session_state:
       },
   }
 
-# 💾 2. Session State 初始化 (登入狀態與報價單紀錄)
+# 💾 2. Session State 初始化 (報價單 + 越南發票資料庫)
 if "authenticated" not in st.session_state:
   st.session_state.authenticated = False
 if "user_info" not in st.session_state:
@@ -77,12 +76,28 @@ if "quotation_db" not in st.session_state:
       },
   ]
 
+# 🇻🇳 3. 越南發票資料庫初始化
+if "invoice_db" not in st.session_state:
+  st.session_state.invoice_db = [
+      {
+          "invoice_no": "0001234",
+          "pattern": "1/001",
+          "seller_name": "CÔNG TY TNHH MISA",
+          "seller_tax_code": "0101243150",
+          "amount_no_vat": 10000000,
+          "vat_amount": 1000000,
+          "total_amount": 11000000,
+          "currency": "VND",
+          "date": "2026-09-15",
+          "uploader": "Nguyen Van A (S-005)",
+      }
+  ]
+
 if "step" not in st.session_state:
   st.session_state.step = 1
 if "ai_result" not in st.session_state:
   st.session_state.ai_result = ""
 
-# 🎯 精準橡膠大底特寫照片庫
 ACCURATE_GALLERY = {
     "sole": (
         "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop"
@@ -97,6 +112,50 @@ ACCURATE_GALLERY = {
         "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop"
     ),
 }
+
+# 🇻🇳 越南發票 XML 自動解析函數
+def parse_vietnam_xml(xml_bytes):
+  try:
+    root = ET.fromstring(xml_bytes)
+
+    def get_text(node, tag_name):
+      if node is None:
+        return ""
+      for elem in node.iter():
+        if elem.tag.endswith(tag_name):
+          return elem.text.strip() if elem.text else ""
+      return ""
+
+    data = {
+        "invoice_no": get_text(root, "SHDon") or get_text(root, "InvoiceNo"),
+        "pattern": get_text(root, "KHMSHDon")
+        or get_text(root, "InvoicePattern"),
+        "seller_name": get_text(root, "TenNBan") or get_text(root, "ComName"),
+        "seller_tax_code": get_text(root, "MSTNBan")
+        or get_text(root, "ComTaxCode"),
+        "amount_no_vat": float(
+            get_text(root, "TgTCThue")
+            or get_text(root, "TotalAmountWithoutVAT")
+            or 0
+        ),
+        "vat_amount": float(
+            get_text(root, "TgTThue") or get_text(root, "VATAmount") or 0
+        ),
+        "total_amount": float(
+            get_text(root, "TgTTTBSo")
+            or get_text(root, "TotalAmountWithVAT")
+            or 0
+        ),
+        "currency": get_text(root, "DVTTe")
+        or get_text(root, "CurrencyCode")
+        or "VND",
+        "date": get_text(root, "NLap") or get_text(root, "AriseDate"),
+    }
+    return data
+  except Exception as e:
+    st.error(f"❌ XML 解析失敗: {e}")
+    return None
+
 
 # ==========================================
 # 🔓 3. 登入介面 (未登入時顯示)
@@ -133,13 +192,12 @@ if not st.session_state.authenticated:
         - **業務帳號 1**：`alex` / 密碼：`alex123`
         - **業務帳號 2**：`david` / 密碼：`david123`
         """)
-  st.stop()  # 未登入前停止執行後續畫面
+  st.stop()
 
 # ==========================================
 # 🔒 4. 已登入的主系統介面
 # ==========================================
 
-# 側邊欄：使用者資訊與登出按鈕
 st.sidebar.title("👤 使用者資訊")
 st.sidebar.write(f"**當前使用者**：{st.session_state.user_info['name']}")
 st.sidebar.write(
@@ -163,19 +221,20 @@ user_role = st.session_state.user_info["role"]
 if user_role == "admin":
   st.header("⚙️ 系統主管管理後台")
 
-  # 🌟 使用 st.tabs 建立兩個獨立的管理分頁
-  tab1, tab2 = st.tabs(
-      ["📊 業務報價總覽與資料庫", "👥 系統使用者管理 (User Management)"]
-  )
+  # 🌟 建立 3 個獨立的管理分頁（包含越南發票）
+  tab1, tab2, tab3 = st.tabs([
+      "📊 業務報價總覽與資料庫",
+      "👥 系統使用者管理 (User Management)",
+      "🇻🇳 越南電子發票登記 (Hóa đơn điện tử)",
+  ])
 
   # ------------------------------------------
-  # 分頁 1：業務報價總覽與資料庫
+  # 分頁 1：業務報價總覽
   # ------------------------------------------
   with tab1:
     st.caption(
         "您可以檢視全公司所有業務員的報價歷程、總金額統計，並匯出報表。"
     )
-
     df = pd.DataFrame(st.session_state.quotation_db)
     total_sales = df["amount"].sum() if not df.empty else 0
     total_orders = len(df)
@@ -201,7 +260,6 @@ if user_role == "admin":
         filtered_df = df
 
       st.dataframe(filtered_df, use_container_width=True)
-
       csv_data = filtered_df.to_csv(index=False).encode("utf-8-sig")
       st.download_button(
           "📥 匯出業務報價總表 (CSV)",
@@ -212,14 +270,12 @@ if user_role == "admin":
       st.info("目前尚無任何報價單紀錄。")
 
   # ------------------------------------------
-  # 分頁 2：系統使用者管理
+  # 分頁 2：使用者管理
   # ------------------------------------------
   with tab2:
     st.caption(
         "管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。"
     )
-
-    # 1. 顯示現有使用者列表
     st.subheader("📄 現有使用者名單")
     user_list = []
     for uname, udata in st.session_state.user_database.items():
@@ -236,8 +292,6 @@ if user_role == "admin":
     st.dataframe(pd.DataFrame(user_list), use_container_width=True)
 
     st.divider()
-
-    # 2. 新增使用者與修改/刪除操作
     col_add, col_manage = st.columns(2)
 
     with col_add:
@@ -247,7 +301,11 @@ if user_role == "admin":
         new_password = st.text_input("預設密碼 (Password)")
         new_name = st.text_input("顯示姓名與工號 (例如: Eric Lin (S-008))")
         new_role = st.selectbox(
-            "選擇權限角色", ["sales", "admin"], format_func=lambda x: "💼 業務人員" if x == "sales" else "🔑 系統主管"
+            "選擇權限角色",
+            ["sales", "admin"],
+            format_func=lambda x: (
+                "💼 業務人員" if x == "sales" else "🔑 系統主管"
+            ),
         )
 
         submit_add = st.form_submit_button("✅ 建立新帳號", type="primary")
@@ -268,12 +326,8 @@ if user_role == "admin":
 
     with col_manage:
       st.subheader("🛠️ 修改密碼 / 刪除帳號")
-
-      # 選擇欲管理的帳號（不包含目前的登入者自己）
       manageable_users = [
-          u
-          for u in st.session_state.user_database.keys()
-          if u != "admin"  # 保護預設 admin
+          u for u in st.session_state.user_database.keys() if u != "admin"
       ]
 
       if manageable_users:
@@ -281,7 +335,6 @@ if user_role == "admin":
             "選擇要管理的帳號", manageable_users
         )
 
-        # 修改密碼
         with st.expander("🔑 重設此帳號密碼"):
           updated_pwd = st.text_input(
               f"輸入 `{selected_target_user}` 的新密碼",
@@ -298,15 +351,98 @@ if user_role == "admin":
             else:
               st.warning("請輸入新密碼！")
 
-        # 刪除帳號
         with st.expander("❌ 刪除此帳號"):
-          st.warning(f"確定要刪除帳號 `{selected_target_user}` 嗎？此動作無法復原。")
+          st.warning(f"確定要刪除帳號 `{selected_target_user}` 嗎？")
           if st.button("確認刪除帳號", type="primary"):
             del st.session_state.user_database[selected_target_user]
             st.success(f"🗑️ 帳號 `{selected_target_user}` 已刪除！")
             st.rerun()
       else:
         st.info("目前沒有可供修改或刪除的其他使用者。")
+
+  # ------------------------------------------
+  # 🇻🇳 分頁 3：越南發票登記與自動解析
+  # ------------------------------------------
+  with tab3:
+    st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
+    st.caption(
+        "直接上傳越南稅局標準 XML 發票檔案，AI 系統將自動抓取金額、稅號與開立單位並登記於後台。"
+    )
+
+    col_xml, col_preview = st.columns([1, 1])
+
+    with col_xml:
+      st.markdown("### 📤 自動解析發票 (上傳 XML)")
+      uploaded_xml = st.file_uploader(
+          "請選擇越南電子發票檔 (.xml)", type=["xml"]
+      )
+
+      if uploaded_xml is not None:
+        xml_bytes = uploaded_xml.read()
+        parsed_data = parse_vietnam_xml(xml_bytes)
+
+        if parsed_data:
+          st.success("✅ XML 發票解析成功！")
+          st.json(parsed_data)
+
+          if st.button("💾 確認匯入系統資料庫", type="primary"):
+            parsed_data["uploader"] = st.session_state.user_info["name"]
+            st.session_state.invoice_db.append(parsed_data)
+            st.toast("🎉 發票已成功登錄至發票總表！", icon="🧾")
+            st.rerun()
+
+    with col_preview:
+      st.markdown("### 📝 手動登記發票")
+      with st.form("manual_invoice_form"):
+        inv_no = st.text_input("發票號碼 (Số hóa đơn)", "0005678")
+        inv_pattern = st.text_input("發票代碼 (Mẫu số)", "1/001")
+        seller_name = st.text_input(
+            "賣方公司 (Bên bán)", "CÔNG TY TNHH PLASTIC VN"
+        )
+        seller_tax = st.text_input("賣方稅號 (MST)", "3701234567")
+        total_amt = st.number_input(
+            "總金額 (含稅 VND)", min_value=0.0, value=2500000.0, step=1000.0
+        )
+        inv_date = st.date_input("開立日期", datetime.date.today())
+
+        submit_inv = st.form_submit_button("➕ 手動新增發票")
+        if submit_inv:
+          new_inv = {
+              "invoice_no": inv_no,
+              "pattern": inv_pattern,
+              "seller_name": seller_name,
+              "seller_tax_code": seller_tax,
+              "amount_no_vat": round(total_amt / 1.1, 2),
+              "vat_amount": round(total_amt - (total_amt / 1.1), 2),
+              "total_amount": total_amt,
+              "currency": "VND",
+              "date": str(inv_date),
+              "uploader": st.session_state.user_info["name"],
+          }
+          st.session_state.invoice_db.append(new_inv)
+          st.success("✅ 手動登記成功！")
+          st.rerun()
+
+    st.divider()
+    st.subheader("📊 已登記越南發票總表")
+
+    if st.session_state.invoice_db:
+      inv_df = pd.DataFrame(st.session_state.invoice_db)
+
+      # 算總金額 Metric
+      total_vnd = inv_df["total_amount"].sum()
+      st.metric("已登記發票總金額", f"{total_vnd:,.0f} VND")
+
+      st.dataframe(inv_df, use_container_width=True)
+
+      inv_csv = inv_df.to_csv(index=False).encode("utf-8-sig")
+      st.download_button(
+          "📥 匯出越南發票總表 (CSV)",
+          inv_csv,
+          file_name=f"Vietnam_Invoices_{datetime.date.today()}.csv",
+      )
+    else:
+      st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
 # 💼 畫面 B：業務員前台報價系統 (Sales Agent)
@@ -360,7 +496,6 @@ else:
       },
   }
 
-  # 頂部選單
   top_col1, top_col2, top_col3 = st.columns(3)
   with top_col1:
     lang = st.selectbox(
@@ -381,8 +516,6 @@ else:
 
   with col1:
     st.subheader(L["step1_title"])
-
-    # 📌 自動綁定登入者姓名
     current_sales = st.session_state.user_info["name"]
     st.text_input("經辦業務員 / Sales Rep", current_sales, disabled=True)
 
@@ -401,7 +534,6 @@ else:
           "AI 正在解析業務需求並比對廠內模具資料庫..."
       ):
         model = genai.GenerativeModel("gemini-1.5-flash")
-
         try:
           prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
           res_analysis = model.generate_content(
@@ -416,7 +548,6 @@ else:
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
-
       st.markdown(
           f"""
                 <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; text-align: center;">
@@ -428,13 +559,10 @@ else:
                 """,
           unsafe_allow_html=True,
       )
-
       st.info(st.session_state.ai_result)
 
       if st.button(L["btn_confirm_3d"], type="primary"):
         st.session_state.step = 3
-
-        # 自動寫入該業務員的單號至資料庫
         new_quote_id = f"QT-{datetime.date.today().strftime('%Y%m%d')}-{len(st.session_state.quotation_db)+1:03d}"
         st.session_state.quotation_db.append({
             "quote_id": new_quote_id,
