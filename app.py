@@ -1,4 +1,7 @@
 import datetime
+import email
+from email.header import decode_header
+import imaplib
 import os
 import xml.etree.ElementTree as ET
 import google.generativeai as genai
@@ -84,9 +87,9 @@ if "invoice_db" not in st.session_state:
           "pattern": "1/001",
           "seller_name": "CÔNG TY TNHH MISA",
           "seller_tax_code": "0101243150",
-          "amount_no_vat": 10000000,
-          "vat_amount": 1000000,
-          "total_amount": 11000000,
+          "amount_no_vat": 10000000.0,
+          "vat_amount": 1000000.0,
+          "total_amount": 11000000.0,
           "currency": "VND",
           "date": "2026-09-15",
           "uploader": "Nguyen Van A (S-005)",
@@ -112,6 +115,7 @@ ACCURATE_GALLERY = {
         "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop"
     ),
 }
+
 
 # 🇻🇳 越南發票 XML 自動解析函數
 def parse_vietnam_xml(xml_bytes):
@@ -155,6 +159,53 @@ def parse_vietnam_xml(xml_bytes):
   except Exception as e:
     st.error(f"❌ XML 解析失敗: {e}")
     return None
+
+
+# 📧 通用信箱自動連線與下載 XML 發票函數
+def fetch_invoices_from_custom_email(
+    imap_server, port, user_email, user_password
+):
+  try:
+    mail = imaplib.IMAP4_SSL(imap_server, port)
+    mail.login(user_email, user_password)
+    mail.select("inbox")
+
+    # 搜尋郵件內文包含 Hóa đơn 的信件
+    status, messages = mail.search(None, '(BODY "Hóa đơn")')
+    email_ids = messages[0].split()
+
+    downloaded_invoices = []
+
+    # 讀取最新的 5 封發票郵件做測試
+    for e_id in email_ids[-5:]:
+      _, msg_data = mail.fetch(e_id, "(RFC822)")
+      for response_part in msg_data:
+        if isinstance(response_part, tuple):
+          msg = email.message_from_bytes(response_part[1])
+
+          for part in msg.walk():
+            if part.get_content_maintype() == "multipart":
+              continue
+            if part.get("Content-Disposition") is None:
+              continue
+
+            filename = part.get_filename()
+            if filename:
+              filename_decoded, enc = decode_header(filename)[0]
+              if isinstance(filename_decoded, bytes):
+                filename = filename_decoded.decode(enc or "utf-8")
+
+              if filename.lower().endswith(".xml"):
+                xml_data = part.get_payload(decode=True)
+                invoice_info = parse_vietnam_xml(xml_data)
+                if invoice_info:
+                  downloaded_invoices.append(invoice_info)
+
+    mail.logout()
+    return downloaded_invoices
+  except Exception as e:
+    st.error(f"❌ 信箱連線或抓取失敗：{e}")
+    return []
 
 
 # ==========================================
@@ -221,7 +272,6 @@ user_role = st.session_state.user_info["role"]
 if user_role == "admin":
   st.header("⚙️ 系統主管管理後台")
 
-  # 🌟 建立 3 個獨立的管理分頁（包含越南發票）
   tab1, tab2, tab3 = st.tabs([
       "📊 業務報價總覽與資料庫",
       "👥 系統使用者管理 (User Management)",
@@ -361,20 +411,50 @@ if user_role == "admin":
         st.info("目前沒有可供修改或刪除的其他使用者。")
 
   # ------------------------------------------
-  # 🇻🇳 分頁 3：越南發票登記與自動解析
+  # 🇻🇳 分頁 3：越南發票登記（支援手動、上傳與「信箱連線」）
   # ------------------------------------------
   with tab3:
     st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
     st.caption(
-        "直接上傳越南稅局標準 XML 發票檔案，AI 系統將自動抓取金額、稅號與開立單位並登記於後台。"
+        "您可以透過**手動連線公司信箱**、**上傳 XML 檔案** 或 **手動輸入**"
+        " 進行發票登記。"
     )
+
+    # 🌐 模式 1: 企業信箱自動連線設定
+    with st.expander("📧 模式 A：設定公司專屬信箱，自動連線抓取發票", expanded=True):
+      col_m1, col_m2 = st.columns(2)
+      with col_m1:
+        mail_server = st.text_input(
+            "IMAP 伺服器地址 (Server)", "mail.yourcompany.com"
+        )
+        mail_port = st.number_input("IMAP Port (預設 SSL: 993)", value=993)
+      with col_m2:
+        mail_user = st.text_input("信箱帳號 (Email)", "invoice@yourcompany.com")
+        mail_pwd = st.text_input("信箱密碼 (Password)", type="password")
+
+      if st.button("🚀 開始連線信箱並讀取最新發票", type="primary"):
+        with st.spinner("正在安全連線至公司信箱並搜尋 XML 發票..."):
+          fetched_invs = fetch_invoices_from_custom_email(
+              mail_server, mail_port, mail_user, mail_pwd
+          )
+          if fetched_invs:
+            for inv in fetched_invs:
+              inv["uploader"] = f"Auto-Email ({mail_user})"
+              st.session_state.invoice_db.append(inv)
+            st.success(f"🎉 成功從信箱抓取並解析 {len(fetched_invs)} 張發票！")
+            st.rerun()
+          else:
+            st.warning("⚠️ 連線成功但未搜尋到新的 XML 發票附件。")
+
+    st.divider()
 
     col_xml, col_preview = st.columns([1, 1])
 
+    # 🌐 模式 2: 上傳 XML
     with col_xml:
-      st.markdown("### 📤 自動解析發票 (上傳 XML)")
+      st.markdown("### 📤 模式 B：上傳 XML 單檔解析")
       uploaded_xml = st.file_uploader(
-          "請選擇越南電子發票檔 (.xml)", type=["xml"]
+          "選擇越南電子發票檔 (.xml)", type=["xml"]
       )
 
       if uploaded_xml is not None:
@@ -391,8 +471,9 @@ if user_role == "admin":
             st.toast("🎉 發票已成功登錄至發票總表！", icon="🧾")
             st.rerun()
 
+    # 🌐 模式 3: 手動輸入
     with col_preview:
-      st.markdown("### 📝 手動登記發票")
+      st.markdown("### 📝 模式 C：手動輸入發票")
       with st.form("manual_invoice_form"):
         inv_no = st.text_input("發票號碼 (Số hóa đơn)", "0005678")
         inv_pattern = st.text_input("發票代碼 (Mẫu số)", "1/001")
@@ -429,7 +510,6 @@ if user_role == "admin":
     if st.session_state.invoice_db:
       inv_df = pd.DataFrame(st.session_state.invoice_db)
 
-      # 算總金額 Metric
       total_vnd = inv_df["total_amount"].sum()
       st.metric("已登記發票總金額", f"{total_vnd:,.0f} VND")
 
