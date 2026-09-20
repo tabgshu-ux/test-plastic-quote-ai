@@ -30,14 +30,14 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🎨 通用型塑膠/橡膠射出產品圖庫匹配函數 (支援塑膠盒、外殼、齒輪、橡膠件等)
+# 🎨 通用型塑膠/橡膠射出產品圖庫匹配函數 (精準過濾非工廠背景)
 def get_injection_product_image(product_name):
-  """根據業務輸入的產品名稱，自動匹配對應的工業射出零件高解析照片"""
+  """根據關鍵字匹配專業、乾淨的射出成型產品結構特寫圖"""
   p_name = product_name.lower()
 
-  # 1. 塑膠盒 / 收納盒 / 容器類
+  # 1. 塑膠盒 / 收納盒 / 容器類 (產品特寫)
   if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
-    return "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=1000&auto=format&fit=crop&q=80"
+    return "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=1000&auto=format&fit=crop&q=80"
 
   # 2. 車用外殼 / 電子機構件 / 工業外殼
   elif any(
@@ -54,7 +54,7 @@ def get_injection_product_image(product_name):
   elif any(k in p_name for k in ["底", "sole", "outsole", "橡膠"]):
     return "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=1000&auto=format&fit=crop&q=80"
 
-  # 5. 預設工業塑膠射出原料與成品展示
+  # 5. 預設工業塑膠射出成品展示
   else:
     return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80"
 
@@ -84,11 +84,21 @@ if "user_database" not in st.session_state:
       },
   }
 
-# 💾 2. Session State 初始化 (報價單 + 越南發票資料庫)
+# 💾 2. Session State 初始化 (報價單 + 聊天紀錄 + 越南發票資料庫)
 if "authenticated" not in st.session_state:
   st.session_state.authenticated = False
 if "user_info" not in st.session_state:
   st.session_state.user_info = None
+
+if "chat_messages" not in st.session_state:
+  st.session_state.chat_messages = [
+      {
+          "role": "assistant",
+          "content": (
+              "👋 您好！我是 Gemini AI 射出估價助手。請輸入您想評估的產品（例如：透明塑膠盒、車用外殼或橡膠大底），我將即時為您分析規格並呈現象圖！"
+          ),
+      }
+  ]
 
 if "quotation_db" not in st.session_state:
   st.session_state.quotation_db = [
@@ -536,18 +546,14 @@ if user_role == "admin":
       st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
-# 💼 畫面 B：業務人員前台報價系統 (Sales Agent)
+# 💼 畫面 B：業務人員前台報價系統 (嵌入 Gemini AI 對話助手)
 # ==========================================
 else:
   LANG_DICT = {
       "繁體中文": {
           "title": "🏭 塑膠/橡膠射出成型 — 業務智慧估價系統",
-          "btn_gen_2d": "🎨 第一步：AI 分析需求與匹配產品樣圖",
-          "btn_confirm_3d": (
-              "✅ 確認產品樣式，下一步：生成 3D 渲染圖與報價"
-          ),
-          "step1_title": "1. 業務資訊與需求輸入",
-          "step2_title": "2. 射出產品樣貌與結構圖展示",
+          "step1_title": "1. 🤖 Gemini AI 需求對話與規格輸入",
+          "step2_title": "2. 🖼️ 射出產品設計與圖片即時展示",
           "step3_title": "3. 3D 可視化模型與自動報價單",
           "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -557,12 +563,8 @@ else:
       },
       "Tiếng Việt": {
           "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
-          "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Khớp mẫu sản phẩm",
-          "btn_confirm_3d": (
-              "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá"
-          ),
-          "step1_title": "1. Nhập thông tin NVKD & Yêu cầu",
-          "step2_title": "2. Hình ảnh thiết kế sản phẩm chất lượng cao",
+          "step1_title": "1. 🤖 Gemini AI Phân Tích & Nhập Yêu Cầu",
+          "step2_title": "2. 🖼️ Hình Ảnh Thiết Kế Sản Phẩm",
           "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
           "pdf_btn": "📄 Tải bản thảo báo giá PDF",
           "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
@@ -572,12 +574,8 @@ else:
       },
       "English": {
           "title": "🏭 Global Plastic Injection — Sales Quotation System",
-          "btn_gen_2d": "🎨 Step 1: AI Spec Analysis & Match Product Design",
-          "btn_confirm_3d": (
-              "✅ Confirm Design, Next: Render 3D Model & Quote"
-          ),
-          "step1_title": "1. Sales Info & Specifications",
-          "step2_title": "2. High-Quality Injection Product Render",
+          "step1_title": "1. 🤖 Gemini AI Copilot & Specs Input",
+          "step2_title": "2. 🖼️ Product Design Preview",
           "step3_title": "3. Interactive 3D Render & Final Quote",
           "pdf_btn": "📄 Download Official PDF Quote",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -605,54 +603,68 @@ else:
 
   col1, col2 = st.columns([1, 1])
 
+  # 左側：Gemini 對話框與輸入區
   with col1:
     st.subheader(L["step1_title"])
     current_sales = st.session_state.user_info["name"]
     st.text_input("經辦業務員 / Sales Rep", current_sales, disabled=True)
 
-    product_name = st.text_input(
-        "產品名稱 / Product Name",
-        "透明耐衝擊射出塑膠盒 (Transparent Injection Plastic Box)",
-    )
-    desc = st.text_area(
-        "產品描述 / Description",
-        "需求數量 20,000 個，採用 PP/ABS 耐衝擊透明塑膠，具備雙邊卡扣與高密封性結構，尺寸 20cm x 15cm x 8cm。",
-    )
-
+    # 上傳客戶圖面
     uploaded_design = st.file_uploader(
-        "📤 可選：自訂上傳客戶 2D / CAD 圖面 (.jpg, .png)",
+        "📤 上傳客戶原廠 2D / CAD 圖面 (.jpg, .png)",
         type=["jpg", "jpeg", "png"],
     )
 
-    if st.button(L["btn_gen_2d"], type="primary", key="btn_gen_2d_step1"):
+    # 🤖 嵌入式 Gemini Chat 視窗
+    st.caption("💬 與 Gemini AI 討論需求，系統將同步於右側生成圖面與估價：")
+    chat_container = st.container(height=280)
+
+    for msg in st.session_state.chat_messages:
+      with chat_container.chat_message(msg["role"]):
+        st.write(msg["content"])
+
+    # 用戶輸入訊息
+    if user_prompt := st.chat_input("輸入產品需求（例如：透明塑膠盒、車用外殼、橡膠大底...）"):
+      st.session_state.chat_messages.append(
+          {"role": "user", "content": user_prompt}
+      )
       st.session_state.step = 2
-      with st.spinner("AI 正在解析射出規格，並匹配產品結構圖..."):
-        # 1. LLM 規格建議分析 (Gemini 1.5 Flash)
+
+      # 呼叫 Gemini AI 進行專業射出規格分析
+      with st.spinner("Gemini 正在分析產品規格與計算建議..."):
         model = genai.GenerativeModel("gemini-1.5-flash")
         try:
-          prompt_analysis = f"Analyze plastic/rubber injection specs for product: {product_name}, description: {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
-          res_analysis = model.generate_content(
-              prompt_analysis, request_options={"timeout": 10}
+          sys_prompt = f"You are an expert plastic and rubber injection molding consultant. Analyze user request: '{user_prompt}'. Provide technical suggestions on Material, Part Weight(g), Mold Cavities, Machine Tonnage, and Estimated Unit Cost in {lang}."
+          response = model.generate_content(
+              sys_prompt, request_options={"timeout": 12}
           )
-          st.session_state.ai_result = res_analysis.text
+          ai_reply = response.text
         except:
-          st.session_state.ai_result = "💡 **預估材料建議**：建議採用射出級耐衝擊 PP / ABS 材質。\n- **預估單個重量**：120g\n- **建議模具穴數**：1 開 2 (1*2 Cavity)\n- **建議射出機台**：180 噸"
+          ai_reply = "💡 **Gemini AI 建議**：根據射出需求，建議採用耐衝擊高透光 PP/ABS 材料。\n- **預估單個重量**：120g\n- **模具穴數**：1 開 2 (Cavity)\n- **建議噸數**：180 噸"
 
-        # 2. 若業務有自行上傳圖面，優先生產上傳圖；否則自動匹配對應類別的射出零件照片
-        if uploaded_design is not None:
-          st.session_state.matched_image = uploaded_design
-          st.session_state.is_uploaded = True
-        else:
-          st.session_state.matched_image = get_injection_product_image(
-              product_name
-          )
-          st.session_state.is_uploaded = False
+      st.session_state.chat_messages.append(
+          {"role": "assistant", "content": ai_reply}
+      )
+      st.session_state.ai_result = ai_reply
 
+      # 同步更新圖片 (優先使用上傳圖，否則自動匹配對應圖庫)
+      if uploaded_design is not None:
+        st.session_state.matched_image = uploaded_design
+        st.session_state.is_uploaded = True
+      else:
+        st.session_state.matched_image = get_injection_product_image(
+            user_prompt
+        )
+        st.session_state.is_uploaded = False
+
+      st.rerun()
+
+  # 右側：圖片展示與 3D 報價區
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
 
-      # 顯示圖片 (區分上傳圖面與系統匹配圖)
+      # 顯示即時圖片 (位於右側您指定的地方)
       if st.session_state.get("is_uploaded", False):
         st.image(
             st.session_state.matched_image,
@@ -662,23 +674,21 @@ else:
       else:
         st.image(
             st.session_state.matched_image,
-            caption=(
-                f"✨ 系統匹配射出成型結構圖：【{product_name}】相關質感與輪廓展示"
-            ),
+            caption="✨ Gemini AI 同步匹配之產品結構與外觀質感特寫",
             use_container_width=True,
         )
 
-      st.info(st.session_state.ai_result)
-
       if st.button(
-          L["btn_confirm_3d"], type="primary", key="btn_confirm_3d_step2"
+          "✅ 確認產品樣式，生成 3D 模型與報價單",
+          type="primary",
+          key="btn_confirm_3d_step2",
       ):
         st.session_state.step = 3
         new_quote_id = f"QT-{datetime.date.today().strftime('%Y%m%d')}-{len(st.session_state.quotation_db)+1:03d}"
         st.session_state.quotation_db.append({
             "quote_id": new_quote_id,
             "sales_rep": current_sales,
-            "client_product": product_name,
+            "client_product": "Gemini AI 客製射出產品",
             "site": site,
             "amount": 216500,
             "curr": curr,
@@ -703,7 +713,7 @@ else:
                 renderer.setSize(container.clientWidth, container.clientHeight);
                 container.appendChild(renderer.domElement);
 
-                // 3D 通用射出立方機構/容器渲染 (Interactive 3D Render)
+                // 3D 通用射出機構渲染
                 const geometry = new THREE.BoxGeometry(2, 1.2, 0.8);
                 const material = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.85 });
                 const mesh = new THREE.Mesh(geometry, material);
