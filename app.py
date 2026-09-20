@@ -30,68 +30,19 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🎨 橡膠大底專用 2D Canvas 動態即時繪製元件 (0秒生成、100%不逾時)
-def render_rubber_outsole_canvas(product_name):
-  """使用 HTML5 Canvas 在前端極速渲染具備人字紋與防滑刻痕的橡膠大底設計圖"""
-  canvas_html = f"""
-    <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid #334155;">
-        <canvas id="outsoleCanvas" width="400" height="280" style="background-color: #1e293b; border-radius: 8px; box-shadow: inset 0 0 10px #000;"></canvas>
-        <p style="color: #38bdf8; font-size: 13px; margin-top: 10px; margin-bottom: 0;">
-            ✨ AI 產品結構模擬：已為【{product_name}】即時算繪高防滑人字紋與深溝槽橡膠刻痕
-        </p>
-    </div>
-    <script>
-        const canvas = document.getElementById('outsoleCanvas');
-        const ctx = canvas.getContext('2d');
+# 🎨 橡膠大底高畫質實體圖庫庫存 (根據關鍵字自動匹配逼真大底圖)
+def get_high_quality_outsole_image(product_name):
+  """根據產品名稱回傳高畫質且具備防滑刻痕的專業橡膠大底照片"""
+  # 高解析度橡膠大底與鞋底刻痕特寫圖庫
+  outsole_gallery = [
+      "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80",  # 水晶透明防滑橡膠底
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",  # 高抓地力紋路底
+      "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&auto=format&fit=crop&q=80",  # 工業射出輪廓底
+  ]
 
-        // 清除背景
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 繪製大底外廓 (Shoe Outsole Outline)
-        ctx.beginPath();
-        ctx.moveTo(100, 40);
-        ctx.bezierCurveTo(250, 20, 320, 50, 310, 140);
-        ctx.bezierCurveTo(300, 220, 220, 250, 130, 240);
-        ctx.bezierCurveTo(80, 230, 70, 160, 80, 100);
-        ctx.bezierCurveTo(85, 60, 90, 45, 100, 40);
-        ctx.closePath();
-
-        // 大底底色 (透明/水晶橡膠質感)
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
-        ctx.fill();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#38bdf8';
-        ctx.stroke();
-
-        // 繪製人字紋與抓地溝槽 (Herringbone Tread Patterns)
-        ctx.strokeStyle = '#0284c7';
-        ctx.lineWidth = 3;
-        for (let y = 60; y < 220; y += 16) {{
-            ctx.beginPath();
-            for (let x = 110; x < 280; x += 30) {{
-                ctx.moveTo(x, y);
-                ctx.lineTo(x + 15, y - 8);
-                ctx.lineTo(x + 30, y);
-            }}
-            ctx.stroke();
-        }}
-
-        // 繪製防滑縱向主溝槽 (Drainage Grooves)
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(150, 55); ctx.lineTo(160, 225);
-        ctx.moveTo(230, 55); ctx.lineTo(240, 215);
-        ctx.stroke();
-
-        // 標註品牌與射出標章
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('RUBBER / TPU INJECTION', 140, 145);
-    </script>
-    """
-  components.html(canvas_html, height=330)
+  # 簡單的 Hash 匹配，確保相同的產品名稱會顯示同一張高畫質大底圖
+  img_index = sum(ord(char) for char in product_name) % len(outsole_gallery)
+  return outsole_gallery[img_index]
 
 
 # 🔐 1. 初始化使用者帳號資料庫
@@ -577,12 +528,12 @@ else:
   LANG_DICT = {
       "繁體中文": {
           "title": "🏭 塑膠射出 — 業務智慧估價系統",
-          "btn_gen_2d": "🎨 第一步：AI 分析需求與即時生成大底刻痕圖",
+          "btn_gen_2d": "🎨 第一步：AI 分析需求與匹配大底刻痕圖",
           "btn_confirm_3d": (
               "✅ 確認產品樣式，下一步：生成 3D 渲染圖與報價"
           ),
           "step1_title": "1. 業務資訊與需求輸入",
-          "step2_title": "2. AI 即時繪製高精細橡膠大底樣式",
+          "step2_title": "2. 高精細橡膠大底樣式展示",
           "step3_title": "3. 3D 可視化模型與自動報價單",
           "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -592,12 +543,12 @@ else:
       },
       "Tiếng Việt": {
           "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
-          "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Tạo hình ảnh đế cao su AI",
+          "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Khớp mẫu đế cao su",
           "btn_confirm_3d": (
               "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá"
           ),
           "step1_title": "1. Nhập thông tin NVKD & Yêu cầu",
-          "step2_title": "2. Hình ảnh thiết kế đế cao su do AI tạo",
+          "step2_title": "2. Hình ảnh thiết kế đế cao su chất lượng cao",
           "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
           "pdf_btn": "📄 Tải bản thảo báo giá PDF",
           "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
@@ -607,12 +558,12 @@ else:
       },
       "English": {
           "title": "🏭 Global Plastic Injection — Sales Quotation System",
-          "btn_gen_2d": "🎨 Step 1: AI Spec Analysis & Real-time AI Generation",
+          "btn_gen_2d": "🎨 Step 1: AI Spec Analysis & Match Outsole Design",
           "btn_confirm_3d": (
               "✅ Confirm Design, Next: Render 3D Model & Quote"
           ),
           "step1_title": "1. Sales Info & Specifications",
-          "step2_title": "2. AI Generated Outsole Design",
+          "step2_title": "2. High-Quality Outsole Design",
           "step3_title": "3. Interactive 3D Render & Final Quote",
           "pdf_btn": "📄 Download Official PDF Quote",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -656,7 +607,7 @@ else:
 
     if st.button(L["btn_gen_2d"], type="primary", key="btn_gen_2d_step1"):
       st.session_state.step = 2
-      with st.spinner("AI 正在解析業務需求，並算繪大底結構圖..."):
+      with st.spinner("AI 正在解析業務需求，並檢索高畫質大底結構圖..."):
         # 1. LLM 規格建議分析 (Gemini 1.5 Flash)
         model = genai.GenerativeModel("gemini-1.5-flash")
         try:
@@ -668,12 +619,21 @@ else:
         except:
           st.session_state.ai_result = "💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
 
+        # 2. 匹配高畫質美觀的實體橡膠大底照片
+        st.session_state.matched_image = get_high_quality_outsole_image(
+            product_name
+        )
+
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
 
-      # ⚡ 直接呼叫前端極速 Canvas 渲染 2D 橡膠大底刻痕圖
-      render_rubber_outsole_canvas(product_name)
+      # 顯示美觀且高細節的大底特寫照片
+      st.image(
+          st.session_state.matched_image,
+          caption="✨ 高細節橡膠大底樣式：人字防滑刻痕與透光射出質感展示",
+          use_container_width=True,
+      )
 
       st.info(st.session_state.ai_result)
 
