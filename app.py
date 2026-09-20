@@ -30,20 +30,33 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🎨 專屬「純橡膠大底 / 鞋底刻痕視角 (Outsole Bottom View)」圖库
-def get_high_quality_outsole_image(product_name):
-  """根據產品名稱回傳純橡膠大底特寫、防滑紋路與刻痕的專業設計照片"""
-  outsole_gallery = [
-      # 1. 專業防滑橡膠大底特寫 (人字紋與溝槽細節)
-      "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=1000&auto=format&fit=crop&q=80",
-      # 2. 高抓地力橡膠底刻痕特寫
-      "https://images.unsplash.com/photo-1539185441755-769473a23570?w=1000&auto=format&fit=crop&q=80",
-      # 3. 複合材質 TPU / 橡膠射出底細節
-      "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=1000&auto=format&fit=crop&q=80",
-  ]
+# 🎨 通用型塑膠/橡膠射出產品圖庫匹配函數 (支援塑膠盒、外殼、齒輪、橡膠件等)
+def get_injection_product_image(product_name):
+  """根據業務輸入的產品名稱，自動匹配對應的工業射出零件高解析照片"""
+  p_name = product_name.lower()
 
-  img_index = sum(ord(char) for char in product_name) % len(outsole_gallery)
-  return outsole_gallery[img_index]
+  # 1. 塑膠盒 / 收納盒 / 容器類
+  if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
+    return "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=1000&auto=format&fit=crop&q=80"
+
+  # 2. 車用外殼 / 電子機構件 / 工業外殼
+  elif any(
+      k in p_name
+      for k in ["外殼", "shell", "housing", "車用", "電子", "cover"]
+  ):
+    return "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1000&auto=format&fit=crop&q=80"
+
+  # 3. 齒輪 / 精密射出零件
+  elif any(k in p_name for k in ["齒輪", "gear", "精密", "零件", "part"]):
+    return "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=1000&auto=format&fit=crop&q=80"
+
+  # 4. 橡膠大底 / 鞋底紋路特寫
+  elif any(k in p_name for k in ["底", "sole", "outsole", "橡膠"]):
+    return "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=1000&auto=format&fit=crop&q=80"
+
+  # 5. 預設工業塑膠射出原料與成品展示
+  else:
+    return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80"
 
 
 # 🔐 1. 初始化使用者帳號資料庫
@@ -82,9 +95,9 @@ if "quotation_db" not in st.session_state:
       {
           "quote_id": "QT-20260918-001",
           "sales_rep": "Alex Chen (S-001)",
-          "client_product": "喬丹11代風格水晶橡膠大底",
+          "client_product": "透明耐衝擊塑膠收納盒",
           "site": "Vietnam (Binh Duong)",
-          "amount": 216500,
+          "amount": 12500,
           "curr": "USD",
           "date": "2026-09-18",
       },
@@ -215,7 +228,7 @@ def fetch_invoices_from_custom_email(
 # 🔓 3. 登入介面 (未登入時顯示)
 # ==========================================
 if not st.session_state.authenticated:
-  st.title("🏭 塑膠射出跨國 AI 報價系統 — 用戶登入")
+  st.title("🏭 塑膠/橡膠射出成型 — 跨國 AI 報價 ERP 系統")
   st.caption("請輸入您的企業帳號與密碼以進行身份驗證")
 
   col_login, _ = st.columns([1, 1])
@@ -528,13 +541,13 @@ if user_role == "admin":
 else:
   LANG_DICT = {
       "繁體中文": {
-          "title": "🏭 塑膠射出 — 業務智慧估價系統",
-          "btn_gen_2d": "🎨 第一步：AI 分析需求與匹配大底刻痕圖",
+          "title": "🏭 塑膠/橡膠射出成型 — 業務智慧估價系統",
+          "btn_gen_2d": "🎨 第一步：AI 分析需求與匹配產品樣圖",
           "btn_confirm_3d": (
               "✅ 確認產品樣式，下一步：生成 3D 渲染圖與報價"
           ),
           "step1_title": "1. 業務資訊與需求輸入",
-          "step2_title": "2. 高精細橡膠大底樣式展示",
+          "step2_title": "2. 射出產品樣貌與結構圖展示",
           "step3_title": "3. 3D 可視化模型與自動報價單",
           "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -544,12 +557,12 @@ else:
       },
       "Tiếng Việt": {
           "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
-          "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Khớp mẫu đế cao su",
+          "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Khớp mẫu sản phẩm",
           "btn_confirm_3d": (
               "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá"
           ),
           "step1_title": "1. Nhập thông tin NVKD & Yêu cầu",
-          "step2_title": "2. Hình ảnh thiết kế đế cao su chất lượng cao",
+          "step2_title": "2. Hình ảnh thiết kế sản phẩm chất lượng cao",
           "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
           "pdf_btn": "📄 Tải bản thảo báo giá PDF",
           "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
@@ -559,12 +572,12 @@ else:
       },
       "English": {
           "title": "🏭 Global Plastic Injection — Sales Quotation System",
-          "btn_gen_2d": "🎨 Step 1: AI Spec Analysis & Match Outsole Design",
+          "btn_gen_2d": "🎨 Step 1: AI Spec Analysis & Match Product Design",
           "btn_confirm_3d": (
               "✅ Confirm Design, Next: Render 3D Model & Quote"
           ),
           "step1_title": "1. Sales Info & Specifications",
-          "step2_title": "2. High-Quality Outsole Design",
+          "step2_title": "2. High-Quality Injection Product Render",
           "step3_title": "3. Interactive 3D Render & Final Quote",
           "pdf_btn": "📄 Download Official PDF Quote",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -599,42 +612,61 @@ else:
 
     product_name = st.text_input(
         "產品名稱 / Product Name",
-        "喬丹11代風格水晶橡膠大底 (AJ11 Translucent Outsole)",
+        "透明耐衝擊射出塑膠盒 (Transparent Injection Plastic Box)",
     )
     desc = st.text_area(
         "產品描述 / Description",
-        "需求數量 50,000 雙，採用耐磨透明橡膠與人字紋防滑抓地刻痕，高透光、防黃變，尺寸 32cm x 12cm。",
+        "需求數量 20,000 個，採用 PP/ABS 耐衝擊透明塑膠，具備雙邊卡扣與高密封性結構，尺寸 20cm x 15cm x 8cm。",
+    )
+
+    uploaded_design = st.file_uploader(
+        "📤 可選：自訂上傳客戶 2D / CAD 圖面 (.jpg, .png)",
+        type=["jpg", "jpeg", "png"],
     )
 
     if st.button(L["btn_gen_2d"], type="primary", key="btn_gen_2d_step1"):
       st.session_state.step = 2
-      with st.spinner("AI 正在解析業務需求，並檢索高畫質大底結構圖..."):
+      with st.spinner("AI 正在解析射出規格，並匹配產品結構圖..."):
         # 1. LLM 規格建議分析 (Gemini 1.5 Flash)
         model = genai.GenerativeModel("gemini-1.5-flash")
         try:
-          prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
+          prompt_analysis = f"Analyze plastic/rubber injection specs for product: {product_name}, description: {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
           res_analysis = model.generate_content(
               prompt_analysis, request_options={"timeout": 10}
           )
           st.session_state.ai_result = res_analysis.text
         except:
-          st.session_state.ai_result = "💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
+          st.session_state.ai_result = "💡 **預估材料建議**：建議採用射出級耐衝擊 PP / ABS 材質。\n- **預估單個重量**：120g\n- **建議模具穴數**：1 開 2 (1*2 Cavity)\n- **建議射出機台**：180 噸"
 
-        # 2. 匹配高畫質美觀的實體橡膠大底照片
-        st.session_state.matched_image = get_high_quality_outsole_image(
-            product_name
-        )
+        # 2. 若業務有自行上傳圖面，優先生產上傳圖；否則自動匹配對應類別的射出零件照片
+        if uploaded_design is not None:
+          st.session_state.matched_image = uploaded_design
+          st.session_state.is_uploaded = True
+        else:
+          st.session_state.matched_image = get_injection_product_image(
+              product_name
+          )
+          st.session_state.is_uploaded = False
 
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
 
-      # 顯示單獨橡膠大底特寫照片
-      st.image(
-          st.session_state.matched_image,
-          caption="✨ 橡膠大底結構設計：防滑刻痕溝槽與耐磨底面細節展示",
-          use_container_width=True,
-      )
+      # 顯示圖片 (區分上傳圖面與系統匹配圖)
+      if st.session_state.get("is_uploaded", False):
+        st.image(
+            st.session_state.matched_image,
+            caption="📄 業務上傳之客戶原廠 2D 圖面 / 設計圖",
+            use_container_width=True,
+        )
+      else:
+        st.image(
+            st.session_state.matched_image,
+            caption=(
+                f"✨ 系統匹配射出成型結構圖：【{product_name}】相關質感與輪廓展示"
+            ),
+            use_container_width=True,
+        )
 
       st.info(st.session_state.ai_result)
 
@@ -671,23 +703,12 @@ else:
                 renderer.setSize(container.clientWidth, container.clientHeight);
                 container.appendChild(renderer.domElement);
 
-                const soleShape = new THREE.Shape();
-                soleShape.moveTo(-1.2, -0.4);
-                soleShape.bezierCurveTo(-1.4, -0.4, -1.5, -0.2, -1.4, 0.2);
-                soleShape.bezierCurveTo(-1.2, 0.5, -0.5, 0.5, 0.0, 0.3);
-                soleShape.bezierCurveTo(0.5, 0.2, 1.0, 0.4, 1.3, 0.3);
-                soleShape.bezierCurveTo(1.5, 0.2, 1.5, -0.2, 1.3, -0.3);
-                soleShape.bezierCurveTo(0.8, -0.5, 0.2, -0.4, -0.4, -0.3);
-                soleShape.bezierCurveTo(-0.8, -0.3, -1.0, -0.4, -1.2, -0.4);
-
-                const extrudeSettings = { depth: 0.25, bevelEnabled: true, bevelSegments: 3, steps: 2, bevelSize: 0.05, bevelThickness: 0.05 };
-                const geometry = new THREE.ExtrudeGeometry(soleShape, extrudeSettings);
-                geometry.center();
-
+                // 3D 通用射出立方機構/容器渲染 (Interactive 3D Render)
+                const geometry = new THREE.BoxGeometry(2, 1.2, 0.8);
                 const material = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.85 });
-                const soleMesh = new THREE.Mesh(geometry, material);
-                soleMesh.rotation.x = -Math.PI / 3;
-                scene.add(soleMesh);
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.x = -Math.PI / 4;
+                scene.add(mesh);
 
                 const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
                 light1.position.set(5, 10, 7);
@@ -695,12 +716,11 @@ else:
                 const light2 = new THREE.AmbientLight(0x333333);
                 scene.add(light2);
 
-                camera.position.z = 3.2;
+                camera.position.z = 3.5;
 
                 function animate() {
                     requestAnimationFrame(animate);
-                    soleMesh.rotation.z += 0.01;
-                    soleMesh.rotation.y += 0.005;
+                    mesh.rotation.y += 0.01;
                     renderer.render(scene, camera);
                 }
                 animate();
@@ -709,8 +729,8 @@ else:
       components.html(three_js_code, height=390)
 
       st.success(
-          f"💰 報價計算完成 (經辦業務: {current_sales})：單件預估 $4.20 USD /"
-          " 模具開發費 $6,500 USD"
+          f"💰 報價計算完成 (經辦業務: {current_sales})：單件估算 $0.85 USD /"
+          " 射出模具開發費 $4,500 USD"
       )
 
       def generate_multilingual_pdf():
@@ -757,9 +777,9 @@ else:
                 f"Unit Price ({curr})",
                 f"Ext. Amount ({curr})",
             ],
-            [L["item_mold"], "1 Set", "$6,500.00", "$6,500.00"],
-            [L["item_part"], "50,000", "$4.20", "$210,000.00"],
-            [L["item_total"], "", "", f"{curr} $216,500.00"],
+            [L["item_mold"], "1 Set", "$4,500.00", "$4,500.00"],
+            [L["item_part"], "20,000", "$0.85", "$17,000.00"],
+            [L["item_total"], "", "", f"{curr} $21,500.00"],
         ]
         t_detail = Table(table_data, colWidths=[220, 80, 100, 100])
         t_detail.setStyle(
