@@ -1,10 +1,14 @@
+import base64
 import datetime
 import email
 from email.header import decode_header
 import imaplib
 import os
 import xml.etree.ElementTree as ET
-import google.generativeai as genai
+
+from google import genai
+from google.genai import types
+import google.generativeai as legacy_genai
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -24,7 +28,45 @@ if not api_key:
   st.error("⚠️ API Key not configured!")
   st.stop()
 
-genai.configure(api_key=api_key)
+# legacy SDK 設定 (用於 Gemini 1.5 Flash 文字分析)
+legacy_genai.configure(api_key=api_key)
+
+
+# 🎨 橡膠大底專用 AI 圖片生成核心函數 (Imagen 3 API)
+def generate_rubber_outsole_image(product_name, product_desc):
+  """根據業務輸入的產品名稱與描述，即時生成包含高細節刻痕與紋路的橡膠大底 2D 渲染圖"""
+  try:
+    client = genai.Client(api_key=api_key)
+
+    # 專門為「橡膠大底刻痕與射出質感」設計的提示詞
+    prompt = f"""
+        Industrial product design photography of a shoe outsole for: {product_name}.
+        Details: {product_desc}.
+        Focus: Bottom view / sole tread view of a high-performance rubber injection outsole.
+        Key features: Highly detailed anti-slip tread patterns, sharp herringbone grip grooves, deep lug traction, clear vulcanized rubber/TPU texture, injection molding quality, professional studio lighting, isolated on clean dark background, 8k resolution, photorealistic.
+        """
+
+    response = client.models.generate_images(
+        model="imagen-3.0-generate-002",
+        prompt=prompt,
+        config=types.GenerateImagesConfig(
+            number_of_images=1,
+            aspect_ratio="4:3",
+            output_mime_type="image/jpeg",
+        ),
+    )
+
+    for generated_image in response.generated_images:
+      base64_image_bytes = generated_image.image.image_bytes
+      base64_encoded = base64.b64encode(base64_image_bytes).decode("utf-8")
+      return f"data:image/jpeg;base64,{base64_encoded}"
+
+  except Exception as e:
+    st.warning(
+        f"⚠️ AI 圖片生成略過或失敗 ({e})，使用預設歷史資料庫大底圖展示。"
+    )
+    return "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop"
+
 
 # 🔐 1. 初始化使用者帳號資料庫
 if "user_database" not in st.session_state:
@@ -101,21 +143,6 @@ if "step" not in st.session_state:
 if "ai_result" not in st.session_state:
   st.session_state.ai_result = ""
 
-ACCURATE_GALLERY = {
-    "sole": (
-        "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop"
-    ),
-    "housing": (
-        "https://images.unsplash.com/photo-1527443195645-1133f7f28990?w=800&auto=format&fit=crop"
-    ),
-    "gear": (
-        "https://images.unsplash.com/photo-1530982011887-3cc11cc85693?w=800&auto=format&fit=crop"
-    ),
-    "default": (
-        "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop"
-    ),
-}
-
 
 # 🇻🇳 越南發票 XML 自動解析函數
 def parse_vietnam_xml(xml_bytes):
@@ -170,13 +197,11 @@ def fetch_invoices_from_custom_email(
     mail.login(user_email, user_password)
     mail.select("inbox")
 
-    # 搜尋郵件內文包含 Hóa đơn 的信件
     status, messages = mail.search(None, '(BODY "Hóa đơn")')
     email_ids = messages[0].split()
 
     downloaded_invoices = []
 
-    # 讀取最新的 5 封發票郵件做測試
     for e_id in email_ids[-5:]:
       _, msg_data = mail.fetch(e_id, "(RFC822)")
       for response_part in msg_data:
@@ -278,9 +303,7 @@ if user_role == "admin":
       "🇻🇳 越南電子發票登記 (Hóa đơn điện tử)",
   ])
 
-  # ------------------------------------------
   # 分頁 1：業務報價總覽
-  # ------------------------------------------
   with tab1:
     st.caption(
         "您可以檢視全公司所有業務員的報價歷程、總金額統計，並匯出報表。"
@@ -319,9 +342,7 @@ if user_role == "admin":
     else:
       st.info("目前尚無任何報價單紀錄。")
 
-  # ------------------------------------------
   # 分頁 2：使用者管理
-  # ------------------------------------------
   with tab2:
     st.caption(
         "管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。"
@@ -410,9 +431,7 @@ if user_role == "admin":
       else:
         st.info("目前沒有可供修改或刪除的其他使用者。")
 
-  # ------------------------------------------
-  # 🇻🇳 分頁 3：越南發票登記（支援手動、上傳與「信箱連線」）
-  # ------------------------------------------
+  # 分頁 3：越南發票登記
   with tab3:
     st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
     st.caption(
@@ -420,7 +439,6 @@ if user_role == "admin":
         " 進行發票登記。"
     )
 
-    # 🌐 模式 1: 企業信箱自動連線設定
     with st.expander("📧 模式 A：設定公司專屬信箱，自動連線抓取發票", expanded=True):
       col_m1, col_m2 = st.columns(2)
       with col_m1:
@@ -450,7 +468,6 @@ if user_role == "admin":
 
     col_xml, col_preview = st.columns([1, 1])
 
-    # 🌐 模式 2: 上傳 XML
     with col_xml:
       st.markdown("### 📤 模式 B：上傳 XML 單檔解析")
       uploaded_xml = st.file_uploader(
@@ -471,7 +488,6 @@ if user_role == "admin":
             st.toast("🎉 發票已成功登錄至發票總表！", icon="🧾")
             st.rerun()
 
-    # 🌐 模式 3: 手動輸入
     with col_preview:
       st.markdown("### 📝 模式 C：手動輸入發票")
       with st.form("manual_invoice_form"):
@@ -509,7 +525,6 @@ if user_role == "admin":
 
     if st.session_state.invoice_db:
       inv_df = pd.DataFrame(st.session_state.invoice_db)
-
       total_vnd = inv_df["total_amount"].sum()
       st.metric("已登記發票總金額", f"{total_vnd:,.0f} VND")
 
@@ -525,18 +540,18 @@ if user_role == "admin":
       st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
-# 💼 畫面 B：業務員前台報價系統 (Sales Agent)
+# 💼 畫面 B：業務人員前台報價系統 (Sales Agent)
 # ==========================================
 else:
   LANG_DICT = {
       "繁體中文": {
           "title": "🏭 塑膠射出 — 業務智慧估價系統",
-          "btn_gen_2d": "🔍 第一步：AI 分析與歷史模具庫比對",
+          "btn_gen_2d": "🎨 第一步：AI 分析需求與即時生成大底刻痕圖",
           "btn_confirm_3d": (
               "✅ 確認產品樣式，下一步：生成 3D 渲染圖與報價"
           ),
           "step1_title": "1. 業務資訊與需求輸入",
-          "step2_title": "2. 歷史大底打樣圖比對",
+          "step2_title": "2. AI 即時繪製高精細橡膠大底樣式",
           "step3_title": "3. 3D 可視化模型與自動報價單",
           "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -546,12 +561,12 @@ else:
       },
       "Tiếng Việt": {
           "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
-          "btn_gen_2d": "🔍 Bước 1: Phân tích AI & Tìm kiếm hình ảnh",
+          "btn_gen_2d": "🎨 Bước 1: Phân tích AI & Tạo hình ảnh đế cao su AI",
           "btn_confirm_3d": (
               "✅ Xác nhận hình ảnh, Bước tiếp: Tạo mô hình 3D & Báo giá"
           ),
           "step1_title": "1. Nhập thông tin NVKD & Yêu cầu",
-          "step2_title": "2. Kết quả tìm kiếm từ thư viện AI",
+          "step2_title": "2. Hình ảnh thiết kế đế cao su do AI tạo",
           "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
           "pdf_btn": "📄 Tải bản thảo báo giá PDF",
           "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
@@ -561,12 +576,12 @@ else:
       },
       "English": {
           "title": "🏭 Global Plastic Injection — Sales Quotation System",
-          "btn_gen_2d": "🔍 Step 1: AI Analysis & Database Match",
+          "btn_gen_2d": "🎨 Step 1: AI Spec Analysis & Real-time AI Generation",
           "btn_confirm_3d": (
-              "✅ Confirm Reference, Next: Render 3D Model & Quote"
+              "✅ Confirm Design, Next: Render 3D Model & Quote"
           ),
           "step1_title": "1. Sales Info & Specifications",
-          "step2_title": "2. AI Database Match Result",
+          "step2_title": "2. AI Generated Outsole Design (Imagen 3)",
           "step3_title": "3. Interactive 3D Render & Final Quote",
           "pdf_btn": "📄 Download Official PDF Quote",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
@@ -605,15 +620,16 @@ else:
     )
     desc = st.text_area(
         "產品描述 / Description",
-        "需求數量 50,000 雙，採用耐磨透明橡膠與中底碳纖維板複合射出成型。要求高度透光性、防黃變，尺寸 32cm x 12cm。",
+        "需求數量 50,000 雙，採用耐磨透明橡膠與人字紋防滑抓地刻痕，高透光、防黃變，尺寸 32cm x 12cm。",
     )
 
     if st.button(L["btn_gen_2d"], type="primary"):
       st.session_state.step = 2
       with st.spinner(
-          "AI 正在解析業務需求並比對廠內模具資料庫..."
+          "AI 正在解析業務需求，並透過 Imagen 3 實時繪製全新大底刻痕圖..."
       ):
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # 1. LLM 規格建議分析
+        model = legacy_genai.GenerativeModel("gemini-1.5-flash")
         try:
           prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
           res_analysis = model.generate_content(
@@ -621,9 +637,12 @@ else:
           )
           st.session_state.ai_result = res_analysis.text
         except:
-          st.session_state.ai_result = f"💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
+          st.session_state.ai_result = "💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
 
-        st.session_state.matched_image = ACCURATE_GALLERY["sole"]
+        # 2. ⚡ 呼叫 Imagen 3 生成橡膠大底刻痕圖片
+        st.session_state.matched_image = generate_rubber_outsole_image(
+            product_name, desc
+        )
 
   with col2:
     if st.session_state.step >= 2:
@@ -631,9 +650,9 @@ else:
       st.markdown(
           f"""
                 <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; text-align: center;">
-                    <img src="{st.session_state.matched_image}" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 6px;" alt="橡膠大底歷史圖庫">
+                    <img src="{st.session_state.matched_image}" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 6px;" alt="AI 即時繪製橡膠大底">
                     <p style="color: #38bdf8; font-size: 13px; margin-top: 8px; margin-bottom: 0;">
-                        🔍 AI 比對成功：調出廠內模具圖庫 #RUBBER-OUTSOLE-2026 正宗大底視圖
+                        ✨ AI 即時生成專屬圖像：已根據需求描繪防滑刻痕與深溝槽質感 (Imagen 3)
                     </p>
                 </div>
                 """,
