@@ -5,7 +5,8 @@ from email.header import decode_header
 import imaplib
 import os
 import urllib.parse
-import xml.etree.ElementTree as ETimport base64
+import xml.etree.ElementTree as ET
+import base64
 import datetime
 import email
 from email.header import decode_header
