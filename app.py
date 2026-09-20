@@ -30,17 +30,18 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🎨 橡膠大底高畫質實體圖庫庫存 (根據關鍵字自動匹配逼真大底圖)
+# 🎨 專屬「純橡膠大底 / 鞋底刻痕視角 (Outsole Bottom View)」圖库
 def get_high_quality_outsole_image(product_name):
-  """根據產品名稱回傳高畫質且具備防滑刻痕的專業橡膠大底照片"""
-  # 高解析度橡膠大底與鞋底刻痕特寫圖庫
+  """根據產品名稱回傳純橡膠大底特寫、防滑紋路與刻痕的專業設計照片"""
   outsole_gallery = [
-      "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80",  # 水晶透明防滑橡膠底
-      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",  # 高抓地力紋路底
-      "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&auto=format&fit=crop&q=80",  # 工業射出輪廓底
+      # 1. 專業防滑橡膠大底特寫 (人字紋與溝槽細節)
+      "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=1000&auto=format&fit=crop&q=80",
+      # 2. 高抓地力橡膠底刻痕特寫
+      "https://images.unsplash.com/photo-1539185441755-769473a23570?w=1000&auto=format&fit=crop&q=80",
+      # 3. 複合材質 TPU / 橡膠射出底細節
+      "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=1000&auto=format&fit=crop&q=80",
   ]
 
-  # 簡單的 Hash 匹配，確保相同的產品名稱會顯示同一張高畫質大底圖
   img_index = sum(ord(char) for char in product_name) % len(outsole_gallery)
   return outsole_gallery[img_index]
 
@@ -628,10 +629,10 @@ else:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
 
-      # 顯示美觀且高細節的大底特寫照片
+      # 顯示單獨橡膠大底特寫照片
       st.image(
           st.session_state.matched_image,
-          caption="✨ 高細節橡膠大底樣式：人字防滑刻痕與透光射出質感展示",
+          caption="✨ 橡膠大底結構設計：防滑刻痕溝槽與耐磨底面細節展示",
           use_container_width=True,
       )
 
