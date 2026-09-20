@@ -30,26 +30,22 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🎨 專業射出成型產品結構 2D/3D 高清動態渲染 (100% 乾淨白底，無人物/無雜亂背景)
+# 🎨 專業射出成型產品結構 2D CAD 高清動態渲染 (100% 乾淨白底，無人物/無雜亂背景)
 def render_product_cad_preview(product_keyword):
-  """根據產品類型，在前端即時動態算繪 100% 正確且乾淨的 2D/3D 產品工業結構圖"""
+  """根據產品類型，在前端即時動態算繪 2D CAD 產品工業結構圖"""
   p_name = product_keyword.lower()
 
-  # 1. 塑膠盒 / 容器類 (顯示高透光塑膠盒與卡扣結構)
   if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
     title = "透明塑膠射出盒 (Plastic Box with Latch Structure)"
     shape_script = """
             ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
             ctx.strokeStyle = '#38bdf8';
             ctx.lineWidth = 3;
-            // 盒體
             ctx.strokeRect(80, 70, 240, 140);
             ctx.fillRect(80, 70, 240, 140);
-            // 蓋子卡扣
             ctx.fillStyle = '#0284c7';
             ctx.fillRect(65, 110, 15, 60);
             ctx.fillRect(320, 110, 15, 60);
-            // 加強筋結構線
             ctx.strokeStyle = 'rgba(255,255,255,0.4)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -57,7 +53,6 @@ def render_product_cad_preview(product_keyword):
             ctx.moveTo(320, 70); ctx.lineTo(80, 210);
             ctx.stroke();
         """
-  # 2. 橡膠大底 / 鞋底類 (顯示清晰人字紋防滑溝槽)
   elif any(k in p_name for k in ["底", "sole", "outsole", "橡膠"]):
     title = "橡膠射出大底 (Rubber Outsole Tread & Anti-Slip Pattern)"
     shape_script = """
@@ -69,7 +64,6 @@ def render_product_cad_preview(product_keyword):
             ctx.bezierCurveTo(300, 220, 220, 250, 130, 240);
             ctx.bezierCurveTo(80, 230, 70, 160, 80, 100); ctx.closePath();
             ctx.fill(); ctx.stroke();
-            // 人字紋溝槽
             ctx.strokeStyle = '#0284c7'; ctx.lineWidth = 2;
             for (let y = 60; y < 220; y += 18) {
                 ctx.beginPath();
@@ -79,7 +73,6 @@ def render_product_cad_preview(product_keyword):
                 ctx.stroke();
             }
         """
-  # 3. 車用/電子外殼/機構件 (顯示工程外殼與螺絲柱鎖孔)
   else:
     title = "工程塑膠射出外殼 (Industrial Housing & Screw Pillars)"
     shape_script = """
@@ -87,7 +80,6 @@ def render_product_cad_preview(product_keyword):
             ctx.strokeStyle = '#38bdf8';
             ctx.lineWidth = 3;
             ctx.beginPath(); ctx.roundRect(80, 60, 240, 160, 20); ctx.fill(); ctx.stroke();
-            // 4個角落鎖螺絲柱 (Screw Bosses)
             ctx.fillStyle = '#38bdf8';
             ctx.beginPath();
             ctx.arc(110, 90, 10, 0, Math.PI*2); ctx.arc(290, 90, 10, 0, Math.PI*2);
@@ -108,16 +100,109 @@ def render_product_cad_preview(product_keyword):
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // 畫網格 background grid
         ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.5;
         for(let i=0; i<canvas.width; i+=20) {{ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }}
         for(let j=0; j<canvas.height; j+=20) {{ ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(canvas.width,j); ctx.stroke(); }}
         
-        // 執行對應產品繪圖
         {shape_script}
     </script>
     """
   components.html(canvas_html, height=330)
+
+
+# 🧊 動態 Three.js 3D 模型渲染函數 (根據需求即時變化造型)
+def render_dynamic_3d_model(product_keyword):
+  """根據關鍵字產生對應造型的 3D 模型渲染 (盒體、大底、齒輪、外殼)"""
+  p_name = product_keyword.lower()
+
+  if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
+    # 3D 盒體模型 (組合式盒子與盒蓋)
+    model_js = """
+            const group = new THREE.Group();
+            const boxGeo = new THREE.BoxGeometry(2.2, 1.2, 1.4);
+            const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.75 });
+            const boxMesh = new THREE.Mesh(boxGeo, mat);
+            group.add(boxMesh);
+
+            // 上蓋邊框
+            const lidGeo = new THREE.BoxGeometry(2.3, 0.15, 1.5);
+            const lidMat = new THREE.MeshPhongMaterial({ color: 0x0284c7 });
+            const lidMesh = new THREE.Mesh(lidGeo, lidMat);
+            lidMesh.position.y = 0.65;
+            group.add(lidMesh);
+            scene.add(group);
+            const targetMesh = group;
+        """
+  elif any(k in p_name for k in ["底", "sole", "outsole", "橡膠"]):
+    # 3D 鞋底流線造型 (Extrude Geometry)
+    model_js = """
+            const soleShape = new THREE.Shape();
+            soleShape.moveTo(-1.2, -0.4);
+            soleShape.bezierCurveTo(-1.4, -0.4, -1.5, -0.2, -1.4, 0.2);
+            soleShape.bezierCurveTo(-1.2, 0.5, -0.5, 0.5, 0.0, 0.3);
+            soleShape.bezierCurveTo(0.5, 0.2, 1.0, 0.4, 1.3, 0.3);
+            soleShape.bezierCurveTo(1.5, 0.2, 1.5, -0.2, 1.3, -0.3);
+            soleShape.bezierCurveTo(0.8, -0.5, 0.2, -0.4, -0.4, -0.3);
+            soleShape.bezierCurveTo(-0.8, -0.3, -1.0, -0.4, -1.2, -0.4);
+
+            const extrudeSettings = { depth: 0.25, bevelEnabled: true, bevelSegments: 3, steps: 2, bevelSize: 0.05, bevelThickness: 0.05 };
+            const geometry = new THREE.ExtrudeGeometry(soleShape, extrudeSettings);
+            geometry.center();
+            const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.85 });
+            const targetMesh = new THREE.Mesh(geometry, mat);
+            targetMesh.rotation.x = -Math.PI / 3;
+            scene.add(targetMesh);
+        """
+  elif any(k in p_name for k in ["齒輪", "gear", "精密"]):
+    # 3D 圓柱齒輪模型 (Cylinder with Segment Patterns)
+    model_js = """
+            const geometry = new THREE.CylinderGeometry(1.2, 1.2, 0.4, 16);
+            const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 100, wireframe: false });
+            const targetMesh = new THREE.Mesh(geometry, mat);
+            scene.add(targetMesh);
+        """
+  else:
+    # 3D 圓角外殼模型
+    model_js = """
+            const geometry = new THREE.BoxGeometry(2.0, 1.5, 0.6);
+            const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 80, transparent: true, opacity: 0.8 });
+            const targetMesh = new THREE.Mesh(geometry, mat);
+            scene.add(targetMesh);
+        """
+
+  three_code = f"""
+        <div id="three_container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        <script>
+            const container = document.getElementById('three_container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            {model_js}
+
+            const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
+            light1.position.set(5, 10, 7);
+            scene.add(light1);
+            const light2 = new THREE.AmbientLight(0x404040);
+            scene.add(light2);
+
+            camera.position.z = 3.5;
+
+            function animate() {{
+                requestAnimationFrame(animate);
+                if(typeof targetMesh !== 'undefined') {{
+                    targetMesh.rotation.y += 0.01;
+                    targetMesh.rotation.x += 0.005;
+                }}
+                renderer.render(scene, camera);
+            }}
+            animate();
+        </script>
+    """
+  components.html(three_code, height=390)
 
 
 # 🔐 1. 初始化使用者帳號資料庫
@@ -615,7 +700,7 @@ else:
           "title": "🏭 塑膠/橡膠射出成型 — 業務智慧估價系統",
           "step1_title": "1. 🤖 Gemini AI 需求對話與規格輸入",
           "step2_title": "2. 📐 工業 2D CAD 產品結構模擬",
-          "step3_title": "3. 3D 可視化模型與自動報價單",
+          "step3_title": "3. 🧊 客製化 3D 渲染模型與自動報價單",
           "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
           "item_mold": "Custom Mold Development",
@@ -626,7 +711,7 @@ else:
           "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
           "step1_title": "1. 🤖 Gemini AI Phân Tích & Nhập Yêu Cầu",
           "step2_title": "2. 📐 Mô Phỏng Cấu Trúc 2D CAD Sản Phẩm",
-          "step3_title": "3. Mô hình 3D & Báo giá chi tiết",
+          "step3_title": "3. Mô hình 3D Chi Tiết & Báo giá",
           "pdf_btn": "📄 Tải bản thảo báo giá PDF",
           "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
           "item_mold": "Chi phí phát triển khuôn mẫu",
@@ -637,7 +722,7 @@ else:
           "title": "🏭 Global Plastic Injection — Sales Quotation System",
           "step1_title": "1. 🤖 Gemini AI Copilot & Specs Input",
           "step2_title": "2. 📐 2D CAD Product Structure Preview",
-          "step3_title": "3. Interactive 3D Render & Final Quote",
+          "step3_title": "3. Customized Interactive 3D Render & Quote",
           "pdf_btn": "📄 Download Official PDF Quote",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
           "item_mold": "Custom Mold Development",
@@ -716,12 +801,12 @@ else:
 
       st.rerun()
 
-  # 右側：圖片展示與 3D 報價區
+  # 右側：2D CAD/圖片與客製 3D 報價區
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
 
-      # 顯示即時圖片 (位於右側)
+      # 顯示 2D CAD 結構模擬或上傳圖
       if st.session_state.get("is_uploaded", False):
         st.image(
             st.session_state.uploaded_file,
@@ -729,11 +814,10 @@ else:
             use_container_width=True,
         )
       else:
-        # 算繪 100% 乾淨白底的工業 CAD 結構圖
         render_product_cad_preview(st.session_state.current_keyword)
 
       if st.button(
-          "✅ 確認產品樣式，生成 3D 模型與報價單",
+          "✅ 確認產品樣式，生成動態 3D 模型與報價單",
           type="primary",
           key="btn_confirm_3d_step2",
       ):
@@ -756,41 +840,8 @@ else:
       st.divider()
       st.subheader(L["step3_title"])
 
-      three_js_code = """
-            <div id="container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-            <script>
-                const container = document.getElementById('container');
-                const scene = new THREE.Scene();
-                const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-                const renderer = new THREE.WebGLRenderer({ antialias: true });
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                container.appendChild(renderer.domElement);
-
-                // 3D 通用射出機構渲染
-                const geometry = new THREE.BoxGeometry(2, 1.2, 0.8);
-                const material = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.85 });
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.rotation.x = -Math.PI / 4;
-                scene.add(mesh);
-
-                const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
-                light1.position.set(5, 10, 7);
-                scene.add(light1);
-                const light2 = new THREE.AmbientLight(0x333333);
-                scene.add(light2);
-
-                camera.position.z = 3.5;
-
-                function animate() {
-                    requestAnimationFrame(animate);
-                    mesh.rotation.y += 0.01;
-                    renderer.render(scene, camera);
-                }
-                animate();
-            </script>
-            """
-      components.html(three_js_code, height=390)
+      # 🧊 呼叫可根據關鍵字即時變換造型的 3D Three.js 模型
+      render_dynamic_3d_model(st.session_state.current_keyword)
 
       st.success(
           f"💰 報價計算完成 (經辦業務: {current_sales})：單件估算 $0.85 USD /"
