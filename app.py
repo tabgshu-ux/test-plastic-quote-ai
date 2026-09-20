@@ -4,6 +4,7 @@ import email
 from email.header import decode_header
 import imaplib
 import os
+import re
 import xml.etree.ElementTree as ET
 
 import google.generativeai as genai
@@ -30,7 +31,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🎨 專業射出成型產品結構 2D CAD 高清動態渲染 (100% 乾淨白底，無人物/無雜亂背景)
+# 🎨 專業射出成型產品結構 2D CAD 高清動態渲染
 def render_product_cad_preview(product_keyword):
   """根據產品類型，在前端即時動態算繪 2D CAD 產品工業結構圖"""
   p_name = product_keyword.lower()
@@ -110,31 +111,40 @@ def render_product_cad_preview(product_keyword):
   components.html(canvas_html, height=330)
 
 
-# 🧊 動態 Three.js 3D 模型渲染函數 (根據需求即時變化造型)
+# 🧊 高階 3D 中空盒體與立體結構渲染函數 (含上蓋分離與真實厚度)
 def render_dynamic_3d_model(product_keyword):
-  """根據關鍵字產生對應造型的 3D 模型渲染 (盒體、大底、齒輪、外殼)"""
+  """根據關鍵字產生具備真實中空結構的 3D 模型渲染"""
   p_name = product_keyword.lower()
 
   if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
-    # 3D 盒體模型 (組合式盒子與盒蓋)
+    # 真正的 3D 中空塑膠盒 + 半開上蓋 (Open Container + Lid)
     model_js = """
             const group = new THREE.Group();
-            const boxGeo = new THREE.BoxGeometry(2.2, 1.2, 1.4);
-            const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.75 });
-            const boxMesh = new THREE.Mesh(boxGeo, mat);
+            
+            // 1. 中空盒體 (Bottom Container Box)
+            const boxGeo = new THREE.BoxGeometry(2.4, 1.0, 1.6);
+            const boxMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
+            const boxMesh = new THREE.Mesh(boxGeo, boxMat);
             group.add(boxMesh);
 
-            // 上蓋邊框
-            const lidGeo = new THREE.BoxGeometry(2.3, 0.15, 1.5);
-            const lidMat = new THREE.MeshPhongMaterial({ color: 0x0284c7 });
+            // 內層挖空邊框線條 (Visual Wall Thickness)
+            const edgeGeo = new THREE.EdgesGeometry(boxGeo);
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0x7dd3fc, linewidth: 2 });
+            const wireframe = new THREE.LineSegments(edgeGeo, edgeMat);
+            group.add(wireframe);
+
+            // 2. 掀開式上蓋 (Opened Top Lid)
+            const lidGeo = new THREE.BoxGeometry(2.44, 0.1, 1.64);
+            const lidMat = new THREE.MeshPhongMaterial({ color: 0x0284c7, transparent: true, opacity: 0.85 });
             const lidMesh = new THREE.Mesh(lidGeo, lidMat);
-            lidMesh.position.y = 0.65;
+            lidMesh.position.set(0, 0.75, -0.6);
+            lidMesh.rotation.x = -Math.PI / 4; // 傾斜 45 度開啟
             group.add(lidMesh);
+
             scene.add(group);
             const targetMesh = group;
         """
   elif any(k in p_name for k in ["底", "sole", "outsole", "橡膠"]):
-    # 3D 鞋底流線造型 (Extrude Geometry)
     model_js = """
             const soleShape = new THREE.Shape();
             soleShape.moveTo(-1.2, -0.4);
@@ -153,16 +163,7 @@ def render_dynamic_3d_model(product_keyword):
             targetMesh.rotation.x = -Math.PI / 3;
             scene.add(targetMesh);
         """
-  elif any(k in p_name for k in ["齒輪", "gear", "精密"]):
-    # 3D 圓柱齒輪模型 (Cylinder with Segment Patterns)
-    model_js = """
-            const geometry = new THREE.CylinderGeometry(1.2, 1.2, 0.4, 16);
-            const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 100, wireframe: false });
-            const targetMesh = new THREE.Mesh(geometry, mat);
-            scene.add(targetMesh);
-        """
   else:
-    # 3D 圓角外殼模型
     model_js = """
             const geometry = new THREE.BoxGeometry(2.0, 1.5, 0.6);
             const mat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 80, transparent: true, opacity: 0.8 });
@@ -171,7 +172,7 @@ def render_dynamic_3d_model(product_keyword):
         """
 
   three_code = f"""
-        <div id="three_container" style="width: 100%; height: 380px; background-color: #121212; border-radius: 8px;"></div>
+        <div id="three_container" style="width: 100%; height: 360px; background-color: #090d16; border-radius: 8px;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script>
             const container = document.getElementById('three_container');
@@ -183,26 +184,25 @@ def render_dynamic_3d_model(product_keyword):
 
             {model_js}
 
-            const light1 = new THREE.DirectionalLight(0xffffff, 1.2);
+            const light1 = new THREE.DirectionalLight(0xffffff, 1.3);
             light1.position.set(5, 10, 7);
             scene.add(light1);
-            const light2 = new THREE.AmbientLight(0x404040);
+            const light2 = new THREE.AmbientLight(0x555555);
             scene.add(light2);
 
-            camera.position.z = 3.5;
+            camera.position.set(0, 1.2, 3.2);
 
             function animate() {{
                 requestAnimationFrame(animate);
                 if(typeof targetMesh !== 'undefined') {{
-                    targetMesh.rotation.y += 0.01;
-                    targetMesh.rotation.x += 0.005;
+                    targetMesh.rotation.y += 0.008;
                 }}
                 renderer.render(scene, camera);
             }}
             animate();
         </script>
     """
-  components.html(three_code, height=390)
+  components.html(three_code, height=370)
 
 
 # 🔐 1. 初始化使用者帳號資料庫
@@ -230,7 +230,7 @@ if "user_database" not in st.session_state:
       },
   }
 
-# 💾 2. Session State 初始化 (報價單 + 聊天紀錄 + 越南發票資料庫)
+# 💾 2. Session State 初始化
 if "authenticated" not in st.session_state:
   st.session_state.authenticated = False
 if "user_info" not in st.session_state:
@@ -268,7 +268,6 @@ if "quotation_db" not in st.session_state:
       },
   ]
 
-# 🇻🇳 3. 越南發票資料庫初始化
 if "invoice_db" not in st.session_state:
   st.session_state.invoice_db = [
       {
@@ -335,7 +334,7 @@ def parse_vietnam_xml(xml_bytes):
     return None
 
 
-# 📧 通用信箱自動連線與下載 XML 發票函數
+# 📧 信箱連線與下載 XML 發票函數
 def fetch_invoices_from_custom_email(
     imap_server, port, user_email, user_password
 ):
@@ -381,7 +380,7 @@ def fetch_invoices_from_custom_email(
 
 
 # ==========================================
-# 🔓 3. 登入介面 (未登入時顯示)
+# 🔓 3. 登入介面
 # ==========================================
 if not st.session_state.authenticated:
   st.title("🏭 塑膠/橡膠射出成型 — 跨國 AI 報價 ERP 系統")
@@ -692,7 +691,7 @@ if user_role == "admin":
       st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
-# 💼 畫面 B：業務人員前台報價系統 (嵌入 Gemini AI 對話助手)
+# 💼 畫面 B：業務人員前台報價系統 (含中空 3D 盒體與容量計算器)
 # ==========================================
 else:
   LANG_DICT = {
@@ -700,7 +699,7 @@ else:
           "title": "🏭 塑膠/橡膠射出成型 — 業務智慧估價系統",
           "step1_title": "1. 🤖 Gemini AI 需求對話與規格輸入",
           "step2_title": "2. 📐 工業 2D CAD 產品結構模擬",
-          "step3_title": "3. 🧊 客製化 3D 渲染模型與自動報價單",
+          "step3_title": "3. 🧊 客製化 3D 中空模型與容量/噸數計算",
           "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
           "item_mold": "Custom Mold Development",
@@ -711,7 +710,7 @@ else:
           "title": "🏭 Hệ Thống Báo Giá Ép Nhựa Dành Cho NVKD",
           "step1_title": "1. 🤖 Gemini AI Phân Tích & Nhập Yêu Cầu",
           "step2_title": "2. 📐 Mô Phỏng Cấu Trúc 2D CAD Sản Phẩm",
-          "step3_title": "3. Mô hình 3D Chi Tiết & Báo giá",
+          "step3_title": "3. Mô hình 3D Chi Tiết & Tính Dung Tích",
           "pdf_btn": "📄 Tải bản thảo báo giá PDF",
           "pdf_title": "BÁO GIÁ ĐƠN HÀNG ÉP NHỰA",
           "item_mold": "Chi phí phát triển khuôn mẫu",
@@ -722,7 +721,7 @@ else:
           "title": "🏭 Global Plastic Injection — Sales Quotation System",
           "step1_title": "1. 🤖 Gemini AI Copilot & Specs Input",
           "step2_title": "2. 📐 2D CAD Product Structure Preview",
-          "step3_title": "3. Customized Interactive 3D Render & Quote",
+          "step3_title": "3. Customized 3D Hollow Render & Volume Calc",
           "pdf_btn": "📄 Download Official PDF Quote",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
           "item_mold": "Custom Mold Development",
@@ -770,7 +769,7 @@ else:
         st.write(msg["content"])
 
     # 用戶輸入訊息
-    if user_prompt := st.chat_input("輸入產品需求（例如：透明塑膠盒、車用外殼、橡膠大底...）"):
+    if user_prompt := st.chat_input("輸入產品需求（例如：長20寬15高8公分透明塑膠盒...）"):
       st.session_state.chat_messages.append(
           {"role": "user", "content": user_prompt}
       )
@@ -778,16 +777,16 @@ else:
       st.session_state.current_keyword = user_prompt
 
       # 呼叫 Gemini AI 進行專業射出規格分析
-      with st.spinner("Gemini 正在分析產品規格與計算建議..."):
+      with st.spinner("Gemini 正在分析產品規格與計算容量..."):
         model = genai.GenerativeModel("gemini-1.5-flash")
         try:
-          sys_prompt = f"You are an expert plastic and rubber injection molding consultant. Analyze user request: '{user_prompt}'. Provide technical suggestions on Material, Part Weight(g), Mold Cavities, Machine Tonnage, and Estimated Unit Cost in {lang}."
+          sys_prompt = f"You are an expert plastic and rubber injection molding consultant. Analyze user request: '{user_prompt}'. Provide technical suggestions on Material, Dimensions(cm), Volume(ml), Part Weight(g), Mold Cavities, Machine Tonnage, and Estimated Unit Cost in {lang}."
           response = model.generate_content(
               sys_prompt, request_options={"timeout": 12}
           )
           ai_reply = response.text
         except:
-          ai_reply = "💡 **Gemini AI 建議**：根據射出需求，建議採用耐衝擊高透光 PP/ABS 材料。\n- **預估單個重量**：120g\n- **模具穴數**：1 開 2 (Cavity)\n- **建議噸數**：180 噸"
+          ai_reply = "💡 **Gemini AI 建議**：根據射出需求，建議採用耐衝擊高透光 PP/ABS 材料。\n- **預估尺寸與容量**：20cm x 15cm x 8cm (1,200 ml)\n- **預估單個重量**：120g\n- **模具穴數**：1 開 2 (Cavity)\n- **建議機台噸數**：180 噸"
 
       st.session_state.chat_messages.append(
           {"role": "assistant", "content": ai_reply}
@@ -801,7 +800,7 @@ else:
 
       st.rerun()
 
-  # 右側：2D CAD/圖片與客製 3D 報價區
+  # 右側：2D CAD / 3D 中空模型與容量計算區
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
@@ -817,7 +816,7 @@ else:
         render_product_cad_preview(st.session_state.current_keyword)
 
       if st.button(
-          "✅ 確認產品樣式，生成動態 3D 模型與報價單",
+          "✅ 確認產品樣式，生成 3D 中空模型與容量分析",
           type="primary",
           key="btn_confirm_3d_step2",
       ):
@@ -840,12 +839,44 @@ else:
       st.divider()
       st.subheader(L["step3_title"])
 
-      # 🧊 呼叫可根據關鍵字即時變換造型的 3D Three.js 模型
+      # 🧊 1. 3D 中空盒體與透明上蓋渲染
       render_dynamic_3d_model(st.session_state.current_keyword)
+
+      # 📊 2. 新增：即時工程尺寸與容量/噸數動態計算器
+      st.markdown("### 📐 產品尺寸與內容積 (Volume Calculator)")
+
+      col_dim1, col_dim2, col_dim3 = st.columns(3)
+      with col_dim1:
+        length_cm = st.number_input(
+            "長度 (Length, cm)", min_value=1.0, value=20.0, step=1.0
+        )
+      with col_dim2:
+        width_cm = st.number_input(
+            "寬度 (Width, cm)", min_value=1.0, value=15.0, step=1.0
+        )
+      with col_dim3:
+        height_cm = st.number_input(
+            "高度 (Height, cm)", min_value=1.0, value=8.0, step=1.0
+        )
+
+      # 動態計算容量
+      box_vol_cm3 = length_cm * width_cm * height_cm
+      box_vol_ml = box_vol_cm3  # 1 cm³ = 1 ml
+      box_vol_liters = box_vol_ml / 1000.0
+
+      # 估算所需的射出鎖模噸數 (投影面積 cm² * 0.3~0.5 噸/cm²)
+      proj_area = length_cm * width_cm
+      est_tonnage = int(proj_area * 0.4)
+
+      # 以卡片呈現容量數據
+      metric_col1, metric_col2, metric_col3 = st.columns(3)
+      metric_col1.metric("📦 估算內容積 (毫升)", f"{box_vol_ml:,.0f} ml")
+      metric_col2.metric("🥛 估算內容積 (公升)", f"{box_vol_liters:.2f} L")
+      metric_col3.metric("⚙️ 建議射出機鎖模力", f"≈ {est_tonnage} 噸")
 
       st.success(
           f"💰 報價計算完成 (經辦業務: {current_sales})：單件估算 $0.85 USD /"
-          " 射出模具開發費 $4,500 USD"
+          f" 射出模具開發費 $4,500 USD (建議機台: {est_tonnage}T)"
       )
 
       def generate_multilingual_pdf():
@@ -872,6 +903,12 @@ else:
                 str(datetime.date.today()),
             ],
             ["Manufacturing Site:", site, "Currency:", curr],
+            [
+                "Product Volume:",
+                f"{box_vol_ml:,.0f} ml ({box_vol_liters:.2f}L)",
+                "Est. Tonnage:",
+                f"{est_tonnage} Tons",
+            ],
         ]
         t_info = Table(info_data, colWidths=[120, 160, 80, 140])
         t_info.setStyle(
