@@ -6,10 +6,9 @@ import imaplib
 import os
 import xml.etree.ElementTree as ET
 
-from google import genai
-from google.genai import types
-import google.generativeai as legacy_genai
+import google.generativeai as genai
 import pandas as pd
+import requests
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -28,43 +27,46 @@ if not api_key:
   st.error("⚠️ API Key not configured!")
   st.stop()
 
-# legacy SDK 設定 (用於 Gemini 1.5 Flash 文字分析)
-legacy_genai.configure(api_key=api_key)
+# 設定 Gemini SDK
+genai.configure(api_key=api_key)
 
 
-# 🎨 橡膠大底專用 AI 圖片生成核心函數 (Imagen 3 API)
+# 🎨 橡膠大底專用 AI 圖片生成核心函數 (相容 Developer API Key REST 模式)
 def generate_rubber_outsole_image(product_name, product_desc):
   """根據業務輸入的產品名稱與描述，即時生成包含高細節刻痕與紋路的橡膠大底 2D 渲染圖"""
+  prompt = (
+      f"Industrial product design photography of a shoe outsole for:"
+      f" {product_name}. Details: {product_desc}. Focus: Bottom view / sole"
+      " tread view of a high-performance rubber injection outsole. Key"
+      " features: Highly detailed anti-slip tread patterns, sharp herringbone"
+      " grip grooves, deep lug traction, clear vulcanized rubber/TPU texture,"
+      " photorealistic, studio lighting, 8k."
+  )
+
   try:
-    client = genai.Client(api_key=api_key)
+    # 直接使用相容 Developer API Key 的 REST 端點
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "instances": [{"prompt": prompt}],
+        "parameters": {"sampleCount": 1, "aspectRatio": "4:3"},
+    }
 
-    # 專門為「橡膠大底刻痕與射出質感」設計的提示詞
-    prompt = f"""
-        Industrial product design photography of a shoe outsole for: {product_name}.
-        Details: {product_desc}.
-        Focus: Bottom view / sole tread view of a high-performance rubber injection outsole.
-        Key features: Highly detailed anti-slip tread patterns, sharp herringbone grip grooves, deep lug traction, clear vulcanized rubber/TPU texture, injection molding quality, professional studio lighting, isolated on clean dark background, 8k resolution, photorealistic.
-        """
+    response = requests.post(url, json=payload, headers=headers, timeout=25)
+    res_data = response.json()
 
-    response = client.models.generate_images(
-        model="imagen-3.0-generate-002",
-        prompt=prompt,
-        config=types.GenerateImagesConfig(
-            number_of_images=1,
-            aspect_ratio="4:3",
-            output_mime_type="image/jpeg",
-        ),
-    )
-
-    for generated_image in response.generated_images:
-      base64_image_bytes = generated_image.image.image_bytes
-      base64_encoded = base64.b64encode(base64_image_bytes).decode("utf-8")
-      return f"data:image/jpeg;base64,{base64_encoded}"
+    if "predictions" in res_data and len(res_data["predictions"]) > 0:
+      b64_image = res_data["predictions"][0]["bytesBase64Encoded"]
+      return f"data:image/jpeg;base64,{b64_image}"
+    else:
+      err_msg = res_data.get("error", {}).get("message", "API Key 權限不足")
+      st.warning(
+          f"⚠️ Imagen 3 生成介面回傳警告 ({err_msg})，展示歷史預設大底圖。"
+      )
+      return "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop"
 
   except Exception as e:
-    st.warning(
-        f"⚠️ AI 圖片生成略過或失敗 ({e})，使用預設歷史資料庫大底圖展示。"
-    )
+    st.warning(f"⚠️ 圖片生成連線逾時或失敗 ({e})，使用預設歷史資料庫大底圖展示。")
     return "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop"
 
 
@@ -628,8 +630,8 @@ else:
       with st.spinner(
           "AI 正在解析業務需求，並透過 Imagen 3 實時繪製全新大底刻痕圖..."
       ):
-        # 1. LLM 規格建議分析
-        model = legacy_genai.GenerativeModel("gemini-1.5-flash")
+        # 1. LLM 規格建議分析 (Gemini 1.5 Flash)
+        model = genai.GenerativeModel("gemini-1.5-flash")
         try:
           prompt_analysis = f"Analyze plastic/rubber injection specs for: {product_name}, {desc}. Return Material, Weight(g), Cavity, Tonnage in {lang}."
           res_analysis = model.generate_content(
@@ -639,7 +641,7 @@ else:
         except:
           st.session_state.ai_result = "💡 **預估材料建議**：建議採用高耐磨透明 TPU / 橡膠複合材質。\n- **預估單個重量**：180g\n- **建議模具穴數**：1 開 2\n- **建議機台噸數**：250 噸"
 
-        # 2. ⚡ 呼叫 Imagen 3 生成橡膠大底刻痕圖片
+        # 2. ⚡ 呼叫 Imagen 3 (REST 介面) 生成橡膠大底刻痕圖片
         st.session_state.matched_image = generate_rubber_outsole_image(
             product_name, desc
         )
