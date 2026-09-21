@@ -106,11 +106,12 @@ if "monthly_payroll_db" not in st.session_state:
 # 📈 0.3 觀察股票與指數關注清單
 if "stock_watchlist" not in st.session_state:
   st.session_state.stock_watchlist = [
-      {"symbol": "TSMC (2330.TW)", "name": "台積電", "price": 985.0, "change": "+15.0 (+1.55%)", "trend": "up"},
-      {"symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1285.4, "change": "-3.2 (-0.25%)", "trend": "down"},
-      {"symbol": "S&P 500", "name": "標普 500 指數", "price": 5626.0, "change": "+22.5 (+0.40%)", "trend": "up"},
+      {"symbol": "TSMC (2330.TW)", "name": "台積電", "price": 2480.0, "change": "+35.0 (+1.44%)", "trend": "up"},
+      {"symbol": "Elite (2383.TW)", "name": "台光電", "price": 5490.0, "change": "+15.0 (+0.27%)", "trend": "up"},
+      {"symbol": "Auras (3324.TW)", "name": "雙鴻", "price": 1480.0, "change": "+95.0 (+6.86%)", "trend": "up"},
+      {"symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "trend": "down"},
       {"symbol": "USD/VND", "name": "美金/越南盾", "price": 24850.0, "change": "-10.0 (-0.04%)", "trend": "down"},
-      {"symbol": "PP Resin", "name": "聚丙烯塑料原物料(噸)", "price": 920.0, "change": "+5.0 (+0.55%)", "trend": "up"},
+      {"symbol": "PP Resin", "name": "聚丙烯塑料(噸)", "price": 920.0, "change": "+5.0 (+0.55%)", "trend": "up"},
   ]
 
 
@@ -577,11 +578,41 @@ if user_role in ["executive", "hr", "finance"]:
 
       st.divider()
 
+      # 💡 高階主管股票與資產配置建議模組 (Executive Stock Recommendations)
+      with st.expander("👑 董事長與總經理 專屬股票配置建議與分析邏輯 (點擊展開)", expanded=True):
+        st.markdown("#### 📊 高階主管黃金資產配置比例建議")
+        
+        # 呈現直觀配置比例卡片
+        c1, c2, c3, c4 = st.columns(4)
+        c1.info("🚀 **40% 核心算力與 AI**\n\n標的：台積電 (2330 / TSM)")
+        c2.success("🏭 **20% 零組件與散熱**\n\n標的：台光電 (2383)、雙鴻 (3324)")
+        c3.warning("🛡️ **30% 穩健高股息**\n\n標的：富邦金 (2881)、高股息 ETF")
+        c4.error("🇻🇳 **10% 越南地緣紅利**\n\n標的：FPT 科技、和發鋼鐵 (HPG)")
+
+        st.markdown("""
+        ---
+        #### 🔍 股票推薦與詳細分析理由：
+        
+        1. **晶片龍頭：台積電 (2330.TW / TSM)**
+           * **分析理由**：AI 從「題材階段」進入「實質獲利階段」。台積電在 3nm/2nm 先進製程與 CoWoS 封裝擁有壟斷優勢，隨 Edge AI（AI 手機/PC）換機潮啟動，具備極強護城河與定價能力。
+        
+        2. **高階零組件與散熱：台光電 (2383.TW) / 雙鴻 (3324.TW)**
+           * **分析理由**：AI 伺服器功耗大增帶動高階銅箔基板 (CCL) 與水冷散熱需求暴增，此類精密製造零組件毛利率高，獲利成長趨勢極為明確。
+        
+        3. **高股息與防禦型金融：富邦金 (2881.TW) / 大華優利高填息 (00918)**
+           * **分析理由**：提供市場高檔震盪時的強勁現金流下檔保護。金融股受惠海外投資收益與穩定資本結構，能穩定派發高股息。
+        
+        4. **越南在地製造紅利：FPT Group (越南 IT 龍頭) / 和發集團 (HPG)**
+           * **分析理由**：全球供應鏈向東南亞（平陽、同奈）移轉，工業區擴廠與基礎建設需求旺盛。FPT 掌握越南軟體轉型，HPG 直接受惠建廠需求。
+        """)
+
+      st.divider()
+
       col_ai_stock, col_add_stock = st.columns([2, 1])
 
       with col_ai_stock:
-        st.markdown("### 🤖 Gemini AI 股市與全球總經趨勢每日解析")
-        st.caption("點擊下方按鈕，讓 Gemini AI 為您彙整今日全球市場漲跌主因與對製造業的影響。")
+        st.markdown("### 🤖 Gemini AI 每日即時戰情分析")
+        st.caption("點擊下方按鈕，讓 AI 為您彙整今日全球市場動態與製造業對策。")
 
         if st.button("🚀 生成今日全球股市與塑膠原物料 AI 趨勢分析報告", type="primary", key="btn_gen_stock_ai"):
           with st.spinner("Gemini AI 正在分析全球股市、美聯儲動態與油價/塑膠原物料價格..."):
@@ -594,7 +625,7 @@ if user_role in ["executive", "hr", "finance"]:
               1. 科技股與半導體 (如台積電 2330.TW) 漲跌趨勢。
               2. 越南經濟指數 (VN-INDEX) 與東南亞製造業資金流向。
               3. 原油與塑膠塑料 (PP/PE/ABS) 原物料成本預測。
-              4. 給管理階層的關鍵決策建議（約 150 字）。
+              4. 給管理階層的關鍵決策建議與股票配置提醒（約 150 字）。
               請以繁體中文回答，使用專業且清晰的格式。
               """
               res = model.generate_content(stock_prompt)
@@ -602,19 +633,19 @@ if user_role in ["executive", "hr", "finance"]:
             except Exception as e:
               st.info("""
               #### 📊 AI 每日市場情報決策卡（示範速報）：
-              1. **科技股與半導體趨勢**：台積電 (2330.TW) 受惠於 AI 晶片需求強勁，今日拉漲 +1.55%，帶動供應鏈強勢。
-              2. **越南股市 (VN-INDEX)**：受到美金微幅升值影響，外資今日小幅調節，指數小跌 -0.25%，但平陽與同奈工業區擴廠租賃需求持續旺盛。
+              1. **科技股與半導體趨勢**：台積電 (2330.TW) 受惠於 AI 晶片需求強勁，買盤推進，帶動整體 AI 供應鏈強勢上揚。
+              2. **越南股市 (VN-INDEX)**：越南胡志明指數目前維持在 1,790 點上方箱型整理，平陽與同奈工業區擴廠租賃需求持續旺盛。
               3. **原物料成本 (PP Resin)**：受國際原油波段反彈影響，塑膠顆粒報價每噸微幅調漲 +0.55%，建議採購團隊適度建立 1~2 個月安全庫存。
-              4. **💡 董事長決策建議**：當前東南亞出貨訂單穩定，塑膠原物料價格處於合理區間，建議維持現行模具與產品報價利潤率，並留意第 4 季美元避險。
+              4. **💡 董事長決策建議**：當前東南亞出貨訂單穩定，建議維持現行模具與產品報價利潤率；資產配置方面，建議保持 30% 防禦型高股息資產以抵禦市場高檔波動。
               """)
 
       with col_add_stock:
         st.markdown("### ➕ 新增自訂關注個股/指數")
         with st.form("add_stock_form"):
-          s_symbol = st.text_input("股票代碼 (如 2317.TW / AAPL)", "2317.TW")
-          s_name = st.text_input("名稱 (如 鴻海)", "鴻海")
-          s_price = st.number_input("最新價格", min_value=0.0, value=185.0, step=0.5)
-          s_change = st.text_input("漲跌幅度 (如 +2.5 (+1.37%))", "+2.5 (+1.37%)")
+          s_symbol = st.text_input("股票代碼 (如 2881.TW / NVDA)", "2881.TW")
+          s_name = st.text_input("名稱 (如 富邦金)", "富邦金")
+          s_price = st.number_input("最新價格", min_value=0.0, value=92.5, step=0.5)
+          s_change = st.text_input("漲跌幅度 (如 +1.2 (+1.31%))", "+1.2 (+1.31%)")
 
           if st.form_submit_button("✅ 新增至關注戰情室"):
             st.session_state.stock_watchlist.append({
