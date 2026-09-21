@@ -31,7 +31,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🏢 0. 初始化公司與多廠區基本資訊 (可由主管於後台動態新增/修改)
+# 🏢 0. 初始化公司與多廠區基本資訊
 if "company_profile" not in st.session_state:
   st.session_state.company_profile = {
       "name": "環球塑膠射出工業股份有限公司 (Global Injection Molding Corp.)",
@@ -62,10 +62,28 @@ if "company_profile" not in st.session_state:
       },
   }
 
+# 👥 0.1 初始化越南員工人事與薪資資料庫
+if "employee_db" not in st.session_state:
+  st.session_state.employee_db = [
+      {
+          "emp_id": "VN-001",
+          "name": "Nguyễn Văn A",
+          "cccd": "038095001234",
+          "phone": "0912345678",
+          "temp_address": "Số 12, Đường số 5, KDC Dĩ An, Bình Dương",
+          "perm_address": "Xã Mỹ Xuyên, Huyện Mỹ Xuyên, Tỉnh Sóc Trăng",
+          "hospital_name": "Bệnh viện Đa khoa Tỉnh Bình Dương",
+          "hospital_address": "59 Phạm Ngọc Thạch, Hiệp Thành, TP. Thủ Dầu Một, Bình Dương",
+          "base_salary": 9000000.0,
+          "meal_allowance": 730000.0,
+          "fuel_allowance": 500000.0,
+          "phone_allowance": 300000.0,
+      }
+  ]
 
-# 🎨 專業射出成型產品結構 2D CAD 高清動態渲染
+
+# 🎨 2D CAD 高清動態渲染
 def render_product_cad_preview(product_keyword):
-  """根據產品類型，在前端即時動態算繪 2D CAD 產品工業結構圖"""
   p_name = product_keyword.lower()
 
   if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
@@ -143,9 +161,8 @@ def render_product_cad_preview(product_keyword):
   components.html(canvas_html, height=330)
 
 
-# 🧊 高階 3D 中空盒體與立體結構渲染函數
+# 🧊 3D 中空盒體渲染
 def render_dynamic_3d_model(product_keyword):
-  """根據關鍵字產生具備真實中空結構的 3D 模型渲染"""
   p_name = product_keyword.lower()
 
   if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
@@ -470,11 +487,12 @@ user_role = st.session_state.user_info["role"]
 if user_role == "admin":
   st.header("⚙️ 系統主管管理後台")
 
-  tab1, tab2, tab3, tab4 = st.tabs([
+  tab1, tab2, tab3, tab4, tab5 = st.tabs([
       "📊 業務報價總覽與資料庫",
       "🏢 跨國多廠區/公司資訊設定 (Multi-Site Profile)",
+      "🇻🇳 越南員工人事與薪資合規管理 (HR & Payroll)",
       "👥 系統使用者管理 (User Management)",
-      "🇻🇳 越南電子發票登記 (Hóa đơn điện tử)",
+      "🧾 越南電子發票登記 (Hóa đơn điện tử)",
   ])
 
   # 分頁 1：業務報價總覽
@@ -516,17 +534,13 @@ if user_role == "admin":
     else:
       st.info("目前尚無任何報價單紀錄。")
 
-  # 分頁 2：多廠區/公司資訊設定 (可無限新增/修改廠區地址電話)
+  # 分頁 2：多廠區/公司資訊設定
   with tab2:
     st.subheader("🏢 跨國企業多廠區與公司抬頭設定")
-    st.caption(
-        "在此設定的全球各地廠區資訊，將會在前台切換「製造基地」時**自動連線套用至"
-        " PDF 報價單**。"
-    )
+    st.caption("在此設定的各地廠區資訊將會自動連線套用至 PDF 報價單。")
 
     cp = st.session_state.company_profile
 
-    # 公司通用抬頭
     with st.form("company_general_form"):
       st.markdown("#### 1. 公司集團基本資料")
       col_g1, col_g2 = st.columns(2)
@@ -544,14 +558,11 @@ if user_role == "admin":
 
     st.divider()
 
-    # 個別廠區管理
-    st.markdown("#### 2. 個別廠區/分公司聯絡資訊 (可直接修改或新增)")
-
+    st.markdown("#### 2. 個別廠區/分公司聯絡資訊")
     sites_dict = cp["sites"]
     selected_site_key = st.selectbox(
         "選擇要編輯的廠區 (Select Site)", list(sites_dict.keys())
     )
-
     current_sdata = sites_dict[selected_site_key]
 
     with st.form("edit_site_form"):
@@ -570,16 +581,13 @@ if user_role == "admin":
             "email": s_email,
             "address": s_address,
         }
-        st.success(f"✅ `{selected_site_key}` 資訊已更新！前台報價將自動連動。")
+        st.success(f"✅ `{selected_site_key}` 資訊已更新！")
         st.rerun()
 
-    # ➕ 新增廠區按鈕
-    with st.expander("➕ 新增其他廠區 / 分公司 (Add New Manufacturing Site)"):
+    with st.expander("➕ 新增其他廠區 / 分公司"):
       with st.form("add_new_site_form"):
-        new_s_key = st.text_input(
-            "新廠區代號 (例如: USA (California) / Thailand (Rayong))"
-        )
-        new_s_name = st.text_input("廠區中文全稱 (例如: 美國加州研發廠)")
+        new_s_key = st.text_input("新廠區代號")
+        new_s_name = st.text_input("廠區中文全稱")
         new_s_phone = st.text_input("電話 (Tel)")
         new_s_fax = st.text_input("傳真 (Fax)")
         new_s_email = st.text_input("Email")
@@ -594,16 +602,119 @@ if user_role == "admin":
                 "email": new_s_email,
                 "address": new_s_address,
             }
-            st.success(f"🎉 新廠區 `{new_s_key}` 建立成功！前台選單已自動同步。")
+            st.success(f"🎉 新廠區 `{new_s_key}` 建立成功！")
             st.rerun()
           else:
             st.error("請至少填寫廠區代號與地址！")
 
-  # 分頁 3：使用者管理
+  # 分頁 3：全新新增 — 🇻🇳 越南員工人事與薪資合規管理 (HR & Payroll)
   with tab3:
+    st.subheader("🇻🇳 越南廠員工人事與薪資計算合規中心")
     st.caption(
-        "管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。"
+        "專為越南投資企業設計：整合員工 CCCD、居住地址、醫療保險醫院與津貼/保險扣除額計算。"
     )
+
+    # 1. 新增員工表單
+    with st.expander("➕ 新增員工個人與保險資料 (Add Employee)", expanded=True):
+      with st.form("add_employee_form"):
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+          emp_id = st.text_input("員工編號 (Mã NV)", f"VN-{len(st.session_state.employee_db)+1:03d}")
+          emp_name = st.text_input("員工全名 (Họ và Tên)", "Trần Thị B")
+          emp_cccd = st.text_input("身份證字號 (Số CCCD)", "038095009999")
+          emp_phone = st.text_input("聯絡電話 (Số điện thoại)", "0987654321")
+          emp_temp_addr = st.text_input("暫住地址 (Địa chỉ tạm trú)", "Khu phố 3, P. An Phú, TP. Thuận An, Bình Dương")
+          emp_perm_addr = st.text_input("戶籍地址 (Địa chỉ thường trú)", "Xã Tam Bình, Huyện Cai Lậy, Tỉnh Tiền Giang")
+        
+        with col_e2:
+          emp_hosp_name = st.text_input("保險登記就醫醫院 (Nơi KCB ban đầu)", "Bệnh viện Quốc tế Hạnh Phúc")
+          emp_hosp_addr = st.text_input("醫院地址 (Địa chỉ BV)", "Đại lộ Bình Dương, Thuận An, Bình Dương")
+          base_sal = st.number_input("本薪 / 保險底薪 (Lương cơ bản, VND)", min_value=0.0, value=8500000.0, step=100000.0)
+          meal_allow = st.number_input("餐費補助 (Phụ cấp ăn trưa, VND)", min_value=0.0, value=730000.0, step=10000.0)
+          fuel_allow = st.number_input("油費補助 (Phụ cấp xăng xe, VND)", min_value=0.0, value=500000.0, step=50000.0)
+          phone_allow = st.number_input("電話補助 (Phụ cấp điện thoại, VND)", min_value=0.0, value=300000.0, step=50000.0)
+
+        submit_emp = st.form_submit_button("✅ 建立員工資料 (Save Employee)", type="primary")
+
+        if submit_emp:
+          st.session_state.employee_db.append({
+              "emp_id": emp_id,
+              "name": emp_name,
+              "cccd": emp_cccd,
+              "phone": emp_phone,
+              "temp_address": emp_temp_addr,
+              "perm_address": emp_perm_addr,
+              "hospital_name": emp_hosp_name,
+              "hospital_address": emp_hosp_addr,
+              "base_salary": base_sal,
+              "meal_allowance": meal_allow,
+              "fuel_allowance": fuel_allow,
+              "phone_allowance": phone_allow,
+          })
+          st.success(f"🎉 員工 `{emp_name}` 資料建立成功！")
+          st.rerun()
+
+    st.divider()
+
+    # 2. 刪除與管理員工
+    col_del, _ = st.columns([1, 1])
+    with col_del:
+      if st.session_state.employee_db:
+        emp_options = [f"{e['emp_id']} - {e['name']}" for e in st.session_state.employee_db]
+        selected_del_emp = st.selectbox("❌ 選擇要刪除的員工", emp_options)
+        if st.button("🗑️ 刪除此員工資料 (Delete Employee)", type="primary"):
+          target_id = selected_del_emp.split(" - ")[0]
+          st.session_state.employee_db = [e for e in st.session_state.employee_db if e["emp_id"] != target_id]
+          st.success(f"🗑️ 員工 `{selected_del_emp}` 已成功刪除！")
+          st.rerun()
+
+    st.divider()
+
+    # 3. 員工清單與薪資保險即時試算總表
+    st.subheader("📋 越南員工清單與薪資/保險試算明細表")
+    if st.session_state.employee_db:
+      calculated_list = []
+      for emp in st.session_state.employee_db:
+        # 計算應發總額
+        gross = emp["base_salary"] + emp["meal_allowance"] + emp["fuel_allowance"] + emp["phone_allowance"]
+        # 越南保險個人扣除比例：BHXH 8% + BHYT 1.5% + BHTN 1% = 10.5% (以本薪計算)
+        ins_deduction = emp["base_salary"] * 0.105
+        # 實領薪資
+        net_salary = gross - ins_deduction
+
+        calculated_list.append({
+            "工號": emp["emp_id"],
+            "姓名": emp["name"],
+            "身分證字號(CCCD)": emp["cccd"],
+            "電話": emp["phone"],
+            "暫住地址": emp["temp_address"],
+            "戶籍地址": emp["perm_address"],
+            "就醫醫院": emp["hospital_name"],
+            "醫院地址": emp["hospital_address"],
+            "本薪 (VND)": f"{emp['base_salary']:,.0f}",
+            "餐費補助 (VND)": f"{emp['meal_allowance']:,.0f}",
+            "油費補助 (VND)": f"{emp['fuel_allowance']:,.0f}",
+            "電話補助 (VND)": f"{emp['phone_allowance']:,.0f}",
+            "應發總額 (Gross)": f"{gross:,.0f}",
+            "保險扣除 (10.5%)": f"-{ins_deduction:,.0f}",
+            "實領薪資 (Net)": f"{net_salary:,.0f}",
+        })
+
+      emp_df = pd.DataFrame(calculated_list)
+      st.dataframe(emp_df, use_container_width=True)
+
+      emp_csv = emp_df.to_csv(index=False).encode("utf-8-sig")
+      st.download_button(
+          "📥 匯出越南員工薪資與保險清冊 (CSV)",
+          emp_csv,
+          file_name=f"Vietnam_Payroll_{datetime.date.today()}.csv",
+      )
+    else:
+      st.info("目前尚無任何員工資料。")
+
+  # 分頁 4：使用者管理
+  with tab4:
+    st.caption("管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。")
     st.subheader("📄 現有使用者名單")
     user_list = []
     for uname, udata in st.session_state.user_database.items():
@@ -688,32 +799,23 @@ if user_role == "admin":
       else:
         st.info("目前沒有可供修改或刪除的其他使用者。")
 
-  # 分頁 4：越南發票登記
-  with tab4:
+  # 分頁 5：越南發票登記
+  with tab5:
     st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
-    st.caption(
-        "您可以透過**手動連線公司信箱**、**上傳 XML 檔案** 或 **手動輸入**"
-        " 進行發票登記。"
-    )
+    st.caption("您可以透過手動連線公司信箱、上傳 XML 檔案 或 手動輸入 進行發票登記。")
 
     with st.expander("📧 模式 A：設定公司專屬信箱，自動連線抓取發票", expanded=True):
       col_m1, col_m2 = st.columns(2)
       with col_m1:
-        mail_server = st.text_input(
-            "IMAP 伺服器地址 (Server)", "mail.yourcompany.com"
-        )
+        mail_server = st.text_input("IMAP 伺服器地址 (Server)", "mail.yourcompany.com")
         mail_port = st.number_input("IMAP Port (預設 SSL: 993)", value=993)
       with col_m2:
         mail_user = st.text_input("信箱帳號 (Email)", "invoice@yourcompany.com")
         mail_pwd = st.text_input("信箱密碼 (Password)", type="password")
 
-      if st.button(
-          "🚀 開始連線信箱並讀取最新發票", type="primary", key="btn_fetch_email"
-      ):
+      if st.button("🚀 開始連線信箱並讀取最新發票", type="primary", key="btn_fetch_email"):
         with st.spinner("正在安全連線至公司信箱並搜尋 XML 發票..."):
-          fetched_invs = fetch_invoices_from_custom_email(
-              mail_server, mail_port, mail_user, mail_pwd
-          )
+          fetched_invs = fetch_invoices_from_custom_email(mail_server, mail_port, mail_user, mail_pwd)
           if fetched_invs:
             for inv in fetched_invs:
               inv["uploader"] = f"Auto-Email ({mail_user})"
@@ -729,9 +831,7 @@ if user_role == "admin":
 
     with col_xml:
       st.markdown("### 📤 模式 B：上傳 XML 單檔解析")
-      uploaded_xml = st.file_uploader(
-          "選擇越南電子發票檔 (.xml)", type=["xml"]
-      )
+      uploaded_xml = st.file_uploader("選擇越南電子發票檔 (.xml)", type=["xml"])
 
       if uploaded_xml is not None:
         xml_bytes = uploaded_xml.read()
@@ -741,9 +841,7 @@ if user_role == "admin":
           st.success("✅ XML 發票解析成功！")
           st.json(parsed_data)
 
-          if st.button(
-              "💾 確認匯入系統資料庫", type="primary", key="btn_import_xml"
-          ):
+          if st.button("💾 確認匯入系統資料庫", type="primary", key="btn_import_xml"):
             parsed_data["uploader"] = st.session_state.user_info["name"]
             st.session_state.invoice_db.append(parsed_data)
             st.toast("🎉 發票已成功登錄至發票總表！", icon="🧾")
@@ -754,13 +852,9 @@ if user_role == "admin":
       with st.form("manual_invoice_form"):
         inv_no = st.text_input("發票號碼 (Số hóa đơn)", "0005678")
         inv_pattern = st.text_input("發票代碼 (Mẫu số)", "1/001")
-        seller_name = st.text_input(
-            "賣方公司 (Bên bán)", "CÔNG TY TNHH PLASTIC VN"
-        )
+        seller_name = st.text_input("賣方公司 (Bên bán)", "CÔNG TY TNHH PLASTIC VN")
         seller_tax = st.text_input("賣方稅號 (MST)", "3701234567")
-        total_amt = st.number_input(
-            "總金額 (含稅 VND)", min_value=0.0, value=2500000.0, step=1000.0
-        )
+        total_amt = st.number_input("總金額 (含稅 VND)", min_value=0.0, value=2500000.0, step=1000.0)
         inv_date = st.date_input("開立日期", datetime.date.today())
 
         submit_inv = st.form_submit_button("➕ 手動新增發票")
@@ -802,7 +896,7 @@ if user_role == "admin":
       st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
-# 💼 畫面 B：業務人員前台報價系統 (動態自動帶入選定廠區之地址電話)
+# 💼 畫面 B：業務人員前台報價系統
 # ==========================================
 else:
   LANG_DICT = {
@@ -843,11 +937,8 @@ else:
 
   top_col1, top_col2, top_col3 = st.columns(3)
   with top_col1:
-    lang = st.selectbox(
-        "🌐 Language / 語言", ["繁體中文", "Tiếng Việt", "English"]
-    )
+    lang = st.selectbox("🌐 Language / 語言", ["繁體中文", "Tiếng Việt", "English"])
 
-  # 動態連線後台建立的所有廠區清單
   available_sites = list(st.session_state.company_profile["sites"].keys())
   with top_col2:
     site = st.selectbox("🏭 Manufacturing Site / 出貨廠區", available_sites)
@@ -859,19 +950,16 @@ else:
 
   col1, col2 = st.columns([1, 1])
 
-  # 左側：Gemini 對話框與輸入區
   with col1:
     st.subheader(L["step1_title"])
     current_sales = st.session_state.user_info["name"]
     st.text_input("經辦業務員 / Sales Rep", current_sales, disabled=True)
 
-    # 上傳客戶圖面
     uploaded_design = st.file_uploader(
         "📤 上傳客戶原廠 2D / CAD 圖面 (.jpg, .png)",
         type=["jpg", "jpeg", "png"],
     )
 
-    # 🤖 嵌入式 Gemini Chat 視窗
     st.caption("💬 與 Gemini AI 討論需求，系統將同步於右側生成圖面與估價：")
     chat_container = st.container(height=280)
 
@@ -879,29 +967,21 @@ else:
       with chat_container.chat_message(msg["role"]):
         st.write(msg["content"])
 
-    # 用戶輸入訊息
     if user_prompt := st.chat_input("輸入產品需求（例如：長20寬15高8公分透明塑膠盒...）"):
-      st.session_state.chat_messages.append(
-          {"role": "user", "content": user_prompt}
-      )
+      st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
       st.session_state.step = 2
       st.session_state.current_keyword = user_prompt
 
-      # 呼叫 Gemini AI 進行專業射出規格分析
       with st.spinner("Gemini 正在分析產品規格與計算容量..."):
         model = genai.GenerativeModel("gemini-1.5-flash")
         try:
           sys_prompt = f"You are an expert plastic and rubber injection molding consultant. Analyze user request: '{user_prompt}'. Provide technical suggestions on Material, Dimensions(cm), Volume(ml), Part Weight(g), Mold Cavities, Machine Tonnage, and Estimated Unit Cost in {lang}."
-          response = model.generate_content(
-              sys_prompt, request_options={"timeout": 12}
-          )
+          response = model.generate_content(sys_prompt, request_options={"timeout": 12})
           ai_reply = response.text
         except:
           ai_reply = "💡 **Gemini AI 建議**：根據射出需求，建議採用耐衝擊高透光 PP/ABS 材料。\n- **預估尺寸與容量**：20cm x 15cm x 8cm (1,200 ml)\n- **預估單個重量**：120g\n- **模具穴數**：1 開 2 (Cavity)\n- **建議機台噸數**：180 噸"
 
-      st.session_state.chat_messages.append(
-          {"role": "assistant", "content": ai_reply}
-      )
+      st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
 
       if uploaded_design is not None:
         st.session_state.uploaded_file = uploaded_design
@@ -911,12 +991,10 @@ else:
 
       st.rerun()
 
-  # 右側：2D CAD / 3D 中空模型與容量計算區
   with col2:
     if st.session_state.step >= 2:
       st.subheader(L["step2_title"])
 
-      # 顯示 2D CAD 結構模擬或上傳圖
       if st.session_state.get("is_uploaded", False):
         st.image(
             st.session_state.uploaded_file,
@@ -926,11 +1004,7 @@ else:
       else:
         render_product_cad_preview(st.session_state.current_keyword)
 
-      if st.button(
-          "✅ 確認產品樣式，生成 3D 中空模型與容量分析",
-          type="primary",
-          key="btn_confirm_3d_step2",
-      ):
+      if st.button("✅ 確認產品樣式，生成 3D 中空模型與容量分析", type="primary", key="btn_confirm_3d_step2"):
         st.session_state.step = 3
         new_quote_id = f"QT-{datetime.date.today().strftime('%Y%m%d')}-{len(st.session_state.quotation_db)+1:03d}"
         st.session_state.quotation_db.append({
@@ -942,55 +1016,40 @@ else:
             "curr": curr,
             "date": str(datetime.date.today()),
         })
-        st.toast(
-            f"✅ 報價單 {new_quote_id} 已成功上傳後台主管系統！", icon="💾"
-        )
+        st.toast(f"✅ 報價單 {new_quote_id} 已成功上傳後台主管系統！", icon="💾")
 
     if st.session_state.step == 3:
       st.divider()
       st.subheader(L["step3_title"])
 
-      # 🧊 1. 3D 中空盒體與透明上蓋渲染
       render_dynamic_3d_model(st.session_state.current_keyword)
 
-      # 📊 2. 即時工程尺寸與容量/噸數動態計算器
       st.markdown("### 📐 產品尺寸與內容積 (Volume Calculator)")
 
       col_dim1, col_dim2, col_dim3 = st.columns(3)
       with col_dim1:
-        length_cm = st.number_input(
-            "長度 (Length, cm)", min_value=1.0, value=20.0, step=1.0
-        )
+        length_cm = st.number_input("長度 (Length, cm)", min_value=1.0, value=20.0, step=1.0)
       with col_dim2:
-        width_cm = st.number_input(
-            "寬度 (Width, cm)", min_value=1.0, value=15.0, step=1.0
-        )
+        width_cm = st.number_input("寬度 (Width, cm)", min_value=1.0, value=15.0, step=1.0)
       with col_dim3:
-        height_cm = st.number_input(
-            "高度 (Height, cm)", min_value=1.0, value=8.0, step=1.0
-        )
+        height_cm = st.number_input("高度 (Height, cm)", min_value=1.0, value=8.0, step=1.0)
 
-      # 動態計算容量
       box_vol_cm3 = length_cm * width_cm * height_cm
       box_vol_ml = box_vol_cm3
       box_vol_liters = box_vol_ml / 1000.0
 
-      # 估算鎖模噸數
       proj_area = length_cm * width_cm
       est_tonnage = int(proj_area * 0.4)
 
-      # 以卡片呈現容量數據
       metric_col1, metric_col2, metric_col3 = st.columns(3)
       metric_col1.metric("📦 估算內容積 (毫升)", f"{box_vol_ml:,.0f} ml")
       metric_col2.metric("🥛 估算內容積 (公升)", f"{box_vol_liters:.2f} L")
       metric_col3.metric("⚙️ 建議射出機鎖模力", f"≈ {est_tonnage} 噸")
 
       st.success(
-          f"💰 報價計算完成 (經辦業務: {current_sales})：單件估算 $0.85 USD /"
-          f" 射出模具開發費 $4,500 USD (出貨基地: {site})"
+          f"💰 報價計算完成 (經辦業務: {current_sales})：單件估算 $0.85 USD / 射出模具開發費 $4,500 USD (出貨基地: {site})"
       )
 
-      # 📄 動態抓取【當前選定廠區】的地址與電話生成 PDF
       def generate_multilingual_pdf():
         pdf_path = "official_quotation.pdf"
         doc = SimpleDocTemplate(pdf_path, pagesize=letter)
@@ -998,12 +1057,8 @@ else:
         story = []
 
         cp = st.session_state.company_profile
-        # 抓取業務選定的特定廠區 Profile
-        selected_site_data = cp["sites"].get(
-            site, list(cp["sites"].values())[0]
-        )
+        selected_site_data = cp["sites"].get(site, list(cp["sites"].values())[0])
 
-        # 公司抬頭標題 (Company Header)
         title_style = ParagraphStyle(
             "TitleStyle",
             parent=styles["Heading1"],
@@ -1011,14 +1066,8 @@ else:
             textColor=colors.HexColor("#0f172a"),
             fontName="Helvetica-Bold",
         )
-        story.append(
-            Paragraph(
-                f"<b>{cp['name']} - {selected_site_data.get('site_name', site)}</b>",
-                title_style,
-            )
-        )
+        story.append(Paragraph(f"<b>{cp['name']} - {selected_site_data.get('site_name', site)}</b>", title_style))
 
-        # 公司與特定廠區詳細聯絡資訊
         sub_style = ParagraphStyle(
             "SubStyle",
             parent=styles["Normal"],
@@ -1027,15 +1076,13 @@ else:
             fontName="Helvetica",
         )
         company_info_text = (
-            f"Tax ID: {cp['tax_id']} | Tel: {selected_site_data['phone']} |"
-            f" Fax: {selected_site_data['fax']}<br/>Email:"
-            f" {selected_site_data['email']} | Web: {cp['website']}<br/>Address:"
-            f" {selected_site_data['address']}"
+            f"Tax ID: {cp['tax_id']} | Tel: {selected_site_data['phone']} | Fax: {selected_site_data['fax']}<br/>"
+            f"Email: {selected_site_data['email']} | Web: {cp['website']}<br/>"
+            f"Address: {selected_site_data['address']}"
         )
         story.append(Paragraph(company_info_text, sub_style))
         story.append(Spacer(1, 10))
 
-        # 報價單名稱
         q_title_style = ParagraphStyle(
             "QTitleStyle",
             parent=styles["Heading2"],
@@ -1047,19 +1094,9 @@ else:
         story.append(Spacer(1, 10))
 
         info_data = [
-            [
-                "Sales Agent:",
-                current_sales,
-                "Date:",
-                str(datetime.date.today()),
-            ],
+            ["Sales Agent:", current_sales, "Date:", str(datetime.date.today())],
             ["Manufacturing Site:", site, "Currency:", curr],
-            [
-                "Product Volume:",
-                f"{box_vol_ml:,.0f} ml ({box_vol_liters:.2f}L)",
-                "Est. Tonnage:",
-                f"{est_tonnage} Tons",
-            ],
+            ["Product Volume:", f"{box_vol_ml:,.0f} ml ({box_vol_liters:.2f}L)", "Est. Tonnage:", f"{est_tonnage} Tons"],
         ]
         t_info = Table(info_data, colWidths=[120, 160, 80, 140])
         t_info.setStyle(
@@ -1074,12 +1111,7 @@ else:
         story.append(Spacer(1, 12))
 
         table_data = [
-            [
-                "Item Description",
-                "Qty / Unit",
-                f"Unit Price ({curr})",
-                f"Ext. Amount ({curr})",
-            ],
+            ["Item Description", "Qty / Unit", f"Unit Price ({curr})", f"Ext. Amount ({curr})"],
             [L["item_mold"], "1 Set", "$4,500.00", "$4,500.00"],
             [L["item_part"], "20,000", "$0.85", "$17,000.00"],
             [L["item_total"], "", "", f"{curr} $21,500.00"],
@@ -1087,35 +1119,14 @@ else:
         t_detail = Table(table_data, colWidths=[220, 80, 100, 100])
         t_detail.setStyle(
             TableStyle([
-                (
-                    "BACKGROUND",
-                    (0, 0),
-                    (-1, 0),
-                    colors.HexColor("#1e293b"),
-                ),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-                (
-                    "GRID",
-                    (0, 0),
-                    (-1, -2),
-                    0.5,
-                    colors.HexColor("#cbd5e1"),
-                ),
-                (
-                    "BACKGROUND",
-                    (0, -1),
-                    (-1, -1),
-                    colors.HexColor("#f1f5f9"),
-                ),
-                (
-                    "TEXTCOLOR",
-                    (0, -1),
-                    (-1, -1),
-                    colors.HexColor("#0f172a"),
-                ),
+                ("GRID", (0, 0), (-1, -2), 0.5, colors.HexColor("#cbd5e1")),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#f1f5f9")),
+                ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#0f172a")),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ])
