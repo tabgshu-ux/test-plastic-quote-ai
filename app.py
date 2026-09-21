@@ -62,7 +62,7 @@ if "company_profile" not in st.session_state:
       },
   }
 
-# 👥 0.1 初始化越南員工人事、出勤與薪資扣款資料庫
+# 👥 0.1 初始化越南員工人事資料庫 (靜態 HR 資料 + 額定本薪與保險)
 if "employee_db" not in st.session_state:
   st.session_state.employee_db = [
       {
@@ -81,9 +81,23 @@ if "employee_db" not in st.session_state:
           "meal_allowance": 730000.0,
           "fuel_allowance": 500000.0,
           "phone_allowance": 300000.0,
-          "tardy_deduction": 150000.0,    # 遲到/早退扣款
-          "leave_deduction": 350000.0,    # 請假扣款
-          "advance_deduction": 2000000.0, # 借款/預支扣款
+      }
+  ]
+
+# 💵 0.2 每月發薪變動扣款資料庫 (Monthly Payroll Records)
+if "monthly_payroll_db" not in st.session_state:
+  st.session_state.monthly_payroll_db = [
+      {
+          "pay_month": "2026-09",
+          "emp_id": "VN-001",
+          "emp_name": "Nguyễn Văn A",
+          "base_salary": 9000000.0,
+          "allowance_total": 1530000.0,
+          "insurance_deduct": 945000.0, # 10.5%
+          "tardy_deduct": 150000.0,
+          "leave_deduct": 300000.0,
+          "advance_deduct": 1000000.0,
+          "net_salary": 8135000.0,
       }
   ]
 
@@ -493,19 +507,18 @@ user_role = st.session_state.user_info["role"]
 if user_role == "admin":
   st.header("⚙️ 系統主管管理後台")
 
-  tab1, tab2, tab3, tab4, tab5 = st.tabs([
+  tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
       "📊 業務報價總覽與資料庫",
       "🏢 跨國多廠區/公司資訊設定 (Multi-Site Profile)",
-      "🇻🇳 越南員工人事、出勤扣款與薪資管理 (HR & Deductions)",
+      "📋 靜態人事檔案 (Employee Profiles)",
+      "💵 每月薪資發放與變動扣款 (Monthly Payroll)",
       "👥 系統使用者管理 (User Management)",
       "🧾 越南電子發票登記 (Hóa đơn điện tử)",
   ])
 
   # 分頁 1：業務報價總覽
   with tab1:
-    st.caption(
-        "您可以檢視全公司所有業務員的報價歷程、總金額統計，並匯出報表。"
-    )
+    st.caption("您可以檢視全公司所有業務員的報價歷程、總金額統計，並匯出報表。")
     df = pd.DataFrame(st.session_state.quotation_db)
     total_sales = df["amount"].sum() if not df.empty else 0
     total_orders = len(df)
@@ -613,17 +626,14 @@ if user_role == "admin":
           else:
             st.error("請至少填寫廠區代號與地址！")
 
-  # 分頁 3：🇻🇳 越南員工人事、出勤扣款與薪資管理 (含遲到/請假/借款扣除)
+  # 分頁 3：靜態人事檔案 (Employee Profiles - 包含合規日期與固定薪資/保險)
   with tab3:
-    st.subheader("🇻🇳 越南廠員工人事、合約日期與薪資扣款管理")
-    st.caption(
-        "整合合規日期（入職/簽約/離職）、津貼與**遲到早退罰款、請假扣款及預支借款扣除**。"
-    )
+    st.subheader("📋 靜態人事檔案與保險底薪管理")
+    st.caption("維護員工個人資料、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。")
 
-    # 1. 新增員工完整表單
-    with st.expander("➕ 新增員工資料與薪資扣款設定 (Add Employee & Salary Specs)", expanded=True):
-      with st.form("add_employee_full_form"):
-        st.markdown("##### 📌 1. 個人基本與合規日期資料 (Personnel Info)")
+    # 新增員工表單
+    with st.expander("➕ 新增員工個人檔案 (Add New Employee)", expanded=True):
+      with st.form("add_static_emp_form"):
         col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
           emp_id = st.text_input("員工編號 (Mã NV)", f"VN-{len(st.session_state.employee_db)+1:03d}")
@@ -640,20 +650,18 @@ if user_role == "admin":
           emp_hosp_name = st.text_input("保險就醫醫院 (Nơi KCB)", "Bệnh viện Quốc tế Hạnh Phúc")
           emp_hosp_addr = st.text_input("醫院地址", "Đại lộ Bình Dương, Thuận An, Bình Dương")
 
-        st.markdown("##### 💵 2. 薪資、津貼與扣款項目 (Salary, Allowances & Deductions)")
-        col_s1, col_s2, col_s3 = st.columns(3)
+        st.markdown("##### 💵 每月固定薪資與津貼 (Fixed Salary Structure)")
+        col_s1, col_s2, col_s3, col_s4 = st.columns(4)
         with col_s1:
           base_sal = st.number_input("本薪 / 保險底薪 (VND)", min_value=0.0, value=8500000.0, step=100000.0)
-          meal_allow = st.number_input("餐費補助 (Phụ cấp ăn)", min_value=0.0, value=730000.0, step=10000.0)
         with col_s2:
-          fuel_allow = st.number_input("油費補助 (Phụ cấp xăng)", min_value=0.0, value=500000.0, step=50000.0)
-          phone_allow = st.number_input("電話補助 (Phụ cấp ĐT)", min_value=0.0, value=300000.0, step=50000.0)
+          meal_allow = st.number_input("餐費補助 (Phụ cấp ăn)", min_value=0.0, value=730000.0, step=10000.0)
         with col_s3:
-          tardy_ded = st.number_input("遲到/早退扣款 (Trừ đi trễ, VND)", min_value=0.0, value=100000.0, step=10000.0)
-          leave_ded = st.number_input("請假/無薪假扣款 (Trừ nghỉ phép, VND)", min_value=0.0, value=300000.0, step=50000.0)
-          advance_ded = st.number_input("預支借款扣除 (Trừ tạm ứng lương, VND)", min_value=0.0, value=1500000.0, step=100000.0)
+          fuel_allow = st.number_input("油費補助 (Phụ cấp xăng)", min_value=0.0, value=500000.0, step=50000.0)
+        with col_s4:
+          phone_allow = st.number_input("電話補助 (Phụ cấp ĐT)", min_value=0.0, value=300000.0, step=50000.0)
 
-        submit_emp = st.form_submit_button("✅ 建立員工完整檔案 (Save Employee)", type="primary")
+        submit_emp = st.form_submit_button("✅ 儲存員工靜態檔案", type="primary")
 
         if submit_emp:
           st.session_state.employee_db.append({
@@ -672,22 +680,19 @@ if user_role == "admin":
               "meal_allowance": meal_allow,
               "fuel_allowance": fuel_allow,
               "phone_allowance": phone_allow,
-              "tardy_deduction": tardy_ded,
-              "leave_deduction": leave_ded,
-              "advance_deduction": advance_ded,
           })
-          st.success(f"🎉 員工 `{emp_name}` 檔案已建立並納入薪資扣款系統！")
+          st.success(f"🎉 員工 `{emp_name}` 檔案已成功建立！")
           st.rerun()
 
     st.divider()
 
-    # 2. 刪除員工功能
+    # 刪除員工功能
     col_del, _ = st.columns([1, 1])
     with col_del:
       if st.session_state.employee_db:
         emp_options = [f"{e['emp_id']} - {e['name']}" for e in st.session_state.employee_db]
-        selected_del_emp = st.selectbox("❌ 選擇要刪除的員工", emp_options)
-        if st.button("🗑️ 刪除此員工資料 (Delete Employee)", type="primary"):
+        selected_del_emp = st.selectbox("❌ 選擇要刪除的員工", emp_options, key="select_del_static_emp")
+        if st.button("🗑️ 刪除此員工檔案", type="primary", key="btn_del_static_emp"):
           target_id = selected_del_emp.split(" - ")[0]
           st.session_state.employee_db = [e for e in st.session_state.employee_db if e["emp_id"] != target_id]
           st.success(f"🗑️ 員工 `{selected_del_emp}` 已成功刪除！")
@@ -695,51 +700,168 @@ if user_role == "admin":
 
     st.divider()
 
-    # 3. 員工清單與薪資保險/遲到借款扣算總表
-    st.subheader("📋 越南員工清冊、合約日期與薪資扣款結算總表")
+    # 人事總表顯示 (含 10.5% 強制保險固定扣算)
+    st.subheader("📋 越南員工靜態檔案與基本保險總表")
     if st.session_state.employee_db:
-      calculated_list = []
+      static_list = []
       for emp in st.session_state.employee_db:
-        # 應發總額
-        gross = emp["base_salary"] + emp["meal_allowance"] + emp["fuel_allowance"] + emp["phone_allowance"]
-        # 保險扣除 (10.5%)
-        ins_deduction = emp["base_salary"] * 0.105
-        # 總扣款 (保險 + 遲到 + 請假 + 預支借款)
-        total_deduction = ins_deduction + emp.get("tardy_deduction", 0) + emp.get("leave_deduction", 0) + emp.get("advance_deduction", 0)
-        # 實領薪資
-        net_salary = gross - total_deduction
-
-        calculated_list.append({
+        ins_deduct = emp["base_salary"] * 0.105
+        static_list.append({
             "工號": emp["emp_id"],
             "姓名": emp["name"],
             "CCCD": emp["cccd"],
+            "電話": emp["phone"],
             "入職日期": emp.get("join_date", "-"),
             "合約簽署日": emp.get("contract_date", "-"),
             "離職日期": emp.get("leave_date", "-"),
+            "就醫醫院": emp["hospital_name"],
             "本薪 (VND)": f"{emp['base_salary']:,.0f}",
-            "津貼總計": f"{(emp['meal_allowance']+emp['fuel_allowance']+emp['phone_allowance']):,.0f}",
-            "應發總額 (Gross)": f"{gross:,.0f}",
-            "保險自付 (10.5%)": f"-{ins_deduction:,.0f}",
-            "遲到扣款": f"-{emp.get('tardy_deduction', 0):,.0f}",
-            "請假扣款": f"-{emp.get('leave_deduction', 0):,.0f}",
-            "借款扣除": f"-{emp.get('advance_deduction', 0):,.0f}",
-            "實領薪資 (Net)": f"{net_salary:,.0f}",
+            "津貼小計": f"{(emp['meal_allowance']+emp['fuel_allowance']+emp['phone_allowance']):,.0f}",
+            "每月固定保險自付 (10.5%)": f"-{ins_deduct:,.0f}",
         })
+      st.dataframe(pd.DataFrame(static_list), use_container_width=True)
 
-      emp_df = pd.DataFrame(calculated_list)
-      st.dataframe(emp_df, use_container_width=True)
-
-      emp_csv = emp_df.to_csv(index=False).encode("utf-8-sig")
-      st.download_button(
-          "📥 匯出完整越南員工薪資與扣款總冊 (CSV)",
-          emp_csv,
-          file_name=f"Vietnam_Payroll_Deductions_{datetime.date.today()}.csv",
-      )
-    else:
-      st.info("目前尚無任何員工資料。")
-
-  # 分頁 4：使用者管理
+  # 分頁 4：全新功能 — 💵 每月薪資發放與變動扣款 (Monthly Payroll Processing)
   with tab4:
+    st.subheader("💵 每月動態薪資發放與變動扣款結算中心")
+    st.caption("在此輸入**當月份實際發生**的「遲到早退罰款、請假扣款與借款/預支扣除」，系統將產出正式薪資單 PDF。")
+
+    # 1. 登記當月變動扣款
+    with st.expander("📝 輸入員工【當月變動考勤與借款扣款】", expanded=True):
+      if st.session_state.employee_db:
+        with st.form("monthly_payroll_form"):
+          col_p1, col_p2, col_p3 = st.columns(3)
+          with col_p1:
+            pay_month = st.text_input("發薪月份 (Tháng lương)", datetime.date.today().strftime("%Y-%m"))
+            emp_sel_payroll = st.selectbox("選擇結算員工", [f"{e['emp_id']} - {e['name']}" for e in st.session_state.employee_db])
+          
+          # 找出選定員工
+          target_emp_id = emp_sel_payroll.split(" - ")[0]
+          emp_info = next((e for e in st.session_state.employee_db if e["emp_id"] == target_emp_id), None)
+
+          with col_p2:
+            st.info(f"📌 **{emp_info['name']}** 約定本薪：`{emp_info['base_salary']:,.0f} VND`")
+            ins_105 = emp_info['base_salary'] * 0.105
+            st.caption(f"🛡️ 每月固定保險扣除 (10.5%): `{ins_105:,.0f} VND`")
+
+          with col_p3:
+            tardy_m = st.number_input("當月遲到/早退扣款 (Trừ đi trễ)", min_value=0.0, value=100000.0, step=10000.0)
+            leave_m = st.number_input("當月請假/無薪假扣款 (Trừ nghỉ phép)", min_value=0.0, value=300000.0, step=50000.0)
+            advance_m = st.number_input("當月預支借款扣除 (Trừ tạm ứng)", min_value=0.0, value=1000000.0, step=100000.0)
+
+          submit_pay = st.form_submit_button("✅ 算算並發放此月薪資 (Calculate Payroll)", type="primary")
+
+          if submit_pay:
+            allow_tot = emp_info['meal_allowance'] + emp_info['fuel_allowance'] + emp_info['phone_allowance']
+            gross_m = emp_info['base_salary'] + allow_tot
+            net_m = gross_m - ins_105 - tardy_m - leave_m - advance_m
+
+            st.session_state.monthly_payroll_db.append({
+                "pay_month": pay_month,
+                "emp_id": emp_info['emp_id'],
+                "emp_name": emp_info['name'],
+                "base_salary": emp_info['base_salary'],
+                "allowance_total": allow_tot,
+                "insurance_deduct": ins_105,
+                "tardy_deduct": tardy_m,
+                "leave_deduct": leave_m,
+                "advance_deduct": advance_m,
+                "net_salary": net_m,
+            })
+            st.success(f"🎉 `{pay_month}` 月份 `{emp_info['name']}` 薪資已成功計算！實領薪資: `{net_m:,.0f} VND`")
+            st.rerun()
+
+    st.divider()
+
+    # 2. 顯示當月薪資結算表與生成單人 PDF 薪資單
+    st.subheader("📊 每月薪資結算總明細表")
+    if st.session_state.monthly_payroll_db:
+      pay_df = pd.DataFrame(st.session_state.monthly_payroll_db)
+      st.dataframe(pay_df, use_container_width=True)
+
+      col_dl1, col_dl2 = st.columns([1, 1])
+      with col_dl1:
+        pay_csv = pay_df.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            "📥 匯出每月薪資發放明細總表 (CSV)",
+            pay_csv,
+            file_name=f"Monthly_Payroll_Summary_{datetime.date.today()}.csv",
+        )
+
+      # 生成中/越雙語電子薪資單 PDF 供員工簽名
+      with col_dl2:
+        with st.expander("📄 下載個人雙語正式薪資單 PDF (Payslip)", expanded=True):
+          pay_records = [f"{p['pay_month']} - {p['emp_id']} {p['emp_name']}" for p in st.session_state.monthly_payroll_db]
+          sel_payslip = st.selectbox("選擇薪資單紀錄", pay_records)
+
+          def generate_payslip_pdf(pay_record):
+            pdf_path = "official_payslip.pdf"
+            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+            styles = getSampleStyleSheet()
+            story = []
+
+            cp = st.session_state.company_profile
+            vn_site = cp['sites'].get("Vietnam (Binh Duong)", list(cp['sites'].values())[0])
+
+            title_style = ParagraphStyle("PTitle", parent=styles["Heading1"], fontSize=13, textColor=colors.HexColor("#0f172a"))
+            story.append(Paragraph(f"<b>{cp['name']} - {vn_site['site_name']}</b>", title_style))
+            story.append(Paragraph(f"<b>PHIẾU LƯƠNG HÀNG THÁNG / 每月正式薪資單 ({pay_record['pay_month']})</b>", ParagraphStyle("SubP", fontSize=11, textColor=colors.HexColor("#0284c7"))))
+            story.append(Spacer(1, 10))
+
+            info_p = [
+                ["Mã NV / 工號:", pay_record['emp_id'], "Tên NV / 姓名:", pay_record['emp_name']],
+                ["Tháng lương / 月份:", pay_record['pay_month'], "Ngày chi trả / 發薪日:", str(datetime.date.today())]
+            ]
+            t_pinfo = Table(info_p, colWidths=[120, 150, 120, 150])
+            t_pinfo.setStyle(TableStyle([('FONTSIZE', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 4)]))
+            story.append(t_pinfo)
+            story.append(Spacer(1, 10))
+
+            pay_table_data = [
+                ["Hạng mục / 薪資與扣款項目", "Số tiền / 金額 (VND)"],
+                ["Lương cơ bản / 本薪", f"{pay_record['base_salary']:,.0f}"],
+                ["Tổng phụ cấp / 津貼總額 (餐費/油費/電話)", f"{pay_record['allowance_total']:,.0f}"],
+                ["Trừ BHXH (10.5%) / 每月保險自付 (10.5%)", f"-{pay_record['insurance_deduct']:,.0f}"],
+                ["Trừ đi trễ / 當月遲到早退扣款", f"-{pay_record['tardy_deduct']:,.0f}"],
+                ["Trừ nghỉ phép / 當月請假扣款", f"-{pay_record['leave_deduct']:,.0f}"],
+                ["Trừ tạm ứng / 當月預支借款扣除", f"-{pay_record['advance_deduct']:,.0f}"],
+                ["LƯƠNG THỰC NHẬN / 當月實領薪資 (NET)", f"{pay_record['net_salary']:,.0f}"]
+            ]
+            t_ptable = Table(pay_table_data, colWidths=[340, 180])
+            t_ptable.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1e293b")),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor("#cbd5e1")),
+                ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f1f5f9")),
+                ('TEXTCOLOR', (0,-1), (-1,-1), colors.HexColor("#0284c7")),
+                ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6)
+            ]))
+            story.append(t_ptable)
+            story.append(Spacer(1, 25))
+
+            sig_data = [["Chữ ký người lập biểu / 製表人簽名", "Chữ ký nhân viên / 員工簽名確認"]]
+            t_sig = Table(sig_data, colWidths=[260, 260])
+            t_sig.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('FONTSIZE', (0,0), (-1,-1), 9)]))
+            story.append(t_sig)
+
+            doc.build(story)
+            return pdf_path
+
+          target_p_index = pay_records.index(sel_payslip)
+          target_p_record = st.session_state.monthly_payroll_db[target_p_index]
+          ps_pdf = generate_payslip_pdf(target_p_record)
+
+          with open(ps_pdf, "rb") as pf:
+            st.download_button(
+                "📥 下載此員工雙語薪資單 PDF (Print Payslip)",
+                pf,
+                file_name=f"Payslip_{target_p_record['pay_month']}_{target_p_record['emp_id']}.pdf",
+                key="btn_dl_payslip_pdf"
+            )
+
+  # 分頁 5：使用者管理
+  with tab5:
     st.caption("管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。")
     st.subheader("📄 現有使用者名單")
     user_list = []
@@ -825,8 +947,8 @@ if user_role == "admin":
       else:
         st.info("目前沒有可供修改或刪除的其他使用者。")
 
-  # 分頁 5：越南發票登記
-  with tab5:
+  # 分頁 6：越南發票登記
+  with tab6:
     st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
     st.caption("您可以透過手動連線公司信箱、上傳 XML 檔案 或 手動輸入 進行發票登記。")
 
