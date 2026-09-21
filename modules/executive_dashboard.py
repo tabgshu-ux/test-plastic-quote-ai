@@ -74,18 +74,16 @@ def render_dashboard(selected_stock_market):
     st.divider()
     col_ai_stock, col_add_stock = st.columns([2, 1])
 
-  with col_ai_stock:
+    with col_ai_stock:
         st.markdown(f"### 🤖 Gemini AI 跨國白話財經摘要 [{selected_stock_market}]")
         st.caption("點擊下方按鈕，讓 AI 為您用最白話的方式解讀該市場之最新趨勢與製造業策略。")
         
         if st.button("🚀 生成該區域白話重點與決策報告", key="btn_gen_stock_ai"):
             with st.spinner(f"Gemini AI 正在為您整理【{selected_stock_market}】白話市場摘要..."):
                 try:
-                    # 1. 抓取目前該市場選中的股票清單資訊
                     current_stocks = [f"{item['name']}({item['ticker']}): 價格{item['price']}, 漲跌{item['change']}" for item in filtered_watchlist]
                     stocks_summary = "；".join(current_stocks)
                     
-                    # 2. 針對「特定市場」客製化提示詞
                     model = genai.GenerativeModel("gemini-1.5-flash")
                     stock_prompt = f"""
                     你是一位給集團董事長專屬的白話財經顧問。
@@ -101,8 +99,7 @@ def render_dashboard(selected_stock_market):
                     res = model.generate_content(stock_prompt)
                     st.markdown(f"#### 📊 AI 區域市場白話摘要：\n{res.text}")
                 
-                except Exception as e:
-                    # 3. 萬一 API 沒連上，針對各國提供「動態客製化後備範例」，不再顯示固定文字！
+                except Exception:
                     mock_responses = {
                         "🇹🇼 台灣 (Taiwan)": "1. **景氣**：AI 伺服器與半導體出口極度強勁，台灣電子製造業排單熱絡。\n2. **動態**：台積電等高階晶片產能供不應求，帶動整體供應鏈資金持續流入。\n3. **影響**：有利台灣總部研發開模與高階訂單之利潤率。\n4. **建議**：維持台灣總部高階產能擴建，抓住 AI 升級紅利。",
                         "🇨🇳 中國/香港 (China/HK)": "1. **景氣**：內需消費與房地產仍在打底階段，但政府持續釋放降息與刺激政策。\n2. **動態**：傳統龍頭如茅台維持高現金流，港股科技股則依賴庫藏股實施保護股價。\n3. **影響**：東莞廠區受內需放緩影響，應優先對接外銷與高單價車用訂單。\n4. **建議**：東莞廠適度收緊信用期，優化應收帳款管理。",
@@ -115,9 +112,12 @@ def render_dashboard(selected_stock_market):
 
     with col_add_stock:
         st.markdown("### 🛠️ 管理自訂觀察關注標的")
-        if "val_stock_name" not in st.session_state: st.session_state["val_stock_name"] = "日月光投控"
-        if "val_stock_price" not in st.session_state: st.session_state["val_stock_price"] = 663.00
-        if "val_stock_change" not in st.session_state: st.session_state["val_stock_change"] = "+25.00 (+3.92%)"
+        if "val_stock_name" not in st.session_state: 
+            st.session_state["val_stock_name"] = "日月光投控"
+        if "val_stock_price" not in st.session_state: 
+            st.session_state["val_stock_price"] = 663.00
+        if "val_stock_change" not in st.session_state: 
+            st.session_state["val_stock_change"] = "+25.00 (+3.92%)"
 
         def fetch_stock_info_callback():
             symbol = st.session_state.get("input_stock_ticker", "").strip().upper()
