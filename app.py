@@ -95,7 +95,7 @@ if "monthly_payroll_db" not in st.session_state:
           "position": "射出機技術員",
           "base_salary": 9000000.0,
           "allowance_total": 1530000.0,
-          "insurance_deduct": 945000.0, # 10.5%
+          "insurance_deduct": 945000.0,  # 10.5%
           "tardy_deduct": 150000.0,
           "leave_deduct": 300000.0,
           "advance_deduct": 1000000.0,
@@ -271,13 +271,28 @@ def render_dynamic_3d_model(product_keyword):
   components.html(three_code, height=370)
 
 
-# 🔐 1. 初始化使用者帳號資料庫
+# 🔐 1. 初始化使用者帳號資料庫 (升級多角色分類：executive / hr / finance / sales)
 if "user_database" not in st.session_state:
   st.session_state.user_database = {
-      "admin": {
-          "password": "admin123",
-          "name": "系統主管 (Manager)",
-          "role": "admin",
+      "boss": {
+          "password": "boss123",
+          "name": "陳董事長 (Chairman)",
+          "role": "executive",
+      },
+      "gm": {
+          "password": "gm123",
+          "name": "林總經理 (General Manager)",
+          "role": "executive",
+      },
+      "hr_manager": {
+          "password": "hr123",
+          "name": "張人事主管 (HR Manager)",
+          "role": "hr",
+      },
+      "accountant": {
+          "password": "fin123",
+          "name": "王財務會計 (Accountant)",
+          "role": "finance",
       },
       "alex": {
           "password": "alex123",
@@ -287,11 +302,6 @@ if "user_database" not in st.session_state:
       "david": {
           "password": "david123",
           "name": "David Wang (S-002)",
-          "role": "sales",
-      },
-      "nguyen": {
-          "password": "nguyen123",
-          "name": "Nguyen Van A (S-005)",
           "role": "sales",
       },
   }
@@ -449,8 +459,8 @@ def fetch_invoices_from_custom_email(
 # 🔓 3. 登入介面
 # ==========================================
 if not st.session_state.authenticated:
-  st.title("🏭 塑膠/橡膠射出成型 — 跨國 AI 報價 ERP 系統")
-  st.caption("請輸入您的企業帳號與密碼以進行身份驗證")
+  st.title("🏭 塑膠/橡膠射出成型 — 跨國 AI 報價與分權 ERP 系統")
+  st.caption("請輸入您的企業帳號與密碼以進行身份驗證與權限跳轉")
 
   col_login, _ = st.columns([1, 1])
   with col_login:
@@ -475,10 +485,11 @@ if not st.session_state.authenticated:
           st.error("❌ 帳號或密碼錯誤，請重新輸入！")
 
     st.info("""
-        💡 **Demo 測試帳號提示：**
-        - **主管帳號**：`admin` / 密碼：`admin123`
-        - **業務帳號 1**：`alex` / 密碼：`alex123`
-        - **業務帳號 2**：`david` / 密碼：`david123`
+        💡 **各權限 Demo 測試帳號提示：**
+        - **董事長/總經理 (全權限)**：`boss` / `boss123` 或 `gm` / `gm123`
+        - **人事專員 (僅人事與薪資)**：`hr_manager` / `hr123`
+        - **財務會計 (僅薪資與發票)**：`accountant` / `fin123`
+        - **業務人員 (僅前台報價)**：`alex` / `alex123`
         """)
   st.stop()
 
@@ -486,11 +497,18 @@ if not st.session_state.authenticated:
 # 🔒 4. 已登入的主系統介面
 # ==========================================
 
+ROLE_NAME_MAP = {
+    "executive": "👑 董事長/總經理 (全權限)",
+    "hr": "👥 人事主管/HR",
+    "finance": "💰 財務會計",
+    "sales": "💼 業務人員",
+}
+
 st.sidebar.title("👤 使用者資訊")
 st.sidebar.write(f"**當前使用者**：{st.session_state.user_info['name']}")
 st.sidebar.write(
     "**權限角色**："
-    f" {'🔑 系統主管' if st.session_state.user_info['role'] == 'admin' else '💼 業務人員'}"
+    f" {ROLE_NAME_MAP.get(st.session_state.user_info['role'], '一般權限')}"
 )
 
 if st.sidebar.button("🚪 登出系統", key="btn_logout_main"):
@@ -504,553 +522,555 @@ st.sidebar.divider()
 user_role = st.session_state.user_info["role"]
 
 # ==========================================
-# 👑 畫面 A：主管管理後台 (Admin Panel)
+# 👑 畫面 A：管理與行政後台 (後端專用 - 非 Sales 權限即可進入)
 # ==========================================
-if user_role == "admin":
-  st.header("⚙️ 系統主管管理後台")
+if user_role in ["executive", "hr", "finance"]:
+  st.header(f"⚙️ 後台管理中心 — [{ROLE_NAME_MAP.get(user_role)}]")
 
-  tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-      "📊 業務報價總覽與資料庫",
-      "🏢 跨國多廠區/公司資訊設定 (Multi-Site Profile)",
-      "📋 人事檔案 (Employee Profiles)",
-      "💵 每月薪資發放與變動扣款 (Monthly Payroll)",
-      "👥 系統使用者管理 (User Management)",
-      "🧾 越南電子發票登記 (Hóa đơn điện tử)",
-  ])
+  # 根據角色分權動態顯示 Tab 分頁
+  tabs_to_show = []
+  if user_role in ["executive"]:
+    tabs_to_show.append("📊 業務報價總覽與資料庫")
+    tabs_to_show.append("🏢 跨國多廠區/公司資訊設定")
 
-  # 分頁 1：業務報價總覽
-  with tab1:
-    st.caption("您可以檢視全公司所有業務員的報價歷程、總金額統計，並匯出報表。")
-    df = pd.DataFrame(st.session_state.quotation_db)
-    total_sales = df["amount"].sum() if not df.empty else 0
-    total_orders = len(df)
+  if user_role in ["executive", "hr"]:
+    tabs_to_show.append("📋 人事檔案 (Employee Profiles)")
 
-    col_a, col_b, col_c = st.columns(3)
-    col_a.metric("全廠歷史報價單數", f"{total_orders} 筆")
-    col_b.metric("全廠估算總報價金額", f"${total_sales:,.2f} USD")
-    col_c.metric(
-        "團隊業務人數",
-        f"{len(df['sales_rep'].unique()) if not df.empty else 0} 位",
-    )
+  if user_role in ["executive", "hr", "finance"]:
+    tabs_to_show.append("💵 每月薪資發放與變動扣款 (Monthly Payroll)")
 
-    st.divider()
-    st.subheader("📋 跨國業務報價總明細表")
+  if user_role in ["executive", "finance"]:
+    tabs_to_show.append("🧾 越南電子發票登記 (Hóa đơn điện tử)")
 
-    if not df.empty:
-      all_sales = ["全部業務 (All)"] + list(df["sales_rep"].unique())
-      selected_sales = st.selectbox("🔍 依業務員篩選紀錄", all_sales)
+  if user_role in ["executive"]:
+    tabs_to_show.append("👥 系統使用者與權限管理 (User Management)")
 
-      if selected_sales != "全部業務 (All)":
-        filtered_df = df[df["sales_rep"] == selected_sales]
-      else:
-        filtered_df = df
+  active_tabs = st.tabs(tabs_to_show)
 
-      st.dataframe(filtered_df, use_container_width=True)
-      csv_data = filtered_df.to_csv(index=False).encode("utf-8-sig")
-      st.download_button(
-          "📥 匯出業務報價總表 (CSV)",
-          csv_data,
-          file_name=f"Admin_Sales_Report_{datetime.date.today()}.csv",
+  # ----------------------------------------
+  # 1. 業務報價總覽 (Executive 專屬)
+  # ----------------------------------------
+  if "📊 業務報價總覽與資料庫" in tabs_to_show:
+    idx = tabs_to_show.index("📊 業務報價總覽與資料庫")
+    with active_tabs[idx]:
+      st.caption("高階主管可檢視全公司所有業務員的報價歷程、總金額統計與趨勢。")
+      df = pd.DataFrame(st.session_state.quotation_db)
+      total_sales = df["amount"].sum() if not df.empty else 0
+      total_orders = len(df)
+
+      col_a, col_b, col_c = st.columns(3)
+      col_a.metric("全廠歷史報價單數", f"{total_orders} 筆")
+      col_b.metric("全廠估算總報價金額", f"${total_sales:,.2f} USD")
+      col_c.metric(
+          "團隊業務人數",
+          f"{len(df['sales_rep'].unique()) if not df.empty else 0} 位",
       )
-    else:
-      st.info("目前尚無任何報價單紀錄。")
 
-  # 分頁 2：多廠區/公司資訊設定
-  with tab2:
-    st.subheader("🏢 跨國企業多廠區與公司抬頭設定")
-    st.caption("在此設定的各地廠區資訊將會自動連線套用至 PDF 報價單。")
+      st.divider()
+      st.subheader("📋 跨國業務報價總明細表")
 
-    cp = st.session_state.company_profile
+      if not df.empty:
+        all_sales = ["全部業務 (All)"] + list(df["sales_rep"].unique())
+        selected_sales = st.selectbox("🔍 依業務員篩選紀錄", all_sales)
 
-    with st.form("company_general_form"):
-      st.markdown("#### 1. 公司集團基本資料")
-      col_g1, col_g2 = st.columns(2)
-      with col_g1:
-        cp_name = st.text_input("公司總稱 (Company Name)", cp["name"])
-        cp_tax_id = st.text_input("統一編號 / 稅號 (Tax ID)", cp["tax_id"])
-      with col_g2:
-        cp_website = st.text_input("官方網站 (Website)", cp["website"])
+        if selected_sales != "全部業務 (All)":
+          filtered_df = df[df["sales_rep"] == selected_sales]
+        else:
+          filtered_df = df
 
-      if st.form_submit_button("💾 儲存集團基本資料"):
-        st.session_state.company_profile["name"] = cp_name
-        st.session_state.company_profile["tax_id"] = cp_tax_id
-        st.session_state.company_profile["website"] = cp_website
-        st.toast("✅ 公司集團基本資料已更新！", icon="💾")
-
-    st.divider()
-
-    st.markdown("#### 2. 個別廠區/分公司聯絡資訊")
-    sites_dict = cp["sites"]
-    selected_site_key = st.selectbox(
-        "選擇要編輯的廠區 (Select Site)", list(sites_dict.keys())
-    )
-    current_sdata = sites_dict[selected_site_key]
-
-    with st.form("edit_site_form"):
-      st.caption(f"正在編輯：`{selected_site_key}` 的聯絡資訊")
-      s_name = st.text_input("廠區中文名稱", current_sdata["site_name"])
-      s_phone = st.text_input("電話 (Tel)", current_sdata["phone"])
-      s_fax = st.text_input("傳真 (Fax)", current_sdata["fax"])
-      s_email = st.text_input("公用 Email", current_sdata["email"])
-      s_address = st.text_input("廠區完整地址 (Address)", current_sdata["address"])
-
-      if st.form_submit_button("💾 更新此廠區資訊", type="primary"):
-        st.session_state.company_profile["sites"][selected_site_key] = {
-            "site_name": s_name,
-            "phone": s_phone,
-            "fax": s_fax,
-            "email": s_email,
-            "address": s_address,
-        }
-        st.success(f"✅ `{selected_site_key}` 資訊已更新！")
-        st.rerun()
-
-    with st.expander("➕ 新增其他廠區 / 分公司"):
-      with st.form("add_new_site_form"):
-        new_s_key = st.text_input("新廠區代號")
-        new_s_name = st.text_input("廠區中文全稱")
-        new_s_phone = st.text_input("電話 (Tel)")
-        new_s_fax = st.text_input("傳真 (Fax)")
-        new_s_email = st.text_input("Email")
-        new_s_address = st.text_input("廠區完整地址")
-
-        if st.form_submit_button("➕ 確認建立新廠區"):
-          if new_s_key and new_s_address:
-            st.session_state.company_profile["sites"][new_s_key] = {
-                "site_name": new_s_name,
-                "phone": new_s_phone,
-                "fax": new_s_fax,
-                "email": new_s_email,
-                "address": new_s_address,
-            }
-            st.success(f"🎉 新廠區 `{new_s_key}` 建立成功！")
-            st.rerun()
-          else:
-            st.error("請至少填寫廠區代號與地址！")
-
-  # 分頁 3：人事檔案 (Employee Profiles - 新增職位欄位)
-  with tab3:
-    st.subheader("📋 越南廠人事檔案與職位管理")
-    st.caption("維護員工個人資料、職位、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。")
-
-    # 新增員工表單
-    with st.expander("➕ 新增員工個人檔案 (Add Employee Profile)", expanded=True):
-      with st.form("add_static_emp_form"):
-        col_e1, col_e2, col_e3 = st.columns(3)
-        with col_e1:
-          emp_id = st.text_input("員工編號 (Mã NV)", f"VN-{len(st.session_state.employee_db)+1:03d}")
-          emp_name = st.text_input("員工全名 (Họ và Tên)", "Trần Thị B")
-          emp_position = st.text_input("職位名稱 (Chức vụ)", "射出機技術員")
-          emp_cccd = st.text_input("身份證字號 (Số CCCD)", "038095009999")
-          emp_phone = st.text_input("聯絡電話", "0987654321")
-        with col_e2:
-          emp_join_date = st.date_input("入職日期 (Ngày vào làm)", datetime.date(2024, 3, 1))
-          emp_contract_date = st.date_input("合約簽署日期 (Ngày ký HĐLĐ)", datetime.date(2024, 3, 5))
-          emp_leave_date_str = st.text_input("離職日期 (若仍在庫請填 -)", "-")
-        with col_e3:
-          emp_temp_addr = st.text_input("暫住地址 (Địa chỉ tạm trú)", "Khu phố 3, P. An Phú, Thuận An, Bình Dương")
-          emp_perm_addr = st.text_input("戶籍地址 (Địa chỉ thường trú)", "Xã Tam Bình, Cai Lậy, Tiền Giang")
-          emp_hosp_name = st.text_input("保險就醫醫院 (Nơi KCB)", "Bệnh viện Quốc tế Hạnh Phúc")
-          emp_hosp_addr = st.text_input("醫院地址", "Đại lộ Bình Dương, Thuận An, Bình Dương")
-
-        st.markdown("##### 💵 每月固定薪資與津貼 (Fixed Salary Structure)")
-        col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-        with col_s1:
-          base_sal = st.number_input("本薪 / 保險底薪 (VND)", min_value=0.0, value=8500000.0, step=100000.0)
-        with col_s2:
-          meal_allow = st.number_input("餐費補助 (Phụ cấp ăn)", min_value=0.0, value=730000.0, step=10000.0)
-        with col_s3:
-          fuel_allow = st.number_input("油費補助 (Phụ cấp xăng)", min_value=0.0, value=500000.0, step=50000.0)
-        with col_s4:
-          phone_allow = st.number_input("電話補助 (Phụ cấp ĐT)", min_value=0.0, value=300000.0, step=50000.0)
-
-        submit_emp = st.form_submit_button("✅ 儲存員工人事檔案", type="primary")
-
-        if submit_emp:
-          st.session_state.employee_db.append({
-              "emp_id": emp_id,
-              "name": emp_name,
-              "position": emp_position,
-              "cccd": emp_cccd,
-              "phone": emp_phone,
-              "temp_address": emp_temp_addr,
-              "perm_address": emp_perm_addr,
-              "hospital_name": emp_hosp_name,
-              "hospital_address": emp_hosp_addr,
-              "join_date": str(emp_join_date),
-              "contract_date": str(emp_contract_date),
-              "leave_date": emp_leave_date_str,
-              "base_salary": base_sal,
-              "meal_allowance": meal_allow,
-              "fuel_allowance": fuel_allow,
-              "phone_allowance": phone_allow,
-          })
-          st.success(f"🎉 員工 `{emp_name}` ({emp_position}) 人事檔案已成功建立！")
-          st.rerun()
-
-    st.divider()
-
-    # 刪除員工功能
-    col_del, _ = st.columns([1, 1])
-    with col_del:
-      if st.session_state.employee_db:
-        emp_options = [f"{e['emp_id']} - {e['name']} ({e.get('position', '一般員工')})" for e in st.session_state.employee_db]
-        selected_del_emp = st.selectbox("❌ 選擇要刪除的員工", emp_options, key="select_del_static_emp")
-        if st.button("🗑️ 刪除此員工檔案", type="primary", key="btn_del_static_emp"):
-          target_id = selected_del_emp.split(" - ")[0]
-          st.session_state.employee_db = [e for e in st.session_state.employee_db if e["emp_id"] != target_id]
-          st.success(f"🗑️ 員工檔案已成功刪除！")
-          st.rerun()
-
-    st.divider()
-
-    # 人事總表顯示 (含職位與 10.5% 強制保險固定扣算)
-    st.subheader("📋 越南員工人事檔案與基本保險總表")
-    if st.session_state.employee_db:
-      static_list = []
-      for emp in st.session_state.employee_db:
-        ins_deduct = emp["base_salary"] * 0.105
-        static_list.append({
-            "工號": emp["emp_id"],
-            "姓名": emp["name"],
-            "職位": emp.get("position", "一般員工"),
-            "CCCD": emp["cccd"],
-            "電話": emp["phone"],
-            "入職日期": emp.get("join_date", "-"),
-            "合約簽署日": emp.get("contract_date", "-"),
-            "離職日期": emp.get("leave_date", "-"),
-            "就醫醫院": emp["hospital_name"],
-            "本薪 (VND)": f"{emp['base_salary']:,.0f}",
-            "津貼小計": f"{(emp['meal_allowance']+emp['fuel_allowance']+emp['phone_allowance']):,.0f}",
-            "每月固定保險自付 (10.5%)": f"-{ins_deduct:,.0f}",
-        })
-      st.dataframe(pd.DataFrame(static_list), use_container_width=True)
-
-  # 分頁 4：💵 每月薪資發放與變動扣款 (Monthly Payroll Processing)
-  with tab4:
-    st.subheader("💵 每月動態薪資發放與變動扣款結算中心")
-    st.caption("在此輸入**當月份實際發生**的「遲到早退罰款、請假扣款與借款/預支扣除」，系統將產出正式薪資單 PDF。")
-
-    # 1. 登記當月變動扣款
-    with st.expander("📝 輸入員工【當月變動考勤與借款扣款】", expanded=True):
-      if st.session_state.employee_db:
-        with st.form("monthly_payroll_form"):
-          col_p1, col_p2, col_p3 = st.columns(3)
-          with col_p1:
-            pay_month = st.text_input("發薪月份 (Tháng lương)", datetime.date.today().strftime("%Y-%m"))
-            emp_sel_payroll = st.selectbox("選擇結算員工", [f"{e['emp_id']} - {e['name']} ({e.get('position', '員工')})" for e in st.session_state.employee_db])
-          
-          # 找出選定員工
-          target_emp_id = emp_sel_payroll.split(" - ")[0]
-          emp_info = next((e for e in st.session_state.employee_db if e["emp_id"] == target_emp_id), None)
-
-          with col_p2:
-            st.info(f"📌 **{emp_info['name']}** [{emp_info.get('position', '員工')}] 本薪：`{emp_info['base_salary']:,.0f} VND`")
-            ins_105 = emp_info['base_salary'] * 0.105
-            st.caption(f"🛡️ 每月固定保險扣除 (10.5%): `{ins_105:,.0f} VND`")
-
-          with col_p3:
-            tardy_m = st.number_input("當月遲到/早退扣款 (Trừ đi trễ)", min_value=0.0, value=100000.0, step=10000.0)
-            leave_m = st.number_input("當月請假/無薪假扣款 (Trừ nghỉ phép)", min_value=0.0, value=300000.0, step=50000.0)
-            advance_m = st.number_input("當月預支借款扣除 (Trừ tạm ứng)", min_value=0.0, value=1000000.0, step=100000.0)
-
-          submit_pay = st.form_submit_button("✅ 計算並發放此月薪資 (Calculate Payroll)", type="primary")
-
-          if submit_pay:
-            allow_tot = emp_info['meal_allowance'] + emp_info['fuel_allowance'] + emp_info['phone_allowance']
-            gross_m = emp_info['base_salary'] + allow_tot
-            net_m = gross_m - ins_105 - tardy_m - leave_m - advance_m
-
-            st.session_state.monthly_payroll_db.append({
-                "pay_month": pay_month,
-                "emp_id": emp_info['emp_id'],
-                "emp_name": emp_info['name'],
-                "position": emp_info.get("position", "員工"),
-                "base_salary": emp_info['base_salary'],
-                "allowance_total": allow_tot,
-                "insurance_deduct": ins_105,
-                "tardy_deduct": tardy_m,
-                "leave_deduct": leave_m,
-                "advance_deduct": advance_m,
-                "net_salary": net_m,
-            })
-            st.success(f"🎉 `{pay_month}` 月份 `{emp_info['name']}` 薪資已成功計算！實領薪資: `{net_m:,.0f} VND`")
-            st.rerun()
-
-    st.divider()
-
-    # 2. 顯示當月薪資結算表與生成單人 PDF 薪資單
-    st.subheader("📊 每月薪資結算總明細表")
-    if st.session_state.monthly_payroll_db:
-      pay_df = pd.DataFrame(st.session_state.monthly_payroll_db)
-      st.dataframe(pay_df, use_container_width=True)
-
-      col_dl1, col_dl2 = st.columns([1, 1])
-      with col_dl1:
-        pay_csv = pay_df.to_csv(index=False).encode("utf-8-sig")
+        st.dataframe(filtered_df, use_container_width=True)
+        csv_data = filtered_df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            "📥 匯出每月薪資發放明細總表 (CSV)",
-            pay_csv,
-            file_name=f"Monthly_Payroll_Summary_{datetime.date.today()}.csv",
+            "📥 匯出業務報價總表 (CSV)",
+            csv_data,
+            file_name=f"Admin_Sales_Report_{datetime.date.today()}.csv",
         )
+      else:
+        st.info("目前尚無任何報價單紀錄。")
 
-      # 生成中/越雙語電子薪資單 PDF 供員工簽名
-      with col_dl2:
-        with st.expander("📄 下載個人雙語正式薪資單 PDF (Payslip)", expanded=True):
-          pay_records = [f"{p['pay_month']} - {p['emp_id']} {p['emp_name']} ({p.get('position', '員工')})" for p in st.session_state.monthly_payroll_db]
-          sel_payslip = st.selectbox("選擇薪資單紀錄", pay_records)
+  # ----------------------------------------
+  # 2. 跨國多廠區/公司資訊設定 (Executive 專屬)
+  # ----------------------------------------
+  if "🏢 跨國多廠區/公司資訊設定" in tabs_to_show:
+    idx = tabs_to_show.index("🏢 跨國多廠區/公司資訊設定")
+    with active_tabs[idx]:
+      st.subheader("🏢 跨國企業多廠區與公司抬頭設定")
+      st.caption("在此設定的各地廠區資訊將會自動連線套用至 PDF 報價單。")
 
-          def generate_payslip_pdf(pay_record):
-            pdf_path = "official_payslip.pdf"
-            doc = SimpleDocTemplate(pdf_path, pagesize=letter)
-            styles = getSampleStyleSheet()
-            story = []
+      cp = st.session_state.company_profile
 
-            cp = st.session_state.company_profile
-            vn_site = cp['sites'].get("Vietnam (Binh Duong)", list(cp['sites'].values())[0])
+      with st.form("company_general_form"):
+        st.markdown("#### 1. 公司集團基本資料")
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+          cp_name = st.text_input("公司總稱 (Company Name)", cp["name"])
+          cp_tax_id = st.text_input("統一編號 / 稅號 (Tax ID)", cp["tax_id"])
+        with col_g2:
+          cp_website = st.text_input("官方網站 (Website)", cp["website"])
 
-            title_style = ParagraphStyle("PTitle", parent=styles["Heading1"], fontSize=13, textColor=colors.HexColor("#0f172a"))
-            story.append(Paragraph(f"<b>{cp['name']} - {vn_site['site_name']}</b>", title_style))
-            story.append(Paragraph(f"<b>PHIẾU LƯƠNG HÀNG THÁNG / 每月正式薪資單 ({pay_record['pay_month']})</b>", ParagraphStyle("SubP", fontSize=11, textColor=colors.HexColor("#0284c7"))))
-            story.append(Spacer(1, 10))
+        if st.form_submit_button("💾 儲存集團基本資料"):
+          st.session_state.company_profile["name"] = cp_name
+          st.session_state.company_profile["tax_id"] = cp_tax_id
+          st.session_state.company_profile["website"] = cp_website
+          st.toast("✅ 公司集團基本資料已更新！", icon="💾")
 
-            info_p = [
-                ["Mã NV / 工號:", pay_record['emp_id'], "Tên NV / 姓名:", pay_record['emp_name']],
-                ["Chức vụ / 職位:", pay_record.get('position', '員工'), "Tháng lương / 月份:", pay_record['pay_month']]
-            ]
-            t_pinfo = Table(info_p, colWidths=[120, 150, 120, 150])
-            t_pinfo.setStyle(TableStyle([('FONTSIZE', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 4)]))
-            story.append(t_pinfo)
-            story.append(Spacer(1, 10))
+      st.divider()
 
-            pay_table_data = [
-                ["Hạng mục / 薪資與扣款項目", "Số tiền / 金額 (VND)"],
-                ["Lương cơ bản / 本薪", f"{pay_record['base_salary']:,.0f}"],
-                ["Tổng phụ cấp / 津貼總額 (餐費/油費/電話)", f"{pay_record['allowance_total']:,.0f}"],
-                ["Trừ BHXH (10.5%) / 每月保險自付 (10.5%)", f"-{pay_record['insurance_deduct']:,.0f}"],
-                ["Trừ đi trễ / 當月遲到早退扣款", f"-{pay_record['tardy_deduct']:,.0f}"],
-                ["Trừ nghỉ phép / 當月請假扣款", f"-{pay_record['leave_deduct']:,.0f}"],
-                ["Trừ tạm ứng / 當月預支借款扣除", f"-{pay_record['advance_deduct']:,.0f}"],
-                ["LƯƠNG THỰC NHẬN / 當月實領薪資 (NET)", f"{pay_record['net_salary']:,.0f}"]
-            ]
-            t_ptable = Table(pay_table_data, colWidths=[340, 180])
-            t_ptable.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1e293b")),
-                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-                ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor("#cbd5e1")),
-                ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f1f5f9")),
-                ('TEXTCOLOR', (0,-1), (-1,-1), colors.HexColor("#0284c7")),
-                ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 6)
-            ]))
-            story.append(t_ptable)
-            story.append(Spacer(1, 25))
+      st.markdown("#### 2. 個別廠區/分公司聯絡資訊")
+      sites_dict = cp["sites"]
+      selected_site_key = st.selectbox(
+          "選擇要編輯的廠區 (Select Site)", list(sites_dict.keys())
+      )
+      current_sdata = sites_dict[selected_site_key]
 
-            sig_data = [["Chữ ký người lập biểu / 製表人簽名", "Chữ ký nhân viên / 員工簽名確認"]]
-            t_sig = Table(sig_data, colWidths=[260, 260])
-            t_sig.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('FONTSIZE', (0,0), (-1,-1), 9)]))
-            story.append(t_sig)
+      with st.form("edit_site_form"):
+        st.caption(f"正在編輯：`{selected_site_key}` 的聯絡資訊")
+        s_name = st.text_input("廠區中文名稱", current_sdata["site_name"])
+        s_phone = st.text_input("電話 (Tel)", current_sdata["phone"])
+        s_fax = st.text_input("傳真 (Fax)", current_sdata["fax"])
+        s_email = st.text_input("公用 Email", current_sdata["email"])
+        s_address = st.text_input("廠區完整地址 (Address)", current_sdata["address"])
 
-            doc.build(story)
-            return pdf_path
+        if st.form_submit_button("💾 更新此廠區資訊", type="primary"):
+          st.session_state.company_profile["sites"][selected_site_key] = {
+              "site_name": s_name,
+              "phone": s_phone,
+              "fax": s_fax,
+              "email": s_email,
+              "address": s_address,
+          }
+          st.success(f"✅ `{selected_site_key}` 資訊已更新！")
+          st.rerun()
 
-          target_p_index = pay_records.index(sel_payslip)
-          target_p_record = st.session_state.monthly_payroll_db[target_p_index]
-          ps_pdf = generate_payslip_pdf(target_p_record)
+  # ----------------------------------------
+  # 3. 人事檔案 (Executive & HR 可存取)
+  # ----------------------------------------
+  if "📋 人事檔案 (Employee Profiles)" in tabs_to_show:
+    idx = tabs_to_show.index("📋 人事檔案 (Employee Profiles)")
+    with active_tabs[idx]:
+      st.subheader("📋 越南廠人事檔案與職位管理")
+      st.caption(
+          "維護員工個人資料、職位、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。"
+      )
 
-          with open(ps_pdf, "rb") as pf:
-            st.download_button(
-                "📥 下載此員工雙語薪資單 PDF (Print Payslip)",
-                pf,
-                file_name=f"Payslip_{target_p_record['pay_month']}_{target_p_record['emp_id']}.pdf",
-                key="btn_dl_payslip_pdf"
-            )
+      # 新增員工表單
+      with st.expander("➕ 新增員工個人檔案 (Add Employee Profile)", expanded=True):
+        with st.form("add_static_emp_form"):
+          col_e1, col_e2, col_e3 = st.columns(3)
+          with col_e1:
+            emp_id = st.text_input("員工編號 (Mã NV)", f"VN-{len(st.session_state.employee_db)+1:03d}")
+            emp_name = st.text_input("員工全名 (Họ và Tên)", "Trần Thị B")
+            emp_position = st.text_input("職位名稱 (Chức vụ)", "射出機技術員")
+            emp_cccd = st.text_input("身份證字號 (Số CCCD)", "038095009999")
+            emp_phone = st.text_input("聯絡電話", "0987654321")
+          with col_e2:
+            emp_join_date = st.date_input("入職日期 (Ngày vào làm)", datetime.date(2024, 3, 1))
+            emp_contract_date = st.date_input("合約簽署日期 (Ngày ký HĐLĐ)", datetime.date(2024, 3, 5))
+            emp_leave_date_str = st.text_input("離職日期 (若仍在庫請填 -)", "-")
+          with col_e3:
+            emp_temp_addr = st.text_input("暫住地址 (Địa chỉ tạm trú)", "Khu phố 3, P. An Phú, Thuận An, Bình Dương")
+            emp_perm_addr = st.text_input("戶籍地址 (Địa chỉ thường trú)", "Xã Tam Bình, Cai Lậy, Tiền Giang")
+            emp_hosp_name = st.text_input("保險就醫醫院 (Nơi KCB)", "Bệnh viện Quốc tế Hạnh Phúc")
+            emp_hosp_addr = st.text_input("醫院地址", "Đại lộ Bình Dương, Thuận An, Bình Dương")
 
-  # 分頁 5：使用者管理
-  with tab5:
-    st.caption("管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。")
-    st.subheader("📄 現有使用者名單")
-    user_list = []
-    for uname, udata in st.session_state.user_database.items():
-      user_list.append({
-          "帳號 (Username)": uname,
-          "姓名與編號 (Name)": udata["name"],
-          "角色 (Role)": (
-              "🔑 主管 (admin)"
-              if udata["role"] == "admin"
-              else "💼 業務 (sales)"
-          ),
-          "密碼 (Password)": udata["password"],
-      })
-    st.dataframe(pd.DataFrame(user_list), use_container_width=True)
+          st.markdown("##### 💵 每月固定薪資與津貼 (Fixed Salary Structure)")
+          col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+          with col_s1:
+            base_sal = st.number_input("本薪 / 保險底薪 (VND)", min_value=0.0, value=8500000.0, step=100000.0)
+          with col_s2:
+            meal_allow = st.number_input("餐費補助 (Phụ cấp ăn)", min_value=0.0, value=730000.0, step=10000.0)
+          with col_s3:
+            fuel_allow = st.number_input("油費補助 (Phụ cấp xăng)", min_value=0.0, value=500000.0, step=50000.0)
+          with col_s4:
+            phone_allow = st.number_input("電話補助 (Phụ cấp ĐT)", min_value=0.0, value=300000.0, step=50000.0)
 
-    st.divider()
-    col_add, col_manage = st.columns(2)
+          submit_emp = st.form_submit_button("✅ 儲存員工人事檔案", type="primary")
 
-    with col_add:
-      st.subheader("➕ 新增使用者帳號")
-      with st.form("add_user_form"):
-        new_username = st.text_input("新帳號 (Username)")
-        new_password = st.text_input("預設密碼 (Password)")
-        new_name = st.text_input("顯示姓名與工號 (例如: Eric Lin (S-008))")
-        new_role = st.selectbox(
-            "選擇權限角色",
-            ["sales", "admin"],
-            format_func=lambda x: (
-                "💼 業務人員" if x == "sales" else "🔑 系統主管"
-            ),
-        )
-
-        submit_add = st.form_submit_button("✅ 建立新帳號", type="primary")
-
-        if submit_add:
-          if not new_username or not new_password or not new_name:
-            st.error("⚠️ 所有欄位皆為必填！")
-          elif new_username in st.session_state.user_database:
-            st.error(f"⚠️ 帳號 `{new_username}` 已存在！")
-          else:
-            st.session_state.user_database[new_username] = {
-                "password": new_password,
-                "name": new_name,
-                "role": new_role,
-            }
-            st.success(f"🎉 帳號 `{new_username}` 建立成功！")
+          if submit_emp:
+            st.session_state.employee_db.append({
+                "emp_id": emp_id,
+                "name": emp_name,
+                "position": emp_position,
+                "cccd": emp_cccd,
+                "phone": emp_phone,
+                "temp_address": emp_temp_addr,
+                "perm_address": emp_perm_addr,
+                "hospital_name": emp_hosp_name,
+                "hospital_address": emp_hosp_addr,
+                "join_date": str(emp_join_date),
+                "contract_date": str(emp_contract_date),
+                "leave_date": emp_leave_date_str,
+                "base_salary": base_sal,
+                "meal_allowance": meal_allow,
+                "fuel_allowance": fuel_allow,
+                "phone_allowance": phone_allow,
+            })
+            st.success(f"🎉 員工 `{emp_name}` ({emp_position}) 人事檔案已成功建立！")
             st.rerun()
 
-    with col_manage:
-      st.subheader("🛠️ 修改密碼 / 刪除帳號")
-      manageable_users = [
-          u for u in st.session_state.user_database.keys() if u != "admin"
-      ]
+      st.divider()
 
-      if manageable_users:
-        selected_target_user = st.selectbox(
-            "選擇要管理的帳號", manageable_users
-        )
+      # 刪除員工功能
+      col_del, _ = st.columns([1, 1])
+      with col_del:
+        if st.session_state.employee_db:
+          emp_options = [f"{e['emp_id']} - {e['name']} ({e.get('position', '一般員工')})" for e in st.session_state.employee_db]
+          selected_del_emp = st.selectbox("❌ 選擇要刪除的員工", emp_options, key="select_del_static_emp")
+          if st.button("🗑️ 刪除此員工檔案", type="primary", key="btn_del_static_emp"):
+            target_id = selected_del_emp.split(" - ")[0]
+            st.session_state.employee_db = [e for e in st.session_state.employee_db if e["emp_id"] != target_id]
+            st.success("🗑️ 員工檔案已成功刪除！")
+            st.rerun()
 
-        with st.expander("🔑 重設此帳號密碼"):
-          updated_pwd = st.text_input(
-              f"輸入 `{selected_target_user}` 的新密碼",
-              type="password",
-              key="pwd_update_input",
+      st.divider()
+
+      # 人事總表顯示
+      st.subheader("📋 越南員工人事檔案與基本保險總表")
+      if st.session_state.employee_db:
+        static_list = []
+        for emp in st.session_state.employee_db:
+          ins_deduct = emp["base_salary"] * 0.105
+          static_list.append({
+              "工號": emp["emp_id"],
+              "姓名": emp["name"],
+              "職位": emp.get("position", "一般員工"),
+              "CCCD": emp["cccd"],
+              "電話": emp["phone"],
+              "入職日期": emp.get("join_date", "-"),
+              "合約簽署日": emp.get("contract_date", "-"),
+              "離職日期": emp.get("leave_date", "-"),
+              "就醫醫院": emp["hospital_name"],
+              "本薪 (VND)": f"{emp['base_salary']:,.0f}",
+              "津貼小計": f"{(emp['meal_allowance']+emp['fuel_allowance']+emp['phone_allowance']):,.0f}",
+              "每月固定保險自付 (10.5%)": f"-{ins_deduct:,.0f}",
+          })
+        st.dataframe(pd.DataFrame(static_list), use_container_width=True)
+
+  # ----------------------------------------
+  # 4. 每月薪資發放與變動扣款 (Executive, HR & Finance 可存取)
+  # ----------------------------------------
+  if "💵 每月薪資發放與變動扣款 (Monthly Payroll)" in tabs_to_show:
+    idx = tabs_to_show.index("💵 每月薪資發放與變動扣款 (Monthly Payroll)")
+    with active_tabs[idx]:
+      st.subheader("💵 每月動態薪資發放與變動扣款結算中心")
+      st.caption("在此輸入**當月份實際發生**的「遲到早退罰款、請假扣款與借款/預支扣除」，系統將產出正式薪資單 PDF。")
+
+      # 登記當月變動扣款
+      with st.expander("📝 輸入員工【當月變動考勤與借款扣款】", expanded=True):
+        if st.session_state.employee_db:
+          with st.form("monthly_payroll_form"):
+            col_p1, col_p2, col_p3 = st.columns(3)
+            with col_p1:
+              pay_month = st.text_input("發薪月份 (Tháng lương)", datetime.date.today().strftime("%Y-%m"))
+              emp_sel_payroll = st.selectbox("選擇結算員工", [f"{e['emp_id']} - {e['name']} ({e.get('position', '員工')})" for e in st.session_state.employee_db])
+            
+            target_emp_id = emp_sel_payroll.split(" - ")[0]
+            emp_info = next((e for e in st.session_state.employee_db if e["emp_id"] == target_emp_id), None)
+
+            with col_p2:
+              st.info(f"📌 **{emp_info['name']}** [{emp_info.get('position', '員工')}] 本薪：`{emp_info['base_salary']:,.0f} VND`")
+              ins_105 = emp_info['base_salary'] * 0.105
+              st.caption(f"🛡️ 每月固定保險扣除 (10.5%): `{ins_105:,.0f} VND`")
+
+            with col_p3:
+              tardy_m = st.number_input("當月遲到/早退扣款 (Trừ đi trễ)", min_value=0.0, value=100000.0, step=10000.0)
+              leave_m = st.number_input("當月請假/無薪假扣款 (Trừ nghỉ phép)", min_value=0.0, value=300000.0, step=50000.0)
+              advance_m = st.number_input("當月預支借款扣除 (Trừ tạm ứng)", min_value=0.0, value=1000000.0, step=100000.0)
+
+            submit_pay = st.form_submit_button("✅ 計算並發放此月薪資 (Calculate Payroll)", type="primary")
+
+            if submit_pay:
+              allow_tot = emp_info['meal_allowance'] + emp_info['fuel_allowance'] + emp_info['phone_allowance']
+              gross_m = emp_info['base_salary'] + allow_tot
+              net_m = gross_m - ins_105 - tardy_m - leave_m - advance_m
+
+              st.session_state.monthly_payroll_db.append({
+                  "pay_month": pay_month,
+                  "emp_id": emp_info['emp_id'],
+                  "emp_name": emp_info['name'],
+                  "position": emp_info.get("position", "員工"),
+                  "base_salary": emp_info['base_salary'],
+                  "allowance_total": allow_tot,
+                  "insurance_deduct": ins_105,
+                  "tardy_deduct": tardy_m,
+                  "leave_deduct": leave_m,
+                  "advance_deduct": advance_m,
+                  "net_salary": net_m,
+              })
+              st.success(f"🎉 `{pay_month}` 月份 `{emp_info['name']}` 薪資已成功計算！實領薪資: `{net_m:,.0f} VND`")
+              st.rerun()
+
+      st.divider()
+
+      # 結算明細表與薪資單 PDF
+      st.subheader("📊 每月薪資結算總明細表")
+      if st.session_state.monthly_payroll_db:
+        pay_df = pd.DataFrame(st.session_state.monthly_payroll_db)
+        st.dataframe(pay_df, use_container_width=True)
+
+        col_dl1, col_dl2 = st.columns([1, 1])
+        with col_dl1:
+          pay_csv = pay_df.to_csv(index=False).encode("utf-8-sig")
+          st.download_button(
+              "📥 匯出每月薪資發放明細總表 (CSV)",
+              pay_csv,
+              file_name=f"Monthly_Payroll_Summary_{datetime.date.today()}.csv",
           )
-          if st.button("更新密碼", key="btn_update_pwd"):
-            if updated_pwd:
-              st.session_state.user_database[selected_target_user][
-                  "password"
-              ] = updated_pwd
-              st.success(f"✅ `{selected_target_user}` 的密碼已更新！")
+
+        with col_dl2:
+          with st.expander("📄 下載個人雙語正式薪資單 PDF (Payslip)", expanded=True):
+            pay_records = [f"{p['pay_month']} - {p['emp_id']} {p['emp_name']} ({p.get('position', '員工')})" for p in st.session_state.monthly_payroll_db]
+            sel_payslip = st.selectbox("選擇薪資單紀錄", pay_records)
+
+            def generate_payslip_pdf(pay_record):
+              pdf_path = "official_payslip.pdf"
+              doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+              styles = getSampleStyleSheet()
+              story = []
+
+              cp = st.session_state.company_profile
+              vn_site = cp['sites'].get("Vietnam (Binh Duong)", list(cp['sites'].values())[0])
+
+              title_style = ParagraphStyle("PTitle", parent=styles["Heading1"], fontSize=13, textColor=colors.HexColor("#0f172a"))
+              story.append(Paragraph(f"<b>{cp['name']} - {vn_site['site_name']}</b>", title_style))
+              story.append(Paragraph(f"<b>PHIẾU LƯƠNG HÀNG THÁNG / 每月正式薪資單 ({pay_record['pay_month']})</b>", ParagraphStyle("SubP", fontSize=11, textColor=colors.HexColor("#0284c7"))))
+              story.append(Spacer(1, 10))
+
+              info_p = [
+                  ["Mã NV / 工號:", pay_record['emp_id'], "Tên NV / 姓名:", pay_record['emp_name']],
+                  ["Chức vụ / 職位:", pay_record.get('position', '員工'), "Tháng lương / 月份:", pay_record['pay_month']]
+              ]
+              t_pinfo = Table(info_p, colWidths=[120, 150, 120, 150])
+              t_pinfo.setStyle(TableStyle([('FONTSIZE', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 4)]))
+              story.append(t_pinfo)
+              story.append(Spacer(1, 10))
+
+              pay_table_data = [
+                  ["Hạng mục / 薪資與扣款項目", "Số tiền / 金額 (VND)"],
+                  ["Lương cơ bản / 本薪", f"{pay_record['base_salary']:,.0f}"],
+                  ["Tổng phụ cấp / 津貼總額 (餐費/油費/電話)", f"{pay_record['allowance_total']:,.0f}"],
+                  ["Trừ BHXH (10.5%) / 每月保險自付 (10.5%)", f"-{pay_record['insurance_deduct']:,.0f}"],
+                  ["Trừ đi trễ / 當月遲到早退扣款", f"-{pay_record['tardy_deduct']:,.0f}"],
+                  ["Trừ nghỉ phép / 當月請假扣款", f"-{pay_record['leave_deduct']:,.0f}"],
+                  ["Trừ tạm ứng / 當月預支借款扣除", f"-{pay_record['advance_deduct']:,.0f}"],
+                  ["LƯƠNG THỰC NHẬN / 當月實領薪資 (NET)", f"{pay_record['net_salary']:,.0f}"]
+              ]
+              t_ptable = Table(pay_table_data, colWidths=[340, 180])
+              t_ptable.setStyle(TableStyle([
+                  ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1e293b")),
+                  ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                  ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor("#cbd5e1")),
+                  ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#f1f5f9")),
+                  ('TEXTCOLOR', (0,-1), (-1,-1), colors.HexColor("#0284c7")),
+                  ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+                  ('BOTTOMPADDING', (0,0), (-1,-1), 6)
+              ]))
+              story.append(t_ptable)
+              story.append(Spacer(1, 25))
+
+              sig_data = [["Chữ ký người lập biểu / 製表人簽名", "Chữ ký nhân viên / 員工簽名確認"]]
+              t_sig = Table(sig_data, colWidths=[260, 260])
+              t_sig.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('FONTSIZE', (0,0), (-1,-1), 9)]))
+              story.append(t_sig)
+
+              doc.build(story)
+              return pdf_path
+
+            target_p_index = pay_records.index(sel_payslip)
+            target_p_record = st.session_state.monthly_payroll_db[target_p_index]
+            ps_pdf = generate_payslip_pdf(target_p_record)
+
+            with open(ps_pdf, "rb") as pf:
+              st.download_button(
+                  "📥 下載此員工雙語薪資單 PDF (Print Payslip)",
+                  pf,
+                  file_name=f"Payslip_{target_p_record['pay_month']}_{target_p_record['emp_id']}.pdf",
+                  key="btn_dl_payslip_pdf"
+              )
+
+  # ----------------------------------------
+  # 5. 越南電子發票登記 (Executive & Finance 可存取)
+  # ----------------------------------------
+  if "🧾 越南電子發票登記 (Hóa đơn điện tử)" in tabs_to_show:
+    idx = tabs_to_show.index("🧾 越南電子發票登記 (Hóa đơn điện tử)")
+    with active_tabs[idx]:
+      st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
+      st.caption("您可以透過手動連線公司信箱、上傳 XML 檔案 或 手動輸入 進行發票登記。")
+
+      with st.expander("📧 模式 A：設定公司專屬信箱，自動連線抓取發票", expanded=True):
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+          mail_server = st.text_input("IMAP 伺服器地址 (Server)", "mail.yourcompany.com")
+          mail_port = st.number_input("IMAP Port (預設 SSL: 993)", value=993)
+        with col_m2:
+          mail_user = st.text_input("信箱帳號 (Email)", "invoice@yourcompany.com")
+          mail_pwd = st.text_input("信箱密碼 (Password)", type="password")
+
+        if st.button("🚀 開始連線信箱並讀取最新發票", type="primary", key="btn_fetch_email"):
+          with st.spinner("正在安全連線至公司信箱並搜尋 XML 發票..."):
+            fetched_invs = fetch_invoices_from_custom_email(mail_server, mail_port, mail_user, mail_pwd)
+            if fetched_invs:
+              for inv in fetched_invs:
+                inv["uploader"] = f"Auto-Email ({mail_user})"
+                st.session_state.invoice_db.append(inv)
+              st.success(f"🎉 成功從信箱抓取並解析 {len(fetched_invs)} 張發票！")
               st.rerun()
             else:
-              st.warning("請輸入新密碼！")
+              st.warning("⚠️ 連線成功但未搜尋到新的 XML 發票附件。")
 
-        with st.expander("❌ 刪除此帳號"):
-          st.warning(f"確定要刪除帳號 `{selected_target_user}` 嗎？")
-          if st.button("確認刪除帳號", type="primary", key="btn_del_user"):
-            del st.session_state.user_database[selected_target_user]
-            st.success(f"🗑️ 帳號 `{selected_target_user}` 已刪除！")
-            st.rerun()
-      else:
-        st.info("目前沒有可供修改或刪除的其他使用者。")
+      st.divider()
 
-  # 分頁 6：越南發票登記
-  with tab6:
-    st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
-    st.caption("您可以透過手動連線公司信箱、上傳 XML 檔案 或 手動輸入 進行發票登記。")
+      col_xml, col_preview = st.columns([1, 1])
 
-    with st.expander("📧 模式 A：設定公司專屬信箱，自動連線抓取發票", expanded=True):
-      col_m1, col_m2 = st.columns(2)
-      with col_m1:
-        mail_server = st.text_input("IMAP 伺服器地址 (Server)", "mail.yourcompany.com")
-        mail_port = st.number_input("IMAP Port (預設 SSL: 993)", value=993)
-      with col_m2:
-        mail_user = st.text_input("信箱帳號 (Email)", "invoice@yourcompany.com")
-        mail_pwd = st.text_input("信箱密碼 (Password)", type="password")
+      with col_xml:
+        st.markdown("### 📤 模式 B：上傳 XML 單檔解析")
+        uploaded_xml = st.file_uploader("選擇越南電子發票檔 (.xml)", type=["xml"])
 
-      if st.button("🚀 開始連線信箱並讀取最新發票", type="primary", key="btn_fetch_email"):
-        with st.spinner("正在安全連線至公司信箱並搜尋 XML 發票..."):
-          fetched_invs = fetch_invoices_from_custom_email(mail_server, mail_port, mail_user, mail_pwd)
-          if fetched_invs:
-            for inv in fetched_invs:
-              inv["uploader"] = f"Auto-Email ({mail_user})"
-              st.session_state.invoice_db.append(inv)
-            st.success(f"🎉 成功從信箱抓取並解析 {len(fetched_invs)} 張發票！")
-            st.rerun()
-          else:
-            st.warning("⚠️ 連線成功但未搜尋到新的 XML 發票附件。")
+        if uploaded_xml is not None:
+          xml_bytes = uploaded_xml.read()
+          parsed_data = parse_vietnam_xml(xml_bytes)
 
-    st.divider()
+          if parsed_data:
+            st.success("✅ XML 發票解析成功！")
+            st.json(parsed_data)
 
-    col_xml, col_preview = st.columns([1, 1])
+            if st.button("💾 確認匯入系統資料庫", type="primary", key="btn_import_xml"):
+              parsed_data["uploader"] = st.session_state.user_info["name"]
+              st.session_state.invoice_db.append(parsed_data)
+              st.toast("🎉 發票已成功登錄至發票總表！", icon="🧾")
+              st.rerun()
 
-    with col_xml:
-      st.markdown("### 📤 模式 B：上傳 XML 單檔解析")
-      uploaded_xml = st.file_uploader("選擇越南電子發票檔 (.xml)", type=["xml"])
+      with col_preview:
+        st.markdown("### 📝 模式 C：手動輸入發票")
+        with st.form("manual_invoice_form"):
+          inv_no = st.text_input("發票號碼 (Số hóa đơn)", "0005678")
+          inv_pattern = st.text_input("發票代碼 (Mẫu số)", "1/001")
+          seller_name = st.text_input("賣方公司 (Bên bán)", "CÔNG TY TNHH PLASTIC VN")
+          seller_tax = st.text_input("賣方稅號 (MST)", "3701234567")
+          total_amt = st.number_input("總金額 (含稅 VND)", min_value=0.0, value=2500000.0, step=1000.0)
+          inv_date = st.date_input("開立日期", datetime.date.today())
 
-      if uploaded_xml is not None:
-        xml_bytes = uploaded_xml.read()
-        parsed_data = parse_vietnam_xml(xml_bytes)
-
-        if parsed_data:
-          st.success("✅ XML 發票解析成功！")
-          st.json(parsed_data)
-
-          if st.button("💾 確認匯入系統資料庫", type="primary", key="btn_import_xml"):
-            parsed_data["uploader"] = st.session_state.user_info["name"]
-            st.session_state.invoice_db.append(parsed_data)
-            st.toast("🎉 發票已成功登錄至發票總表！", icon="🧾")
+          submit_inv = st.form_submit_button("➕ 手動新增發票")
+          if submit_inv:
+            new_inv = {
+                "invoice_no": inv_no,
+                "pattern": inv_pattern,
+                "seller_name": seller_name,
+                "seller_tax_code": seller_tax,
+                "amount_no_vat": round(total_amt / 1.1, 2),
+                "vat_amount": round(total_amt - (total_amt / 1.1), 2),
+                "total_amount": total_amt,
+                "currency": "VND",
+                "date": str(inv_date),
+                "uploader": st.session_state.user_info["name"],
+            }
+            st.session_state.invoice_db.append(new_inv)
+            st.success("✅ 手動登記成功！")
             st.rerun()
 
-    with col_preview:
-      st.markdown("### 📝 模式 C：手動輸入發票")
-      with st.form("manual_invoice_form"):
-        inv_no = st.text_input("發票號碼 (Số hóa đơn)", "0005678")
-        inv_pattern = st.text_input("發票代碼 (Mẫu số)", "1/001")
-        seller_name = st.text_input("賣方公司 (Bên bán)", "CÔNG TY TNHH PLASTIC VN")
-        seller_tax = st.text_input("賣方稅號 (MST)", "3701234567")
-        total_amt = st.number_input("總金額 (含稅 VND)", min_value=0.0, value=2500000.0, step=1000.0)
-        inv_date = st.date_input("開立日期", datetime.date.today())
+      st.divider()
+      st.subheader("📊 已登記越南發票總表")
 
-        submit_inv = st.form_submit_button("➕ 手動新增發票")
-        if submit_inv:
-          new_inv = {
-              "invoice_no": inv_no,
-              "pattern": inv_pattern,
-              "seller_name": seller_name,
-              "seller_tax_code": seller_tax,
-              "amount_no_vat": round(total_amt / 1.1, 2),
-              "vat_amount": round(total_amt - (total_amt / 1.1), 2),
-              "total_amount": total_amt,
-              "currency": "VND",
-              "date": str(inv_date),
-              "uploader": st.session_state.user_info["name"],
-          }
-          st.session_state.invoice_db.append(new_inv)
-          st.success("✅ 手動登記成功！")
-          st.rerun()
+      if st.session_state.invoice_db:
+        inv_df = pd.DataFrame(st.session_state.invoice_db)
+        total_vnd = inv_df["total_amount"].sum()
+        st.metric("已登記發票總金額", f"{total_vnd:,.0f} VND")
 
-    st.divider()
-    st.subheader("📊 已登記越南發票總表")
+        st.dataframe(inv_df, use_container_width=True)
 
-    if st.session_state.invoice_db:
-      inv_df = pd.DataFrame(st.session_state.invoice_db)
-      total_vnd = inv_df["total_amount"].sum()
-      st.metric("已登記發票總金額", f"{total_vnd:,.0f} VND")
+        inv_csv = inv_df.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            "📥 匯出越南發票總表 (CSV)",
+            inv_csv,
+            file_name=f"Vietnam_Invoices_{datetime.date.today()}.csv",
+            key="btn_dl_inv_csv",
+        )
 
-      st.dataframe(inv_df, use_container_width=True)
+  # ----------------------------------------
+  # 6. 系統使用者與權限管理 (Executive 專屬)
+  # ----------------------------------------
+  if "👥 系統使用者與權限管理 (User Management)" in tabs_to_show:
+    idx = tabs_to_show.index("👥 系統使用者與權限管理 (User Management)")
+    with active_tabs[idx]:
+      st.caption("高階主管可在此新增帳號、調整職員角色權限或重設密碼。")
+      st.subheader("📄 現有使用者權限名單")
+      user_list = []
+      for uname, udata in st.session_state.user_database.items():
+        user_list.append({
+            "帳號 (Username)": uname,
+            "姓名與稱謂 (Name)": udata["name"],
+            "角色分權 (Role)": ROLE_NAME_MAP.get(udata["role"], udata["role"]),
+            "密碼 (Password)": udata["password"],
+        })
+      st.dataframe(pd.DataFrame(user_list), use_container_width=True)
 
-      inv_csv = inv_df.to_csv(index=False).encode("utf-8-sig")
-      st.download_button(
-          "📥 匯出越南發票總表 (CSV)",
-          inv_csv,
-          file_name=f"Vietnam_Invoices_{datetime.date.today()}.csv",
-          key="btn_dl_inv_csv",
-      )
-    else:
-      st.info("目前尚未登記任何越南電子發票。")
+      st.divider()
+      col_add, col_manage = st.columns(2)
+
+      with col_add:
+        st.subheader("➕ 新增使用者與設定權限")
+        with st.form("add_user_form"):
+          new_username = st.text_input("新帳號 (Username)")
+          new_password = st.text_input("預設密碼 (Password)")
+          new_name = st.text_input("顯示姓名與職稱 (例如: 王副總)")
+          new_role_key = st.selectbox(
+              "設定角色權限",
+              ["executive", "hr", "finance", "sales"],
+              format_func=lambda x: ROLE_NAME_MAP[x],
+          )
+
+          submit_add = st.form_submit_button("✅ 建立帳號並套用權限", type="primary")
+
+          if submit_add:
+            if not new_username or not new_password or not new_name:
+              st.error("⚠️ 所有欄位皆為必填！")
+            elif new_username in st.session_state.user_database:
+              st.error(f"⚠️ 帳號 `{new_username}` 已存在！")
+            else:
+              st.session_state.user_database[new_username] = {
+                  "password": new_password,
+                  "name": new_name,
+                  "role": new_role_key,
+              }
+              st.success(f"🎉 帳號 `{new_username}` 建立成功！")
+              st.rerun()
+
+      with col_manage:
+        st.subheader("🛠️ 修改密碼 / 刪除帳號")
+        manageable_users = [
+            u for u in st.session_state.user_database.keys() if u != "boss"
+        ]
+
+        if manageable_users:
+          selected_target_user = st.selectbox(
+              "選擇要管理的帳號", manageable_users
+          )
+
+          with st.expander("🔑 重設此帳號密碼"):
+            updated_pwd = st.text_input(
+                f"輸入 `{selected_target_user}` 的新密碼",
+                type="password",
+                key="pwd_update_input",
+            )
+            if st.button("更新密碼", key="btn_update_pwd"):
+              if updated_pwd:
+                st.session_state.user_database[selected_target_user][
+                    "password"
+                ] = updated_pwd
+                st.success(f"✅ `{selected_target_user}` 的密碼已更新！")
+                st.rerun()
+              else:
+                st.warning("請輸入新密碼！")
+
+          with st.expander("❌ 刪除此帳號"):
+            st.warning(f"確定要刪除帳號 `{selected_target_user}` 嗎？")
+            if st.button("確認刪除帳號", type="primary", key="btn_del_user"):
+              del st.session_state.user_database[selected_target_user]
+              st.success(f"🗑️ 帳號 `{selected_target_user}` 已刪除！")
+              st.rerun()
 
 # ==========================================
-# 💼 畫面 B：業務人員前台報價系統
+# 💼 畫面 B：業務人員前台報價系統 (Sales 專用)
 # ==========================================
 else:
   LANG_DICT = {
