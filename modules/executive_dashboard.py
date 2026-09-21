@@ -30,31 +30,42 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
     try:
         ticker = yf.Ticker(ticker_symbol)
         
-        # 優先選擇 fast_info 取得最準確的即時交易價格與前日收盤價
+        # 1. 抓取 1 天 1 分鐘級別的分時盤中資料 (Intraday Data)
+        intraday = ticker.history(period="1d", interval="1m")
+        
+        # 2. 抓取昨收價 (previous_close)
+        prev_price = None
         try:
-            fast_info = ticker.fast_info
-            latest_price = float(fast_info.last_price)
-            prev_price = float(fast_info.previous_close)
+            prev_price = float(ticker.fast_info.previous_close)
         except Exception:
-            latest_price, prev_price = None, None
+            try:
+                prev_price = float(ticker.info.get("regularMarketPreviousClose"))
+            except Exception:
+                pass
 
-        hist = ticker.history(period="10d")
-        valid_closes = hist["Close"].dropna().tolist() if not hist.empty else []
+        latest_price = None
+        if not intraday.empty:
+            valid_intraday = intraday["Close"].dropna().tolist()
+            if valid_intraday:
+                latest_price = float(valid_intraday[-1])
+
+        # 備用防呆：若沒有 1m 資料（如非交易時間或指數），改用 5d 歷史資料
+        hist_5d = ticker.history(period="5d")
+        valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
 
         if latest_price is None or math.isnan(latest_price):
-            if len(valid_closes) >= 1:
-                latest_price = float(valid_closes[-1])
-            else:
-                latest_price = default_price
+            latest_price = float(valid_closes[-1]) if valid_closes else default_price
 
         if prev_price is None or math.isnan(prev_price):
-            if len(valid_closes) >= 2:
-                prev_price = float(valid_closes[-2])
-            else:
-                prev_price = latest_price
+            prev_price = float(valid_closes[-2]) if len(valid_closes) >= 2 else latest_price
 
         change_val = latest_price - prev_price
         change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
+
+        if math.isnan(latest_price): latest_price = default_price
+        if math.isnan(change_val): change_val = 0.0
+        if math.isnan(change_pct): change_pct = 0.0
+
         change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
         
         history_list = valid_closes[-7:] if len(valid_closes) >= 7 else [latest_price] * 7
@@ -281,16 +292,27 @@ def render_dashboard(selected_stock_market):
                 try:
                     ticker = yf.Ticker(symbol)
                     
-                    # 優先從 fast_info 取得最新實時交易價與前日收盤價
+                    # 1. 抓取 1 天 1 分鐘級別盤中資料
+                    intraday = ticker.history(period="1d", interval="1m")
+                    
+                    # 2. 抓取昨收價
+                    prev_price = None
                     try:
-                        fast_info = ticker.fast_info
-                        latest_price = float(fast_info.last_price)
-                        prev_price = float(fast_info.previous_close)
+                        prev_price = float(ticker.fast_info.previous_close)
                     except Exception:
-                        latest_price, prev_price = None, None
+                        try:
+                            prev_price = float(ticker.info.get("regularMarketPreviousClose"))
+                        except Exception:
+                            pass
 
-                    hist = ticker.history(period="10d")
-                    valid_closes = hist["Close"].dropna().tolist() if not hist.empty else []
+                    latest_price = None
+                    if not intraday.empty:
+                        valid_intraday = intraday["Close"].dropna().tolist()
+                        if valid_intraday:
+                            latest_price = float(valid_intraday[-1])
+
+                    hist_5d = ticker.history(period="5d")
+                    valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
 
                     if latest_price is None or math.isnan(latest_price):
                         latest_price = float(valid_closes[-1]) if valid_closes else 0.0
@@ -319,7 +341,7 @@ def render_dashboard(selected_stock_market):
                     st.session_state["input_stock_name"] = short_name
                     st.session_state["input_stock_price"] = float(round(latest_price, 2))
                     st.session_state["input_stock_change"] = change_str
-                    st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 即時資料！", icon="📈")
+                    st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 盤中即時資料！", icon="📈")
 
                 except Exception as e:
                     st.toast(f"❌ 抓取失敗: {e}", icon="❌")
