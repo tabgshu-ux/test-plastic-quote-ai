@@ -271,9 +271,14 @@ def render_dynamic_3d_model(product_keyword):
   components.html(three_code, height=370)
 
 
-# 🔐 1. 初始化使用者帳號資料庫 (升級多角色分類：executive / hr / finance / sales)
+# 🔐 1. 初始化使用者帳號資料庫 (升級：確保含 admin 帳號相容性與全角色設定)
 if "user_database" not in st.session_state:
   st.session_state.user_database = {
+      "admin": {
+          "password": "admin123",
+          "name": "系統最高主管 (Manager)",
+          "role": "executive",
+      },
       "boss": {
           "password": "boss123",
           "name": "陳董事長 (Chairman)",
@@ -465,31 +470,28 @@ if not st.session_state.authenticated:
   col_login, _ = st.columns([1, 1])
   with col_login:
     with st.form("login_form"):
-      username_input = st.text_input("帳號 / Username")
-      password_input = st.text_input("密碼 / Password", type="password")
+      username_input = st.text_input("帳號 / Username").strip().lower()
+      password_input = st.text_input("密碼 / Password", type="password").strip()
       submit_button = st.form_submit_button("🔑 登入系統", type="primary")
 
       if submit_button:
         db = st.session_state.user_database
-        if (
-            username_input in db
-            and db[username_input]["password"] == password_input
-        ):
+        if username_input in db and db[username_input]["password"] == password_input:
           st.session_state.authenticated = True
           st.session_state.user_info = db[username_input]
-          st.success(
-              f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}"
-          )
+          st.success(f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}")
           st.rerun()
         else:
           st.error("❌ 帳號或密碼錯誤，請重新輸入！")
 
     st.info("""
-        💡 **各權限 Demo 測試帳號提示：**
-        - **董事長/總經理 (全權限)**：`boss` / `boss123` 或 `gm` / `gm123`
-        - **人事專員 (僅人事與薪資)**：`hr_manager` / `hr123`
-        - **財務會計 (僅薪資與發票)**：`accountant` / `fin123`
-        - **業務人員 (僅前台報價)**：`alex` / `alex123`
+        💡 **最新可用測試帳號密碼清單：**
+        - **預設最高主管**：`admin` / `admin123`
+        - **董事長**：`boss` / `boss123`
+        - **總經理**：`gm` / `gm123`
+        - **人事專員**：`hr_manager` / `hr123`
+        - **財務會計**：`accountant` / `fin123`
+        - **業務專員**：`alex` / `alex123` 或 `david` / `david123`
         """)
   st.stop()
 
@@ -506,10 +508,7 @@ ROLE_NAME_MAP = {
 
 st.sidebar.title("👤 使用者資訊")
 st.sidebar.write(f"**當前使用者**：{st.session_state.user_info['name']}")
-st.sidebar.write(
-    "**權限角色**："
-    f" {ROLE_NAME_MAP.get(st.session_state.user_info['role'], '一般權限')}"
-)
+st.sidebar.write(f"**權限角色**： {ROLE_NAME_MAP.get(st.session_state.user_info['role'], '一般權限')}")
 
 if st.sidebar.button("🚪 登出系統", key="btn_logout_main"):
   st.session_state.authenticated = False
@@ -649,9 +648,7 @@ if user_role in ["executive", "hr", "finance"]:
     idx = tabs_to_show.index("📋 人事檔案 (Employee Profiles)")
     with active_tabs[idx]:
       st.subheader("📋 越南廠人事檔案與職位管理")
-      st.caption(
-          "維護員工個人資料、職位、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。"
-      )
+      st.caption("維護員工個人資料、職位、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。")
 
       # 新增員工表單
       with st.expander("➕ 新增員工個人檔案 (Add Employee Profile)", expanded=True):
@@ -1010,8 +1007,8 @@ if user_role in ["executive", "hr", "finance"]:
       with col_add:
         st.subheader("➕ 新增使用者與設定權限")
         with st.form("add_user_form"):
-          new_username = st.text_input("新帳號 (Username)")
-          new_password = st.text_input("預設密碼 (Password)")
+          new_username = st.text_input("新帳號 (Username)").strip().lower()
+          new_password = st.text_input("預設密碼 (Password)").strip()
           new_name = st.text_input("顯示姓名與職稱 (例如: 王副總)")
           new_role_key = st.selectbox(
               "設定角色權限",
@@ -1038,7 +1035,7 @@ if user_role in ["executive", "hr", "finance"]:
       with col_manage:
         st.subheader("🛠️ 修改密碼 / 刪除帳號")
         manageable_users = [
-            u for u in st.session_state.user_database.keys() if u != "boss"
+            u for u in st.session_state.user_database.keys() if u not in ["admin", "boss"]
         ]
 
         if manageable_users:
