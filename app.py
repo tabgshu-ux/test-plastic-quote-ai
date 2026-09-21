@@ -31,16 +31,35 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
-# 🏢 0. 初始化公司基本資訊 (可由主管於後台動態修改)
+# 🏢 0. 初始化公司與多廠區基本資訊 (可由主管於後台動態新增/修改)
 if "company_profile" not in st.session_state:
   st.session_state.company_profile = {
       "name": "環球塑膠射出工業股份有限公司 (Global Injection Molding Corp.)",
       "tax_id": "88889999",
-      "phone": "+886-2-2999-8888",
-      "fax": "+886-2-2999-7777",
-      "email": "sales@global-injection.com",
-      "address": "新北市三重區光復路二段 88 號 10 樓",
       "website": "www.global-injection-demo.com",
+      "sites": {
+          "Taiwan (HQ)": {
+              "site_name": "台灣總部與研發中心",
+              "phone": "+886-2-2999-8888",
+              "fax": "+886-2-2999-7777",
+              "email": "hq@global-injection.com",
+              "address": "新北市三重區光復路二段 88 號 10 樓",
+          },
+          "China (Dongguan)": {
+              "site_name": "中國東莞華南製造基地",
+              "phone": "+86-769-8123-4567",
+              "fax": "+86-769-8123-4568",
+              "email": "cn_sales@global-injection.com",
+              "address": "廣東省東莞市長安鎮樟樹浦工業區 16 號",
+          },
+          "Vietnam (Binh Duong)": {
+              "site_name": "越南平陽東安製造廠",
+              "phone": "+84-274-3789-999",
+              "fax": "+84-274-3789-888",
+              "email": "vn_sales@global-injection.com",
+              "address": "KCN Đồng An, Phường Bình Hòa, TP. Thuận An, Tỉnh Bình Dương, Việt Nam",
+          },
+      },
   }
 
 
@@ -453,7 +472,7 @@ if user_role == "admin":
 
   tab1, tab2, tab3, tab4 = st.tabs([
       "📊 業務報價總覽與資料庫",
-      "🏢 報價單公司資訊設定 (Company Profile)",
+      "🏢 跨國多廠區/公司資訊設定 (Multi-Site Profile)",
       "👥 系統使用者管理 (User Management)",
       "🇻🇳 越南電子發票登記 (Hóa đơn điện tử)",
   ])
@@ -497,43 +516,88 @@ if user_role == "admin":
     else:
       st.info("目前尚無任何報價單紀錄。")
 
-  # 分頁 2：公司資訊設定 (修訂抬頭、電話、地址)
+  # 分頁 2：多廠區/公司資訊設定 (可無限新增/修改廠區地址電話)
   with tab2:
-    st.subheader("🏢 報價單抬頭與公司聯絡資訊設定")
+    st.subheader("🏢 跨國企業多廠區與公司抬頭設定")
     st.caption(
-        "在此設定的資訊將會**自動套用與印製**於前台業務產出的 PDF 報價單抬頭。"
+        "在此設定的全球各地廠區資訊，將會在前台切換「製造基地」時**自動連線套用至"
+        " PDF 報價單**。"
     )
 
     cp = st.session_state.company_profile
-    with st.form("company_profile_form"):
-      col_cp1, col_cp2 = st.columns(2)
-      with col_cp1:
-        cp_name = st.text_input("公司名稱 (Company Name)", cp["name"])
-        cp_tax_id = st.text_input(
-            "統一編號 / 稅號 (Tax ID / VAT No.)", cp["tax_id"]
-        )
-        cp_phone = st.text_input("電話 (Tel)", cp["phone"])
-        cp_fax = st.text_input("傳真 (Fax)", cp["fax"])
-      with col_cp2:
-        cp_email = st.text_input("公司 Email", cp["email"])
-        cp_website = st.text_input("官方網站 (Website)", cp["website"])
-        cp_address = st.text_input("公司地址 (Address)", cp["address"])
 
-      save_cp_btn = st.form_submit_button(
-          "💾 儲存公司設定 (Save Company Profile)", type="primary"
-      )
-      if save_cp_btn:
-        st.session_state.company_profile = {
-            "name": cp_name,
-            "tax_id": cp_tax_id,
-            "phone": cp_phone,
-            "fax": cp_fax,
-            "email": cp_email,
-            "address": cp_address,
-            "website": cp_website,
+    # 公司通用抬頭
+    with st.form("company_general_form"):
+      st.markdown("#### 1. 公司集團基本資料")
+      col_g1, col_g2 = st.columns(2)
+      with col_g1:
+        cp_name = st.text_input("公司總稱 (Company Name)", cp["name"])
+        cp_tax_id = st.text_input("統一編號 / 稅號 (Tax ID)", cp["tax_id"])
+      with col_g2:
+        cp_website = st.text_input("官方網站 (Website)", cp["website"])
+
+      if st.form_submit_button("💾 儲存集團基本資料"):
+        st.session_state.company_profile["name"] = cp_name
+        st.session_state.company_profile["tax_id"] = cp_tax_id
+        st.session_state.company_profile["website"] = cp_website
+        st.toast("✅ 公司集團基本資料已更新！", icon="💾")
+
+    st.divider()
+
+    # 個別廠區管理
+    st.markdown("#### 2. 個別廠區/分公司聯絡資訊 (可直接修改或新增)")
+
+    sites_dict = cp["sites"]
+    selected_site_key = st.selectbox(
+        "選擇要編輯的廠區 (Select Site)", list(sites_dict.keys())
+    )
+
+    current_sdata = sites_dict[selected_site_key]
+
+    with st.form("edit_site_form"):
+      st.caption(f"正在編輯：`{selected_site_key}` 的聯絡資訊")
+      s_name = st.text_input("廠區中文名稱", current_sdata["site_name"])
+      s_phone = st.text_input("電話 (Tel)", current_sdata["phone"])
+      s_fax = st.text_input("傳真 (Fax)", current_sdata["fax"])
+      s_email = st.text_input("公用 Email", current_sdata["email"])
+      s_address = st.text_input("廠區完整地址 (Address)", current_sdata["address"])
+
+      if st.form_submit_button("💾 更新此廠區資訊", type="primary"):
+        st.session_state.company_profile["sites"][selected_site_key] = {
+            "site_name": s_name,
+            "phone": s_phone,
+            "fax": s_fax,
+            "email": s_email,
+            "address": s_address,
         }
-        st.success("✅ 公司資訊已成功更新！前台 PDF 報價單將自動連動套用。")
+        st.success(f"✅ `{selected_site_key}` 資訊已更新！前台報價將自動連動。")
         st.rerun()
+
+    # ➕ 新增廠區按鈕
+    with st.expander("➕ 新增其他廠區 / 分公司 (Add New Manufacturing Site)"):
+      with st.form("add_new_site_form"):
+        new_s_key = st.text_input(
+            "新廠區代號 (例如: USA (California) / Thailand (Rayong))"
+        )
+        new_s_name = st.text_input("廠區中文全稱 (例如: 美國加州研發廠)")
+        new_s_phone = st.text_input("電話 (Tel)")
+        new_s_fax = st.text_input("傳真 (Fax)")
+        new_s_email = st.text_input("Email")
+        new_s_address = st.text_input("廠區完整地址")
+
+        if st.form_submit_button("➕ 確認建立新廠區"):
+          if new_s_key and new_s_address:
+            st.session_state.company_profile["sites"][new_s_key] = {
+                "site_name": new_s_name,
+                "phone": new_s_phone,
+                "fax": new_s_fax,
+                "email": new_s_email,
+                "address": new_s_address,
+            }
+            st.success(f"🎉 新廠區 `{new_s_key}` 建立成功！前台選單已自動同步。")
+            st.rerun()
+          else:
+            st.error("請至少填寫廠區代號與地址！")
 
   # 分頁 3：使用者管理
   with tab3:
@@ -738,7 +802,7 @@ if user_role == "admin":
       st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
-# 💼 畫面 B：業務人員前台報價系統 (含公司抬頭連動與 PDF 生成)
+# 💼 畫面 B：業務人員前台報價系統 (動態自動帶入選定廠區之地址電話)
 # ==========================================
 else:
   LANG_DICT = {
@@ -747,7 +811,7 @@ else:
           "step1_title": "1. 🤖 Gemini AI 需求對話與規格輸入",
           "step2_title": "2. 📐 工業 2D CAD 產品結構模擬",
           "step3_title": "3. 🧊 客製化 3D 中空模型與容量/噸數計算",
-          "pdf_btn": "📄 下載正式 PDF 報價單 (帶公司抬頭與簽名)",
+          "pdf_btn": "📄 下載正式 PDF 報價單 (帶選定廠區抬頭與簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
           "item_mold": "Custom Mold Development",
           "item_part": "Production Part Unit Cost",
@@ -782,11 +846,11 @@ else:
     lang = st.selectbox(
         "🌐 Language / 語言", ["繁體中文", "Tiếng Việt", "English"]
     )
+
+  # 動態連線後台建立的所有廠區清單
+  available_sites = list(st.session_state.company_profile["sites"].keys())
   with top_col2:
-    site = st.selectbox(
-        "🏭 Manufacturing Site",
-        ["Taiwan (HQ)", "China (Dongguan)", "Vietnam (Binh Duong)"],
-    )
+    site = st.selectbox("🏭 Manufacturing Site / 出貨廠區", available_sites)
   with top_col3:
     curr = st.selectbox("💱 Currency", ["USD", "TWD", "RMB", "VND"])
 
@@ -923,10 +987,10 @@ else:
 
       st.success(
           f"💰 報價計算完成 (經辦業務: {current_sales})：單件估算 $0.85 USD /"
-          f" 射出模具開發費 $4,500 USD (建議機台: {est_tonnage}T)"
+          f" 射出模具開發費 $4,500 USD (出貨基地: {site})"
       )
 
-      # 📄 動態帶入主管在後台設定的公司 Profile 生成正式 PDF
+      # 📄 動態抓取【當前選定廠區】的地址與電話生成 PDF
       def generate_multilingual_pdf():
         pdf_path = "official_quotation.pdf"
         doc = SimpleDocTemplate(pdf_path, pagesize=letter)
@@ -934,6 +998,10 @@ else:
         story = []
 
         cp = st.session_state.company_profile
+        # 抓取業務選定的特定廠區 Profile
+        selected_site_data = cp["sites"].get(
+            site, list(cp["sites"].values())[0]
+        )
 
         # 公司抬頭標題 (Company Header)
         title_style = ParagraphStyle(
@@ -943,9 +1011,14 @@ else:
             textColor=colors.HexColor("#0f172a"),
             fontName="Helvetica-Bold",
         )
-        story.append(Paragraph(f"<b>{cp['name']}</b>", title_style))
+        story.append(
+            Paragraph(
+                f"<b>{cp['name']} - {selected_site_data.get('site_name', site)}</b>",
+                title_style,
+            )
+        )
 
-        # 公司詳細聯絡資訊
+        # 公司與特定廠區詳細聯絡資訊
         sub_style = ParagraphStyle(
             "SubStyle",
             parent=styles["Normal"],
@@ -954,9 +1027,10 @@ else:
             fontName="Helvetica",
         )
         company_info_text = (
-            f"Tax ID: {cp['tax_id']} | Tel: {cp['phone']} | Fax: {cp['fax']}<br/>"
-            f"Email: {cp['email']} | Web: {cp['website']}<br/>"
-            f"Address: {cp['address']}"
+            f"Tax ID: {cp['tax_id']} | Tel: {selected_site_data['phone']} |"
+            f" Fax: {selected_site_data['fax']}<br/>Email:"
+            f" {selected_site_data['email']} | Web: {cp['website']}<br/>Address:"
+            f" {selected_site_data['address']}"
         )
         story.append(Paragraph(company_info_text, sub_style))
         story.append(Spacer(1, 10))
