@@ -62,12 +62,13 @@ if "company_profile" not in st.session_state:
       },
   }
 
-# 👥 0.1 初始化越南員工人事資料庫 (靜態 HR 資料 + 額定本薪與保險)
+# 👥 0.1 初始化越南員工人事資料庫 (含職位、合規日期、額定本薪與保險)
 if "employee_db" not in st.session_state:
   st.session_state.employee_db = [
       {
           "emp_id": "VN-001",
           "name": "Nguyễn Văn A",
+          "position": "射出機技術員 (Kỹ thuật viên)",
           "cccd": "038095001234",
           "phone": "0912345678",
           "temp_address": "Số 12, Đường số 5, KDC Dĩ An, Bình Dương",
@@ -91,6 +92,7 @@ if "monthly_payroll_db" not in st.session_state:
           "pay_month": "2026-09",
           "emp_id": "VN-001",
           "emp_name": "Nguyễn Văn A",
+          "position": "射出機技術員",
           "base_salary": 9000000.0,
           "allowance_total": 1530000.0,
           "insurance_deduct": 945000.0, # 10.5%
@@ -626,18 +628,19 @@ if user_role == "admin":
           else:
             st.error("請至少填寫廠區代號與地址！")
 
-  # 分頁 3：靜態人事檔案 (Employee Profiles - 包含合規日期與固定薪資/保險)
+  # 分頁 3：人事檔案 (Employee Profiles - 新增職位欄位)
   with tab3:
-    st.subheader("📋 靜態人事檔案與保險底薪管理")
-    st.caption("維護員工個人資料、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。")
+    st.subheader("📋 越南廠人事檔案與職位管理")
+    st.caption("維護員工個人資料、職位、合規日期（入職/簽約/離職）、醫療保險與每月固定保險額 (10.5%)。")
 
     # 新增員工表單
-    with st.expander("➕ 新增員工個人檔案 (Add New Employee)", expanded=True):
+    with st.expander("➕ 新增員工個人檔案 (Add Employee Profile)", expanded=True):
       with st.form("add_static_emp_form"):
         col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
           emp_id = st.text_input("員工編號 (Mã NV)", f"VN-{len(st.session_state.employee_db)+1:03d}")
           emp_name = st.text_input("員工全名 (Họ và Tên)", "Trần Thị B")
+          emp_position = st.text_input("職位名稱 (Chức vụ)", "射出機技術員")
           emp_cccd = st.text_input("身份證字號 (Số CCCD)", "038095009999")
           emp_phone = st.text_input("聯絡電話", "0987654321")
         with col_e2:
@@ -661,12 +664,13 @@ if user_role == "admin":
         with col_s4:
           phone_allow = st.number_input("電話補助 (Phụ cấp ĐT)", min_value=0.0, value=300000.0, step=50000.0)
 
-        submit_emp = st.form_submit_button("✅ 儲存員工靜態檔案", type="primary")
+        submit_emp = st.form_submit_button("✅ 儲存員工人事檔案", type="primary")
 
         if submit_emp:
           st.session_state.employee_db.append({
               "emp_id": emp_id,
               "name": emp_name,
+              "position": emp_position,
               "cccd": emp_cccd,
               "phone": emp_phone,
               "temp_address": emp_temp_addr,
@@ -681,7 +685,7 @@ if user_role == "admin":
               "fuel_allowance": fuel_allow,
               "phone_allowance": phone_allow,
           })
-          st.success(f"🎉 員工 `{emp_name}` 檔案已成功建立！")
+          st.success(f"🎉 員工 `{emp_name}` ({emp_position}) 人事檔案已成功建立！")
           st.rerun()
 
     st.divider()
@@ -690,18 +694,18 @@ if user_role == "admin":
     col_del, _ = st.columns([1, 1])
     with col_del:
       if st.session_state.employee_db:
-        emp_options = [f"{e['emp_id']} - {e['name']}" for e in st.session_state.employee_db]
+        emp_options = [f"{e['emp_id']} - {e['name']} ({e.get('position', '一般員工')})" for e in st.session_state.employee_db]
         selected_del_emp = st.selectbox("❌ 選擇要刪除的員工", emp_options, key="select_del_static_emp")
         if st.button("🗑️ 刪除此員工檔案", type="primary", key="btn_del_static_emp"):
           target_id = selected_del_emp.split(" - ")[0]
           st.session_state.employee_db = [e for e in st.session_state.employee_db if e["emp_id"] != target_id]
-          st.success(f"🗑️ 員工 `{selected_del_emp}` 已成功刪除！")
+          st.success(f"🗑️ 員工檔案已成功刪除！")
           st.rerun()
 
     st.divider()
 
-    # 人事總表顯示 (含 10.5% 強制保險固定扣算)
-    st.subheader("📋 越南員工靜態檔案與基本保險總表")
+    # 人事總表顯示 (含職位與 10.5% 強制保險固定扣算)
+    st.subheader("📋 越南員工人事檔案與基本保險總表")
     if st.session_state.employee_db:
       static_list = []
       for emp in st.session_state.employee_db:
@@ -709,6 +713,7 @@ if user_role == "admin":
         static_list.append({
             "工號": emp["emp_id"],
             "姓名": emp["name"],
+            "職位": emp.get("position", "一般員工"),
             "CCCD": emp["cccd"],
             "電話": emp["phone"],
             "入職日期": emp.get("join_date", "-"),
@@ -721,7 +726,7 @@ if user_role == "admin":
         })
       st.dataframe(pd.DataFrame(static_list), use_container_width=True)
 
-  # 分頁 4：全新功能 — 💵 每月薪資發放與變動扣款 (Monthly Payroll Processing)
+  # 分頁 4：💵 每月薪資發放與變動扣款 (Monthly Payroll Processing)
   with tab4:
     st.subheader("💵 每月動態薪資發放與變動扣款結算中心")
     st.caption("在此輸入**當月份實際發生**的「遲到早退罰款、請假扣款與借款/預支扣除」，系統將產出正式薪資單 PDF。")
@@ -733,14 +738,14 @@ if user_role == "admin":
           col_p1, col_p2, col_p3 = st.columns(3)
           with col_p1:
             pay_month = st.text_input("發薪月份 (Tháng lương)", datetime.date.today().strftime("%Y-%m"))
-            emp_sel_payroll = st.selectbox("選擇結算員工", [f"{e['emp_id']} - {e['name']}" for e in st.session_state.employee_db])
+            emp_sel_payroll = st.selectbox("選擇結算員工", [f"{e['emp_id']} - {e['name']} ({e.get('position', '員工')})" for e in st.session_state.employee_db])
           
           # 找出選定員工
           target_emp_id = emp_sel_payroll.split(" - ")[0]
           emp_info = next((e for e in st.session_state.employee_db if e["emp_id"] == target_emp_id), None)
 
           with col_p2:
-            st.info(f"📌 **{emp_info['name']}** 約定本薪：`{emp_info['base_salary']:,.0f} VND`")
+            st.info(f"📌 **{emp_info['name']}** [{emp_info.get('position', '員工')}] 本薪：`{emp_info['base_salary']:,.0f} VND`")
             ins_105 = emp_info['base_salary'] * 0.105
             st.caption(f"🛡️ 每月固定保險扣除 (10.5%): `{ins_105:,.0f} VND`")
 
@@ -749,7 +754,7 @@ if user_role == "admin":
             leave_m = st.number_input("當月請假/無薪假扣款 (Trừ nghỉ phép)", min_value=0.0, value=300000.0, step=50000.0)
             advance_m = st.number_input("當月預支借款扣除 (Trừ tạm ứng)", min_value=0.0, value=1000000.0, step=100000.0)
 
-          submit_pay = st.form_submit_button("✅ 算算並發放此月薪資 (Calculate Payroll)", type="primary")
+          submit_pay = st.form_submit_button("✅ 計算並發放此月薪資 (Calculate Payroll)", type="primary")
 
           if submit_pay:
             allow_tot = emp_info['meal_allowance'] + emp_info['fuel_allowance'] + emp_info['phone_allowance']
@@ -760,6 +765,7 @@ if user_role == "admin":
                 "pay_month": pay_month,
                 "emp_id": emp_info['emp_id'],
                 "emp_name": emp_info['name'],
+                "position": emp_info.get("position", "員工"),
                 "base_salary": emp_info['base_salary'],
                 "allowance_total": allow_tot,
                 "insurance_deduct": ins_105,
@@ -791,7 +797,7 @@ if user_role == "admin":
       # 生成中/越雙語電子薪資單 PDF 供員工簽名
       with col_dl2:
         with st.expander("📄 下載個人雙語正式薪資單 PDF (Payslip)", expanded=True):
-          pay_records = [f"{p['pay_month']} - {p['emp_id']} {p['emp_name']}" for p in st.session_state.monthly_payroll_db]
+          pay_records = [f"{p['pay_month']} - {p['emp_id']} {p['emp_name']} ({p.get('position', '員工')})" for p in st.session_state.monthly_payroll_db]
           sel_payslip = st.selectbox("選擇薪資單紀錄", pay_records)
 
           def generate_payslip_pdf(pay_record):
@@ -810,7 +816,7 @@ if user_role == "admin":
 
             info_p = [
                 ["Mã NV / 工號:", pay_record['emp_id'], "Tên NV / 姓名:", pay_record['emp_name']],
-                ["Tháng lương / 月份:", pay_record['pay_month'], "Ngày chi trả / 發薪日:", str(datetime.date.today())]
+                ["Chức vụ / 職位:", pay_record.get('position', '員工'), "Tháng lương / 月份:", pay_record['pay_month']]
             ]
             t_pinfo = Table(info_p, colWidths=[120, 150, 120, 150])
             t_pinfo.setStyle(TableStyle([('FONTSIZE', (0,0), (-1,-1), 9), ('BOTTOMPADDING', (0,0), (-1,-1), 4)]))
