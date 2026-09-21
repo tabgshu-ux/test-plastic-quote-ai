@@ -132,9 +132,10 @@ if "monthly_payroll_db" not in st.session_state:
       }
   ]
 
-# 📈 0.3 跨國多市場觀察股票與指數關注清單
-if "stock_watchlist" not in st.session_state:
-  st.session_state.stock_watchlist = [
+# ==========================================
+# 🛑【修正區】強制更新舊的股票數據結構
+# ==========================================
+NEW_STOCK_WATCHLIST_DATA = [
       # 🇹🇼 台灣市場
       {
           "market": "🇹🇼 台灣 (Taiwan)",
@@ -251,6 +252,16 @@ if "stock_watchlist" not in st.session_state:
           "note": "有利平陽廠出口報價與薪資結算",
       },
   ]
+
+# 檢查 Session State 是否有舊資料，如果有，則強制重置為新資料結構
+if "stock_watchlist" in st.session_state:
+  # 檢查第一筆資料是否有 'market' 鍵，如果沒有，說明是舊資料
+  if st.session_state.stock_watchlist and "market" not in st.session_state.stock_watchlist[0]:
+    del st.session_state.stock_watchlist # 刪除舊的
+    st.session_state.stock_watchlist = NEW_STOCK_WATCHLIST_DATA # 載入新的
+    st.toast("🔄 系統已自動更新跨國股市數據結構！", icon="📈")
+else:
+  st.session_state.stock_watchlist = NEW_STOCK_WATCHLIST_DATA # 第一次載入
 
 
 # 🎨 2D CAD 高清動態渲染
@@ -747,7 +758,7 @@ if user_role in ["executive", "hr", "finance"]:
                 value=f"{cur_price:,.2f}",
                 delta=cur_change
             )
-            st.caption(f"**區域**: {item['market']}")
+            st.caption(f"**區域**: {item['market']}") # 👈 這裡之前會報錯，現在已修正
             st.caption(f"**建議**: {item['signal']}")
             st.line_chart(cur_history, height=85)
       else:
@@ -1577,19 +1588,4 @@ else:
                 ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#f1f5f9")),
                 ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#0f172a")),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-            ])
-        )
-        story.append(t_detail)
-
-        doc.build(story)
-        return pdf_path
-
-      pdf_file = generate_multilingual_pdf()
-      with open(pdf_file, "rb") as f:
-        st.download_button(
-            L["pdf_btn"],
-            f,
-            file_name=f"Quotation_{current_sales}_{curr}.pdf",
-            key="btn_dl_pdf_final",
-        )
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8完全複製貼上並執行後，您應該會看到左下角彈出一個🔄通知，隨後錯誤就會消失，跨國股票分頁功能也將恢復正常。
