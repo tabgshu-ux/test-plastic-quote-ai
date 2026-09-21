@@ -510,7 +510,7 @@ if user_role == "admin":
   tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
       "📊 業務報價總覽與資料庫",
       "🏢 跨國多廠區/公司資訊設定 (Multi-Site Profile)",
-      "📋 靜態人事檔案 (Employee Profiles)",
+      "📋 人事檔案 (Employee Profiles)",
       "💵 每月薪資發放與變動扣款 (Monthly Payroll)",
       "👥 系統使用者管理 (User Management)",
       "🧾 越南電子發票登記 (Hóa đơn điện tử)",
