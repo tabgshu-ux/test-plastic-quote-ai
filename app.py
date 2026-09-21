@@ -803,15 +803,31 @@ if user_role in ["executive", "hr", "finance"]:
                 st.markdown("### 🛠️ 管理自訂觀察關注標的")
                 
                 # ----------------------------------------------------
-                # 自動抓取股價邏輯函式 (輸入代號時即時觸發)
+                # 自動抓取股價邏輯函式 (輸入代號時即時觸發 & 支援純數字自動補上 .TW)
                 # ----------------------------------------------------
                 def fetch_stock_info_callback():
-                    symbol = st.session_state.get("input_stock_ticker", "").strip()
+                    symbol = st.session_state.get("input_stock_ticker", "").strip().upper()
+                    
+                    # 💡 自動智慧補全：若輸入純數字 (如 2527)，自動幫使用者補上 .TW
+                    if symbol.isdigit():
+                        symbol = f"{symbol}.TW"
+                        st.session_state["input_stock_ticker"] = symbol
+                    
                     if symbol:
                         try:
                             if HAS_YFINANCE:
                                 ticker = yf.Ticker(symbol)
                                 hist = ticker.history(period="5d")
+                                
+                                # 若 .TW 沒抓到且全是數字，再試試看上櫃的 .TWO
+                                if hist.empty and symbol.endswith(".TW") and symbol[:-3].isdigit():
+                                    alt_symbol = f"{symbol[:-3]}.TWO"
+                                    ticker = yf.Ticker(alt_symbol)
+                                    hist = ticker.history(period="5d")
+                                    if not hist.empty:
+                                        symbol = alt_symbol
+                                        st.session_state["input_stock_ticker"] = symbol
+
                                 if not hist.empty and len(hist) >= 1:
                                     latest_price = float(hist["Close"].iloc[-1])
                                     prev_price = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else latest_price
@@ -827,13 +843,13 @@ if user_role in ["executive", "hr", "finance"]:
                                     except Exception:
                                         short_name = symbol
 
-                                    # 更新 Session State 自動帶入下方輸入框
+                                    # 自動帶入數據
                                     st.session_state["input_stock_name"] = short_name
                                     st.session_state["input_stock_price"] = float(round(latest_price, 2))
                                     st.session_state["input_stock_change"] = change_str
-                                    st.toast(f"✅ 已成功抓取 {short_name} 最新股價資訊！", icon="📈")
+                                    st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 最新股價資訊！", icon="📈")
                                 else:
-                                    st.toast(f"⚠️ 找不到代號 `{symbol}` 的即時股價資料", icon="⚠️")
+                                    st.toast(f"⚠️ 找不到代號 `{symbol}` 的即時股價資料，請確認代號是否正確。", icon="⚠️")
                             else:
                                 st.toast("⚠️ 系統未安裝 yfinance 套件，無法自動抓取", icon="⚠️")
                         except Exception as e:
@@ -853,19 +869,21 @@ if user_role in ["executive", "hr", "finance"]:
                         key="input_stock_market"
                     )
 
-                    # 1. 輸入股票代號 (按 Enter 或離開焦點時自動觸發抓取)
+                    # 1. 輸入股票代號 (支援按 🔍 抓取或直接按 Enter)
                     s_ticker = st.text_input(
-                        "Yahoo 財經代碼 (如 2881.TW / 3711.TW / NVDA)",
-                        value=st.session_state.get("input_stock_ticker", "3711.TW"),
+                        "Yahoo 財經代碼 (如 2881.TW / 2527 / NVDA)",
+                        value=st.session_state.get("input_stock_ticker", "2527.TW"),
                         key="input_stock_ticker",
-                        on_change=fetch_stock_info_callback,
-                        help="輸入代號後按 Enter，系統將自動填入名稱、最新價格與漲跌幅！"
+                        help="輸入代號（例如 2527 或 2881.TW）後點擊右側或按 Enter 即可自動抓取！"
                     )
+
+                    # 🔍 抓取最新行情按鈕
+                    st.button("🔍 抓取最新股價與名稱", on_click=fetch_stock_info_callback, use_container_width=True)
 
                     # 2. 自動帶入的名稱
                     s_name = st.text_input(
-                        "名稱 (如 日月光控股)",
-                        value=st.session_state.get("input_stock_name", "日月光投控"),
+                        "名稱 (如 宏璟)",
+                        value=st.session_state.get("input_stock_name", "宏璟"),
                         key="input_stock_name"
                     )
 
@@ -873,7 +891,7 @@ if user_role in ["executive", "hr", "finance"]:
                     s_price = st.number_input(
                         "最新價格",
                         min_value=0.0,
-                        value=st.session_state.get("input_stock_price", 663.00),
+                        value=st.session_state.get("input_stock_price", 45.80),
                         step=0.5,
                         format="%.2f",
                         key="input_stock_price"
@@ -881,8 +899,8 @@ if user_role in ["executive", "hr", "finance"]:
 
                     # 4. 自動帶入的漲跌幅
                     s_change = st.text_input(
-                        "漲跌幅度 (如 +25.00 (+3.92%))",
-                        value=st.session_state.get("input_stock_change", "+25.00 (+3.92%)"),
+                        "漲跌幅度 (如 +2.05 (+4.69%))",
+                        value=st.session_state.get("input_stock_change", "+2.05 (+4.69%)"),
                         key="input_stock_change"
                     )
 
