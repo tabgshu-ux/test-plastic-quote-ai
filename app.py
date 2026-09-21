@@ -758,7 +758,7 @@ if user_role in ["executive", "hr", "finance"]:
             st.caption(f"**建議**: {item['signal']}")
             st.line_chart(cur_history, height=85)
       else:
-        st.info("該分頁目前無觀察標的，您可以在右側表單自由新增。")
+        st.info("該分頁目前無觀察標的，您可以在右側表單自由新增或刪除。")
 
       st.divider()
 
@@ -800,36 +800,74 @@ if user_role in ["executive", "hr", "finance"]:
               """)
 
       with col_add_stock:
-        st.markdown("### ➕ 新增自訂觀察個股/指數")
-        with st.form("add_stock_form"):
-          s_market = st.selectbox(
-              "選擇股票市場區域",
-              [
-                  "🇹🇼 台灣 (Taiwan)",
-                  "🇨🇳 中國/香港 (China/HK)",
-                  "🇺🇸 美國 (USA)",
-                  "🇻🇳 越南 (Vietnam)",
-                  "🛢️ 原物料與匯率 (Commodities/FX)"
-              ]
-          )
-          s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / NVDA / 0700.HK)", "2881.TW")
-          s_name = st.text_input("名稱 (如 富邦金)", "富邦金")
-          s_price = st.number_input("最新價格", min_value=0.0, value=92.5, step=0.5)
-          s_change = st.text_input("漲跌幅度 (如 +1.2 (+1.31%))", "+1.2 (+1.31%)")
+        st.markdown("### 🛠️ 管理自訂觀察關注標的")
+        
+        # 區塊 A：新增標的
+        with st.expander("➕ 新增觀察個股/指數", expanded=True):
+            with st.form("add_stock_form"):
+              s_market = st.selectbox(
+                  "選擇股票市場區域",
+                  [
+                      "🇹🇼 台灣 (Taiwan)",
+                      "🇨🇳 中國/香港 (China/HK)",
+                      "🇺🇸 美國 (USA)",
+                      "🇻🇳 越南 (Vietnam)",
+                      "🛢️ 原物料與匯率 (Commodities/FX)"
+                  ]
+              )
+              s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / NVDA / 0700.HK)", "2881.TW")
+              s_name = st.text_input("名稱 (如 富邦金)", "富邦金")
+              s_price = st.number_input("最新價格", min_value=0.0, value=92.5, step=0.5)
+              s_change = st.text_input("漲跌幅度 (如 +1.2 (+1.31%))", "+1.2 (+1.31%)")
 
-          if st.form_submit_button("✅ 新增至該市場清單"):
-            st.session_state.stock_watchlist.append({
-                "market": s_market,
-                "ticker": s_ticker,
-                "symbol": f"{s_name} ({s_ticker})",
-                "name": s_name,
-                "price": s_price,
-                "change": s_change,
-                "signal": "🟢 偏多（穩健觀察）",
-                "note": "自訂關注標的"
-            })
-            st.success(f"已成功新增 `{s_name}` 至 【{s_market}】！")
-            st.rerun()
+              if st.form_submit_button("✅ 新增至該市場清單"):
+                st.session_state.stock_watchlist.append({
+                    "market": s_market,
+                    "ticker": s_ticker,
+                    "symbol": f"{s_name} ({s_ticker})",
+                    "name": s_name,
+                    "price": s_price,
+                    "change": s_change,
+                    "signal": "🟢 偏多（穩健觀察）",
+                    "note": "自訂關注標的"
+                })
+                st.success(f"已成功新增 `{s_name}` 至 【{s_market}】！")
+                st.rerun()
+
+        # ==========================================
+        # 🛑【修正區】區塊 B：刪除與管理標的
+        # ==========================================
+        with st.expander("🗑️ 管理與刪除已關注標的", expanded=True):
+            if st.session_state.stock_watchlist:
+                # 根據當前選擇的市場，顯示可刪除的列表
+                if selected_stock_market == "🌐 全部市場 (All Markets)":
+                    manageable_stocks = st.session_state.stock_watchlist
+                    list_label = "全市場已關注標的"
+                else:
+                    manageable_stocks = [item for item in st.session_state.stock_watchlist if item.get("market") == selected_stock_market]
+                    list_label = f"【{selected_stock_market}】已關注標的"
+                
+                if manageable_stocks:
+                    # 建立選單顯示名稱 (ID - Name - Ticker)
+                    stock_options = [f"{idx} - {item['name']} ({item['ticker']})" for idx, item in enumerate(manageable_stocks)]
+                    selected_del_stock_str = st.selectbox(f"選擇要移除的標的 ({list_label})", stock_options, key="del_stock_select")
+                    
+                    if st.button("🗑️ 確認將此標的從關注清單移除", type="primary", key="btn_del_stock_confirm"):
+                        # 解析出索引 (在原始 watchlist 中的索引需要重新對應)
+                        target_ticker = selected_del_stock_str.split(" (")[-1].replace(")", "")
+                        # 重新過濾原始清單，移除該 Ticker
+                        original_count = len(st.session_state.stock_watchlist)
+                        st.session_state.stock_watchlist = [item for item in st.session_state.stock_watchlist if item['ticker'] != target_ticker]
+                        
+                        if len(st.session_state.stock_watchlist) < original_count:
+                            st.success(f"🗑️ 已成功將 `{target_ticker}` 從關注清單移除！")
+                            st.rerun()
+                        else:
+                            st.error("❌ 刪除失敗，找不到該標的。")
+                else:
+                    st.info(f"當前市場【{selected_stock_market}】尚無關注標的。")
+            else:
+                st.info("目前關注清單為空。")
 
   # ----------------------------------------
   # 1. 業務報價總覽 (Executive 專屬)
