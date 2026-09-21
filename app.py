@@ -62,7 +62,7 @@ if "company_profile" not in st.session_state:
       },
   }
 
-# 👥 0.1 初始化越南員工人事與薪資資料庫
+# 👥 0.1 初始化越南員工人事、出勤與薪資扣款資料庫
 if "employee_db" not in st.session_state:
   st.session_state.employee_db = [
       {
@@ -74,10 +74,16 @@ if "employee_db" not in st.session_state:
           "perm_address": "Xã Mỹ Xuyên, Huyện Mỹ Xuyên, Tỉnh Sóc Trăng",
           "hospital_name": "Bệnh viện Đa khoa Tỉnh Bình Dương",
           "hospital_address": "59 Phạm Ngọc Thạch, Hiệp Thành, TP. Thủ Dầu Một, Bình Dương",
+          "join_date": "2024-03-01",
+          "contract_date": "2024-03-05",
+          "leave_date": "-",
           "base_salary": 9000000.0,
           "meal_allowance": 730000.0,
           "fuel_allowance": 500000.0,
           "phone_allowance": 300000.0,
+          "tardy_deduction": 150000.0,    # 遲到/早退扣款
+          "leave_deduction": 350000.0,    # 請假扣款
+          "advance_deduction": 2000000.0, # 借款/預支扣款
       }
   ]
 
@@ -490,7 +496,7 @@ if user_role == "admin":
   tab1, tab2, tab3, tab4, tab5 = st.tabs([
       "📊 業務報價總覽與資料庫",
       "🏢 跨國多廠區/公司資訊設定 (Multi-Site Profile)",
-      "🇻🇳 越南員工人事與薪資合規管理 (HR & Payroll)",
+      "🇻🇳 越南員工人事、出勤扣款與薪資管理 (HR & Deductions)",
       "👥 系統使用者管理 (User Management)",
       "🧾 越南電子發票登記 (Hóa đơn điện tử)",
   ])
@@ -607,34 +613,47 @@ if user_role == "admin":
           else:
             st.error("請至少填寫廠區代號與地址！")
 
-  # 分頁 3：全新新增 — 🇻🇳 越南員工人事與薪資合規管理 (HR & Payroll)
+  # 分頁 3：🇻🇳 越南員工人事、出勤扣款與薪資管理 (含遲到/請假/借款扣除)
   with tab3:
-    st.subheader("🇻🇳 越南廠員工人事與薪資計算合規中心")
+    st.subheader("🇻🇳 越南廠員工人事、合約日期與薪資扣款管理")
     st.caption(
-        "專為越南投資企業設計：整合員工 CCCD、居住地址、醫療保險醫院與津貼/保險扣除額計算。"
+        "整合合規日期（入職/簽約/離職）、津貼與**遲到早退罰款、請假扣款及預支借款扣除**。"
     )
 
-    # 1. 新增員工表單
-    with st.expander("➕ 新增員工個人與保險資料 (Add Employee)", expanded=True):
-      with st.form("add_employee_form"):
-        col_e1, col_e2 = st.columns(2)
+    # 1. 新增員工完整表單
+    with st.expander("➕ 新增員工資料與薪資扣款設定 (Add Employee & Salary Specs)", expanded=True):
+      with st.form("add_employee_full_form"):
+        st.markdown("##### 📌 1. 個人基本與合規日期資料 (Personnel Info)")
+        col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
           emp_id = st.text_input("員工編號 (Mã NV)", f"VN-{len(st.session_state.employee_db)+1:03d}")
           emp_name = st.text_input("員工全名 (Họ và Tên)", "Trần Thị B")
           emp_cccd = st.text_input("身份證字號 (Số CCCD)", "038095009999")
-          emp_phone = st.text_input("聯絡電話 (Số điện thoại)", "0987654321")
-          emp_temp_addr = st.text_input("暫住地址 (Địa chỉ tạm trú)", "Khu phố 3, P. An Phú, TP. Thuận An, Bình Dương")
-          emp_perm_addr = st.text_input("戶籍地址 (Địa chỉ thường trú)", "Xã Tam Bình, Huyện Cai Lậy, Tỉnh Tiền Giang")
-        
+          emp_phone = st.text_input("聯絡電話", "0987654321")
         with col_e2:
-          emp_hosp_name = st.text_input("保險登記就醫醫院 (Nơi KCB ban đầu)", "Bệnh viện Quốc tế Hạnh Phúc")
-          emp_hosp_addr = st.text_input("醫院地址 (Địa chỉ BV)", "Đại lộ Bình Dương, Thuận An, Bình Dương")
-          base_sal = st.number_input("本薪 / 保險底薪 (Lương cơ bản, VND)", min_value=0.0, value=8500000.0, step=100000.0)
-          meal_allow = st.number_input("餐費補助 (Phụ cấp ăn trưa, VND)", min_value=0.0, value=730000.0, step=10000.0)
-          fuel_allow = st.number_input("油費補助 (Phụ cấp xăng xe, VND)", min_value=0.0, value=500000.0, step=50000.0)
-          phone_allow = st.number_input("電話補助 (Phụ cấp điện thoại, VND)", min_value=0.0, value=300000.0, step=50000.0)
+          emp_join_date = st.date_input("入職日期 (Ngày vào làm)", datetime.date(2024, 3, 1))
+          emp_contract_date = st.date_input("合約簽署日期 (Ngày ký HĐLĐ)", datetime.date(2024, 3, 5))
+          emp_leave_date_str = st.text_input("離職日期 (若仍在庫請填 -)", "-")
+        with col_e3:
+          emp_temp_addr = st.text_input("暫住地址 (Địa chỉ tạm trú)", "Khu phố 3, P. An Phú, Thuận An, Bình Dương")
+          emp_perm_addr = st.text_input("戶籍地址 (Địa chỉ thường trú)", "Xã Tam Bình, Cai Lậy, Tiền Giang")
+          emp_hosp_name = st.text_input("保險就醫醫院 (Nơi KCB)", "Bệnh viện Quốc tế Hạnh Phúc")
+          emp_hosp_addr = st.text_input("醫院地址", "Đại lộ Bình Dương, Thuận An, Bình Dương")
 
-        submit_emp = st.form_submit_button("✅ 建立員工資料 (Save Employee)", type="primary")
+        st.markdown("##### 💵 2. 薪資、津貼與扣款項目 (Salary, Allowances & Deductions)")
+        col_s1, col_s2, col_s3 = st.columns(3)
+        with col_s1:
+          base_sal = st.number_input("本薪 / 保險底薪 (VND)", min_value=0.0, value=8500000.0, step=100000.0)
+          meal_allow = st.number_input("餐費補助 (Phụ cấp ăn)", min_value=0.0, value=730000.0, step=10000.0)
+        with col_s2:
+          fuel_allow = st.number_input("油費補助 (Phụ cấp xăng)", min_value=0.0, value=500000.0, step=50000.0)
+          phone_allow = st.number_input("電話補助 (Phụ cấp ĐT)", min_value=0.0, value=300000.0, step=50000.0)
+        with col_s3:
+          tardy_ded = st.number_input("遲到/早退扣款 (Trừ đi trễ, VND)", min_value=0.0, value=100000.0, step=10000.0)
+          leave_ded = st.number_input("請假/無薪假扣款 (Trừ nghỉ phép, VND)", min_value=0.0, value=300000.0, step=50000.0)
+          advance_ded = st.number_input("預支借款扣除 (Trừ tạm ứng lương, VND)", min_value=0.0, value=1500000.0, step=100000.0)
+
+        submit_emp = st.form_submit_button("✅ 建立員工完整檔案 (Save Employee)", type="primary")
 
         if submit_emp:
           st.session_state.employee_db.append({
@@ -646,17 +665,23 @@ if user_role == "admin":
               "perm_address": emp_perm_addr,
               "hospital_name": emp_hosp_name,
               "hospital_address": emp_hosp_addr,
+              "join_date": str(emp_join_date),
+              "contract_date": str(emp_contract_date),
+              "leave_date": emp_leave_date_str,
               "base_salary": base_sal,
               "meal_allowance": meal_allow,
               "fuel_allowance": fuel_allow,
               "phone_allowance": phone_allow,
+              "tardy_deduction": tardy_ded,
+              "leave_deduction": leave_ded,
+              "advance_deduction": advance_ded,
           })
-          st.success(f"🎉 員工 `{emp_name}` 資料建立成功！")
+          st.success(f"🎉 員工 `{emp_name}` 檔案已建立並納入薪資扣款系統！")
           st.rerun()
 
     st.divider()
 
-    # 2. 刪除與管理員工
+    # 2. 刪除員工功能
     col_del, _ = st.columns([1, 1])
     with col_del:
       if st.session_state.employee_db:
@@ -670,33 +695,34 @@ if user_role == "admin":
 
     st.divider()
 
-    # 3. 員工清單與薪資保險即時試算總表
-    st.subheader("📋 越南員工清單與薪資/保險試算明細表")
+    # 3. 員工清單與薪資保險/遲到借款扣算總表
+    st.subheader("📋 越南員工清冊、合約日期與薪資扣款結算總表")
     if st.session_state.employee_db:
       calculated_list = []
       for emp in st.session_state.employee_db:
-        # 計算應發總額
+        # 應發總額
         gross = emp["base_salary"] + emp["meal_allowance"] + emp["fuel_allowance"] + emp["phone_allowance"]
-        # 越南保險個人扣除比例：BHXH 8% + BHYT 1.5% + BHTN 1% = 10.5% (以本薪計算)
+        # 保險扣除 (10.5%)
         ins_deduction = emp["base_salary"] * 0.105
+        # 總扣款 (保險 + 遲到 + 請假 + 預支借款)
+        total_deduction = ins_deduction + emp.get("tardy_deduction", 0) + emp.get("leave_deduction", 0) + emp.get("advance_deduction", 0)
         # 實領薪資
-        net_salary = gross - ins_deduction
+        net_salary = gross - total_deduction
 
         calculated_list.append({
             "工號": emp["emp_id"],
             "姓名": emp["name"],
-            "身分證字號(CCCD)": emp["cccd"],
-            "電話": emp["phone"],
-            "暫住地址": emp["temp_address"],
-            "戶籍地址": emp["perm_address"],
-            "就醫醫院": emp["hospital_name"],
-            "醫院地址": emp["hospital_address"],
+            "CCCD": emp["cccd"],
+            "入職日期": emp.get("join_date", "-"),
+            "合約簽署日": emp.get("contract_date", "-"),
+            "離職日期": emp.get("leave_date", "-"),
             "本薪 (VND)": f"{emp['base_salary']:,.0f}",
-            "餐費補助 (VND)": f"{emp['meal_allowance']:,.0f}",
-            "油費補助 (VND)": f"{emp['fuel_allowance']:,.0f}",
-            "電話補助 (VND)": f"{emp['phone_allowance']:,.0f}",
+            "津貼總計": f"{(emp['meal_allowance']+emp['fuel_allowance']+emp['phone_allowance']):,.0f}",
             "應發總額 (Gross)": f"{gross:,.0f}",
-            "保險扣除 (10.5%)": f"-{ins_deduction:,.0f}",
+            "保險自付 (10.5%)": f"-{ins_deduction:,.0f}",
+            "遲到扣款": f"-{emp.get('tardy_deduction', 0):,.0f}",
+            "請假扣款": f"-{emp.get('leave_deduction', 0):,.0f}",
+            "借款扣除": f"-{emp.get('advance_deduction', 0):,.0f}",
             "實領薪資 (Net)": f"{net_salary:,.0f}",
         })
 
@@ -705,9 +731,9 @@ if user_role == "admin":
 
       emp_csv = emp_df.to_csv(index=False).encode("utf-8-sig")
       st.download_button(
-          "📥 匯出越南員工薪資與保險清冊 (CSV)",
+          "📥 匯出完整越南員工薪資與扣款總冊 (CSV)",
           emp_csv,
-          file_name=f"Vietnam_Payroll_{datetime.date.today()}.csv",
+          file_name=f"Vietnam_Payroll_Deductions_{datetime.date.today()}.csv",
       )
     else:
       st.info("目前尚無任何員工資料。")
