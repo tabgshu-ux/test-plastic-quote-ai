@@ -1588,4 +1588,19 @@ else:
                 ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#f1f5f9")),
                 ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#0f172a")),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8完全複製貼上並執行後，您應該會看到左下角彈出一個🔄通知，隨後錯誤就會消失，跨國股票分頁功能也將恢復正常。
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8)
+            ])
+        )
+        story.append(t_detail)
+
+        doc.build(story)
+        return pdf_path
+
+      pdf_file = generate_multilingual_pdf()
+      with open(pdf_file, "rb") as f:
+        st.download_button(
+            L["pdf_btn"],
+            f,
+            file_name=f"Quotation_{current_sales}_{curr}.pdf",
+            key="btn_dl_pdf_final",
+        )。
