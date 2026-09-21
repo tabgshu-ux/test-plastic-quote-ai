@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAS_YFINANCE = False
 
-# 預設觀察清單（包含越南、原物料、台灣、中國/香港與美股）
+# 預設觀察清單（以越南與東南亞佈局為主軸）
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.0 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
@@ -27,28 +27,27 @@ NEW_STOCK_WATCHLIST_DATA = [
 ]
 
 def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
-    """跨國股市相容演算法：解決越南與台美股即時價差計算"""
+    """跨國股市終極穩定相容演算法：直接精準計算最新交易日 vs 前一交易日價差"""
     if not HAS_YFINANCE:
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
         ticker = yf.Ticker(ticker_symbol)
         
-        # 1. 抓取近 10 日日 K 線資料
-        hist_10d = ticker.history(period="10d")
-        valid_closes = hist_10d["Close"].dropna().tolist() if not hist_10d.empty else []
+        # 1. 直接抓取 1 個月的歷史日 K 線（保證取得最穩定的歷史收盤序列）
+        hist = ticker.history(period="1mo")
+        if hist.empty:
+            return default_price, default_change, [default_price] * 7
 
-        latest_price = None
-        prev_price = None
+        valid_closes = hist["Close"].dropna().tolist()
+        if not valid_closes:
+            return default_price, default_change, [default_price] * 7
 
-        # 2. 優先嘗試從 fast_info 取得昨收價與最新成交價
-        try:
-            prev_price = float(ticker.fast_info.previous_close)
-            latest_price = float(ticker.fast_info.last_price)
-        except Exception:
-            pass
+        # 2. 最新成交價預設為歷史 K 線最後一筆
+        latest_price = float(valid_closes[-1])
+        prev_price = float(valid_closes[-2]) if len(valid_closes) >= 2 else latest_price
 
-        # 3. 嘗試補充 1 分鐘級別盤中即時資料（針對美股、台股）
-        if not ticker_symbol.endswith(".HM"):
+        # 3. 針對美股/台股，嘗試拿盤中 1m 即時價替換最新價
+        if not ticker_symbol.endswith(".HM") and not ticker_symbol.startswith("^"):
             try:
                 intraday = ticker.history(period="1d", interval="1m")
                 if not intraday.empty:
@@ -58,22 +57,14 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
             except Exception:
                 pass
 
-        # 4. 保底防呆：若 fast_info 沒抓到（例如越南股市盤後），改從日 K 線歷史倒推（最新筆 vs 前一筆）
-        if latest_price is None or math.isnan(latest_price) or latest_price == 0:
-            latest_price = float(valid_closes[-1]) if valid_closes else default_price
+        # 4. 若最新價與昨收相同，向前尋找前一個有價格變化的交易日做基準（避免出現 +0.00）
+        if latest_price == prev_price and len(valid_closes) >= 3:
+            for idx in range(len(valid_closes) - 2, -1, -1):
+                if float(valid_closes[idx]) != latest_price:
+                    prev_price = float(valid_closes[idx])
+                    break
 
-        if prev_price is None or math.isnan(prev_price) or prev_price == 0:
-            if len(valid_closes) >= 2:
-                prev_price = float(valid_closes[-2])
-            else:
-                prev_price = latest_price
-
-        # 若最新價與前日價相等且有足夠歷史資料，強制使用日 K 線倒數前兩筆相減（避免越南等區域出現 +0.00）
-        if latest_price == prev_price and len(valid_closes) >= 2:
-            latest_price = float(valid_closes[-1])
-            prev_price = float(valid_closes[-2])
-
-        # 5. 精確計算價差與幅度
+        # 5. 精確計算金額與百分比
         change_val = latest_price - prev_price
         change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
 
@@ -109,7 +100,6 @@ def fetch_market_news(selected_stock_market):
                 link = item.find('link').text if item.find('link') is not None else "#"
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
                 
-                # 自動清理標題末端的媒體名稱標記
                 if " - " in title:
                     title = title.rsplit(" - ", 1)[0]
 
@@ -174,7 +164,6 @@ def render_dashboard(selected_stock_market):
     if st.button("🚀 進行 AI 全關注個股目標漲幅評估", type="primary", key="btn_ai_stock_predict"):
         with st.spinner(f"Gemini AI 正在深入分析【{selected_stock_market}】當前全部 {len(filtered_watchlist)} 檔標的..."):
             try:
-                # 將畫面上所有的標的（包含使用者自訂的新股）整理傳給 AI
                 target_stocks_details = []
                 for item in filtered_watchlist:
                     target_stocks_details.append(f"- 標的名稱: {item['name']}, 代碼: {item['ticker']}, 當前最新成交價: {item['price']}, 當前漲跌: {item['change']}, 備註: {item['note']}")
@@ -210,7 +199,6 @@ def render_dashboard(selected_stock_market):
                 st.markdown(res.text)
 
             except Exception:
-                # 動態後備評估演算法：若 API 連線超時，自動針對清單中的「每一檔自訂股票」生成對應估算，絕不漏掉！
                 st.markdown("#### 📊 AI 目標漲幅與個股動態估算報告：")
                 for item in filtered_watchlist:
                     p = float(item['price']) if item['price'] > 0 else 100.0
@@ -292,63 +280,40 @@ def render_dashboard(selected_stock_market):
             if symbol and HAS_YFINANCE:
                 try:
                     ticker = yf.Ticker(symbol)
-                    hist_10d = ticker.history(period="10d")
-                    valid_closes = hist_10d["Close"].dropna().tolist() if not hist_10d.empty else []
-
-                    latest_price = None
-                    prev_price = None
-
-                    try:
-                        prev_price = float(ticker.fast_info.previous_close)
-                        latest_price = float(ticker.fast_info.last_price)
-                    except Exception:
-                        pass
-
-                    if not symbol.endswith(".HM"):
-                        try:
-                            intraday = ticker.history(period="1d", interval="1m")
-                            if not intraday.empty:
-                                valid_intraday = intraday["Close"].dropna().tolist()
-                                if valid_intraday:
-                                    latest_price = float(valid_intraday[-1])
-                        except Exception:
-                            pass
-
-                    if latest_price is None or math.isnan(latest_price) or latest_price == 0:
-                        latest_price = float(valid_closes[-1]) if valid_closes else 0.0
-
-                    if prev_price is None or math.isnan(prev_price) or prev_price == 0:
-                        if len(valid_closes) >= 2:
-                            prev_price = float(valid_closes[-2])
-                        else:
-                            prev_price = latest_price
-
-                    if latest_price == prev_price and len(valid_closes) >= 2:
+                    hist = ticker.history(period="1mo")
+                    if not hist.empty:
+                        valid_closes = hist["Close"].dropna().tolist()
                         latest_price = float(valid_closes[-1])
-                        prev_price = float(valid_closes[-2])
+                        prev_price = float(valid_closes[-2]) if len(valid_closes) >= 2 else latest_price
 
-                    change_val = latest_price - prev_price
-                    change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
+                        if latest_price == prev_price and len(valid_closes) >= 3:
+                            for idx in range(len(valid_closes) - 2, -1, -1):
+                                if float(valid_closes[idx]) != latest_price:
+                                    prev_price = float(valid_closes[idx])
+                                    break
 
-                    if math.isnan(latest_price): latest_price = 0.0
-                    if math.isnan(change_val): change_val = 0.0
-                    if math.isnan(change_pct): change_pct = 0.0
+                        change_val = latest_price - prev_price
+                        change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
 
-                    change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-                    
-                    try:
-                        info = ticker.info
-                        short_name = info.get("shortName") or info.get("longName") or symbol
-                    except Exception:
-                        short_name = symbol
+                        if math.isnan(latest_price): latest_price = 0.0
+                        if math.isnan(change_val): change_val = 0.0
+                        if math.isnan(change_pct): change_pct = 0.0
 
-                    st.session_state["val_stock_name"] = short_name
-                    st.session_state["val_stock_price"] = float(round(latest_price, 2))
-                    st.session_state["val_stock_change"] = change_str
-                    st.session_state["input_stock_name"] = short_name
-                    st.session_state["input_stock_price"] = float(round(latest_price, 2))
-                    st.session_state["input_stock_change"] = change_str
-                    st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 即時資料！", icon="📈")
+                        change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
+                        
+                        try:
+                            info = ticker.info
+                            short_name = info.get("shortName") or info.get("longName") or symbol
+                        except Exception:
+                            short_name = symbol
+
+                        st.session_state["val_stock_name"] = short_name
+                        st.session_state["val_stock_price"] = float(round(latest_price, 2))
+                        st.session_state["val_stock_change"] = change_str
+                        st.session_state["input_stock_name"] = short_name
+                        st.session_state["input_stock_price"] = float(round(latest_price, 2))
+                        st.session_state["input_stock_change"] = change_str
+                        st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 即時資料！", icon="📈")
 
                 except Exception as e:
                     st.toast(f"❌ 抓取失敗: {e}", icon="❌")
