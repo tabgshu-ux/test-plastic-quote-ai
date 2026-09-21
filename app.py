@@ -16,6 +16,13 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 import streamlit as st
 import streamlit.components.v1 as components
 
+# 嘗試載入即時股市套件 yfinance
+try:
+  import yfinance as yf
+  HAS_YFINANCE = True
+except ImportError:
+  HAS_YFINANCE = False
+
 # 網頁設定
 st.set_page_config(
     page_title="Global Injection AI ERP System", page_icon="🏭", layout="wide"
@@ -29,6 +36,28 @@ if not api_key:
 
 # 設定 Gemini SDK
 genai.configure(api_key=api_key)
+
+
+# 📈 即時抓取真實股市與原物料數據函數
+def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
+  if not HAS_YFINANCE:
+    return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
+  
+  try:
+    ticker = yf.Ticker(ticker_symbol)
+    hist = ticker.history(period="7d")
+    if not hist.empty and len(hist) >= 2:
+      latest_price = float(hist["Close"].iloc[-1])
+      prev_price = float(hist["Close"].iloc[-2])
+      change_val = latest_price - prev_price
+      change_pct = (change_val / prev_price) * 100
+      change_str = f"{'+' if change_val >= 0 else ''}{change_val:.1f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
+      history_list = hist["Close"].tolist()
+      return round(latest_price, 2), change_str, history_list
+    else:
+      return default_price, default_change, [default_price] * 7
+  except Exception:
+    return default_price, default_change, [default_price] * 7
 
 
 # 🏢 0. 初始化公司與多廠區基本資訊
@@ -103,52 +132,52 @@ if "monthly_payroll_db" not in st.session_state:
       }
   ]
 
-# 📈 0.3 觀察股票與指數關注清單 (含直覺信號與簡化近 7 日歷史數據)
+# 📈 0.3 觀察股票與指數關注清單
 if "stock_watchlist" not in st.session_state:
   st.session_state.stock_watchlist = [
       {
+          "ticker": "2330.TW",
           "symbol": "TSMC (2330.TW)",
           "name": "台積電",
           "price": 2480.0,
           "change": "+35.0 (+1.44%)",
           "signal": "🟢 偏多（適合逢低定額）",
-          "history": [2410, 2430, 2425, 2450, 2440, 2460, 2480],
           "note": "AI 晶片先進封裝獨占，長線穩定成長",
       },
       {
+          "ticker": "2383.TW",
           "symbol": "Elite (2383.TW)",
           "name": "台光電",
           "price": 5490.0,
           "change": "+15.0 (+0.27%)",
           "signal": "🟡 觀望（高檔區間震盪）",
-          "history": [5380, 5420, 5400, 5500, 5450, 5470, 5490],
           "note": "伺服器高階 PCB 板材，受惠 AI 升級",
       },
       {
+          "ticker": "2881.TW",
           "symbol": "Fubon (2881.TW)",
           "name": "富邦金",
           "price": 92.5,
           "change": "+1.2 (+1.31%)",
           "signal": "🟢 防禦（高股息避風港）",
-          "history": [89.5, 90.0, 90.8, 91.2, 91.5, 91.8, 92.5],
           "note": "配息能力強，提供穩健現金流保護",
       },
       {
+          "ticker": "^VNINDEX.HM",
           "symbol": "VN-INDEX",
           "name": "越南胡志明指數",
           "price": 1797.9,
           "change": "-4.2 (-0.23%)",
           "signal": "🟡 觀望（整理打底中）",
-          "history": [1810, 1805, 1800, 1795, 1798, 1802, 1797.9],
           "note": "供應鏈移轉長期紅利，平陽廠擴建利多",
       },
       {
-          "symbol": "PP Resin",
-          "name": "聚丙烯塑料(噸/USD)",
-          "price": 920.0,
-          "change": "+5.0 (+0.55%)",
+          "ticker": "CL=F",
+          "symbol": "Crude Oil (PP Ref)",
+          "name": "原油/塑膠原物料",
+          "price": 71.5,
+          "change": "+0.45 (+0.63%)",
           "signal": "🟠 提示（原物料成本微升）",
-          "history": [905, 910, 908, 915, 912, 918, 920],
           "note": "建議採購提前準備 1~2 個月原料庫存",
       },
   ]
@@ -602,21 +631,28 @@ if user_role in ["executive", "hr", "finance"]:
   if "📈 全球股市與 AI 財經動態戰情室" in tabs_to_show:
     idx = tabs_to_show.index("📈 全球股市與 AI 財經動態戰情室")
     with active_tabs[idx]:
-      st.subheader("📈 董事長/總經理 專屬 — 直覺式全球財經與觀察燈號")
-      st.caption("無須研讀複雜 K 線圖，透過『7 日極簡趨勢線』與『AI 觀察燈號』快速掌握關鍵訊息。")
+      col_hdr1, col_hdr2 = st.columns([3, 1])
+      with col_hdr1:
+        st.subheader("📈 董事長/總經理 專屬 — 即時連線財經戰情室")
+        st.caption("連線 Yahoo Finance API 自動更新最新成交價格與 7 日趨勢。")
+      with col_hdr2:
+        if st.button("🔄 立即重新整理最新價格", type="primary", key="btn_refresh_stocks"):
+          st.rerun()
 
-      # 顯示即時卡片與簡化 7 日線圖
+      # 顯示即時卡片與連線抓取
       cols_stock = st.columns(len(st.session_state.stock_watchlist))
       for idx_s, item in enumerate(st.session_state.stock_watchlist):
+        cur_price, cur_change, cur_history = fetch_realtime_stock_data(
+            item.get("ticker", "2330.TW"), item["price"], item["change"]
+        )
         with cols_stock[idx_s]:
           st.metric(
               label=f"{item['name']} ({item['symbol']})",
-              value=f"{item['price']:,.1f}",
-              delta=item['change']
+              value=f"{cur_price:,.2f}",
+              delta=cur_change
           )
           st.caption(f"**建議燈號**：{item['signal']}")
-          # 繪製極簡近 7 日線圖
-          st.line_chart(item['history'], height=80)
+          st.line_chart(cur_history, height=80)
 
       st.divider()
 
@@ -634,7 +670,7 @@ if user_role in ["executive", "hr", "finance"]:
         st.markdown("### 🤖 Gemini AI 每日白話財經摘要")
         st.caption("點擊下方按鈕，讓 AI 為您用最白話的方式解讀今日市場與原物料。")
 
-        if st.button("🚀 生成今日白話市場重點與決策報告", type="primary", key="btn_gen_stock_ai"):
+        if st.button("🚀 生成今日白話市場重點與決策報告", key="btn_gen_stock_ai"):
           with st.spinner("Gemini AI 正在為您整理今日市場白話摘要..."):
             try:
               model = genai.GenerativeModel("gemini-1.5-flash")
@@ -660,19 +696,19 @@ if user_role in ["executive", "hr", "finance"]:
       with col_add_stock:
         st.markdown("### ➕ 新增自訂觀察個股/指數")
         with st.form("add_stock_form"):
-          s_symbol = st.text_input("股票代碼 (如 2881.TW / NVDA)", "2881.TW")
+          s_ticker = st.text_input("Yahoo 財經代碼 (如 NVDA 或 2881.TW)", "2881.TW")
           s_name = st.text_input("名稱 (如 富邦金)", "富邦金")
           s_price = st.number_input("最新價格", min_value=0.0, value=92.5, step=0.5)
           s_change = st.text_input("漲跌幅度 (如 +1.2 (+1.31%))", "+1.2 (+1.31%)")
 
           if st.form_submit_button("✅ 新增至觀察清單"):
             st.session_state.stock_watchlist.append({
-                "symbol": s_symbol,
+                "ticker": s_ticker,
+                "symbol": f"{s_name} ({s_ticker})",
                 "name": s_name,
                 "price": s_price,
                 "change": s_change,
                 "signal": "🟢 偏多（穩健觀察）",
-                "history": [90.0, 90.5, 91.0, 91.2, 91.8, 92.0, s_price],
                 "note": "自訂關注標的"
             })
             st.success(f"已新增 `{s_name}` 至觀察戰情室！")
