@@ -802,13 +802,21 @@ if user_role in ["executive", "hr", "finance"]:
             with col_add_stock:
                 st.markdown("### 🛠️ 管理自訂觀察關注標的")
                 
+                # 初始化 State 狀態欄位
+                if "val_stock_name" not in st.session_state:
+                    st.session_state["val_stock_name"] = "日月光投控"
+                if "val_stock_price" not in st.session_state:
+                    st.session_state["val_stock_price"] = 663.00
+                if "val_stock_change" not in st.session_state:
+                    st.session_state["val_stock_change"] = "+25.00 (+3.92%)"
+
                 # ----------------------------------------------------
-                # 自動抓取股價邏輯函式 (輸入代號時即時觸發 & 支援純數字自動補上 .TW)
+                # 自動抓取股價邏輯函式 (解決 UI 狀態沒同步更新問題)
                 # ----------------------------------------------------
                 def fetch_stock_info_callback():
                     symbol = st.session_state.get("input_stock_ticker", "").strip().upper()
                     
-                    # 💡 自動智慧補全：若輸入純數字 (如 2527)，自動幫使用者補上 .TW
+                    # 自動補全：若輸入純數字 (如 2855 或 2527)，自動補上 .TW
                     if symbol.isdigit():
                         symbol = f"{symbol}.TW"
                         st.session_state["input_stock_ticker"] = symbol
@@ -819,7 +827,7 @@ if user_role in ["executive", "hr", "finance"]:
                                 ticker = yf.Ticker(symbol)
                                 hist = ticker.history(period="5d")
                                 
-                                # 若 .TW 沒抓到且全是數字，再試試看上櫃的 .TWO
+                                # 若 .TW 沒抓到且全是數字，再試試上櫃 .TWO
                                 if hist.empty and symbol.endswith(".TW") and symbol[:-3].isdigit():
                                     alt_symbol = f"{symbol[:-3]}.TWO"
                                     ticker = yf.Ticker(alt_symbol)
@@ -843,19 +851,25 @@ if user_role in ["executive", "hr", "finance"]:
                                     except Exception:
                                         short_name = symbol
 
-                                    # 自動帶入數據
+                                    # 強制覆寫狀態與 UI 元件值
+                                    st.session_state["val_stock_name"] = short_name
+                                    st.session_state["val_stock_price"] = float(round(latest_price, 2))
+                                    st.session_state["val_stock_change"] = change_str
+
+                                    # 同步更新 Widget key 值
                                     st.session_state["input_stock_name"] = short_name
                                     st.session_state["input_stock_price"] = float(round(latest_price, 2))
                                     st.session_state["input_stock_change"] = change_str
+
                                     st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 最新股價資訊！", icon="📈")
                                 else:
-                                    st.toast(f"⚠️ 找不到代號 `{symbol}` 的即時股價資料，請確認代號是否正確。", icon="⚠️")
+                                    st.toast(f"⚠️ 找不到代號 `{symbol}` 的即時股價資料，請確認代號。", icon="⚠️")
                             else:
                                 st.toast("⚠️ 系統未安裝 yfinance 套件，無法自動抓取", icon="⚠️")
                         except Exception as e:
                             st.toast(f"❌ 抓取代號 `{symbol}` 失敗: {e}", icon="❌")
 
-                # 區塊 A：新增標的 (支援輸入代號自動帶入數據)
+                # 區塊 A：新增標的
                 with st.expander("➕ 新增觀察個股/指數", expanded=True):
                     s_market = st.selectbox(
                         "選擇股票市場區域",
@@ -869,38 +883,38 @@ if user_role in ["executive", "hr", "finance"]:
                         key="input_stock_market"
                     )
 
-                    # 1. 輸入股票代號 (支援按 🔍 抓取或直接按 Enter)
+                    # 1. 輸入股票代號 (支援 Enter 直接觸發)
                     s_ticker = st.text_input(
-                        "Yahoo 財經代碼 (如 2881.TW / 2527 / NVDA)",
-                        value=st.session_state.get("input_stock_ticker", "2527.TW"),
+                        "Yahoo 財經代碼 (如 2881.TW / 2855 / NVDA)",
+                        value=st.session_state.get("input_stock_ticker", "2855.TW"),
                         key="input_stock_ticker",
-                        help="輸入代號（例如 2527 或 2881.TW）後點擊右側或按 Enter 即可自動抓取！"
+                        on_change=fetch_stock_info_callback
                     )
 
                     # 🔍 抓取最新行情按鈕
                     st.button("🔍 抓取最新股價與名稱", on_click=fetch_stock_info_callback, use_container_width=True)
 
-                    # 2. 自動帶入的名稱
+                    # 2. 自動帶入並連動的名稱
                     s_name = st.text_input(
-                        "名稱 (如 宏璟)",
-                        value=st.session_state.get("input_stock_name", "宏璟"),
+                        "名稱 (如 統一證)",
+                        value=st.session_state["val_stock_name"],
                         key="input_stock_name"
                     )
 
-                    # 3. 自動帶入的最新價格
+                    # 3. 自動帶入並連動的最新價格
                     s_price = st.number_input(
                         "最新價格",
                         min_value=0.0,
-                        value=st.session_state.get("input_stock_price", 45.80),
+                        value=st.session_state["val_stock_price"],
                         step=0.5,
                         format="%.2f",
                         key="input_stock_price"
                     )
 
-                    # 4. 自動帶入的漲跌幅
+                    # 4. 自動帶入並連動的漲跌幅
                     s_change = st.text_input(
-                        "漲跌幅度 (如 +2.05 (+4.69%))",
-                        value=st.session_state.get("input_stock_change", "+2.05 (+4.69%)"),
+                        "漲跌幅度 (如 +0.50 (+2.10%))",
+                        value=st.session_state["val_stock_change"],
                         key="input_stock_change"
                     )
 
@@ -927,7 +941,6 @@ if user_role in ["executive", "hr", "finance"]:
                 # ==========================================
                 with st.expander("🗑️ 管理與刪除已關注標的", expanded=True):
                     if st.session_state.stock_watchlist:
-                        # 根據當前選擇的市場，顯示可刪除的列表
                         if selected_stock_market == "🌐 全部市場 (All Markets)":
                             manageable_stocks = st.session_state.stock_watchlist
                             list_label = "全市場已關注標的"
@@ -936,14 +949,11 @@ if user_role in ["executive", "hr", "finance"]:
                             list_label = f"【{selected_stock_market}】已關注標的"
                         
                         if manageable_stocks:
-                            # 建立選單顯示名稱 (ID - Name - Ticker)
                             stock_options = [f"{idx} - {item['name']} ({item['ticker']})" for idx, item in enumerate(manageable_stocks)]
                             selected_del_stock_str = st.selectbox(f"選擇要移除的標的 ({list_label})", stock_options, key="del_stock_select")
                             
                             if st.button("🗑️ 確認將此標的從關注清單移除", type="primary", key="btn_del_stock_confirm"):
-                                # 解析出索引 (在原始 watchlist 中的索引需要重新對應)
                                 target_ticker = selected_del_stock_str.split(" (")[-1].replace(")", "")
-                                # 重新過濾原始清單，移除該 Ticker
                                 original_count = len(st.session_state.stock_watchlist)
                                 st.session_state.stock_watchlist = [item for item in st.session_state.stock_watchlist if item['ticker'] != target_ticker]
                                 
