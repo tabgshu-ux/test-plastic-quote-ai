@@ -31,6 +31,19 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 
+# 🏢 0. 初始化公司基本資訊 (可由主管於後台動態修改)
+if "company_profile" not in st.session_state:
+  st.session_state.company_profile = {
+      "name": "環球塑膠射出工業股份有限公司 (Global Injection Molding Corp.)",
+      "tax_id": "88889999",
+      "phone": "+886-2-2999-8888",
+      "fax": "+886-2-2999-7777",
+      "email": "sales@global-injection.com",
+      "address": "新北市三重區光復路二段 88 號 10 樓",
+      "website": "www.global-injection-demo.com",
+  }
+
+
 # 🎨 專業射出成型產品結構 2D CAD 高清動態渲染
 def render_product_cad_preview(product_keyword):
   """根據產品類型，在前端即時動態算繪 2D CAD 產品工業結構圖"""
@@ -111,34 +124,29 @@ def render_product_cad_preview(product_keyword):
   components.html(canvas_html, height=330)
 
 
-# 🧊 高階 3D 中空盒體與立體結構渲染函數 (含上蓋分離與真實厚度)
+# 🧊 高階 3D 中空盒體與立體結構渲染函數
 def render_dynamic_3d_model(product_keyword):
   """根據關鍵字產生具備真實中空結構的 3D 模型渲染"""
   p_name = product_keyword.lower()
 
   if any(k in p_name for k in ["盒", "box", "case", "容器", "casing"]):
-    # 真正的 3D 中空塑膠盒 + 半開上蓋 (Open Container + Lid)
     model_js = """
             const group = new THREE.Group();
-            
-            // 1. 中空盒體 (Bottom Container Box)
             const boxGeo = new THREE.BoxGeometry(2.4, 1.0, 1.6);
             const boxMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, specular: 0xffffff, shininess: 90, transparent: true, opacity: 0.65, side: THREE.DoubleSide });
             const boxMesh = new THREE.Mesh(boxGeo, boxMat);
             group.add(boxMesh);
 
-            // 內層挖空邊框線條 (Visual Wall Thickness)
             const edgeGeo = new THREE.EdgesGeometry(boxGeo);
             const edgeMat = new THREE.LineBasicMaterial({ color: 0x7dd3fc, linewidth: 2 });
             const wireframe = new THREE.LineSegments(edgeGeo, edgeMat);
             group.add(wireframe);
 
-            // 2. 掀開式上蓋 (Opened Top Lid)
             const lidGeo = new THREE.BoxGeometry(2.44, 0.1, 1.64);
             const lidMat = new THREE.MeshPhongMaterial({ color: 0x0284c7, transparent: true, opacity: 0.85 });
             const lidMesh = new THREE.Mesh(lidGeo, lidMat);
             lidMesh.position.set(0, 0.75, -0.6);
-            lidMesh.rotation.x = -Math.PI / 4; // 傾斜 45 度開啟
+            lidMesh.rotation.x = -Math.PI / 4;
             group.add(lidMesh);
 
             scene.add(group);
@@ -443,8 +451,9 @@ user_role = st.session_state.user_info["role"]
 if user_role == "admin":
   st.header("⚙️ 系統主管管理後台")
 
-  tab1, tab2, tab3 = st.tabs([
+  tab1, tab2, tab3, tab4 = st.tabs([
       "📊 業務報價總覽與資料庫",
+      "🏢 報價單公司資訊設定 (Company Profile)",
       "👥 系統使用者管理 (User Management)",
       "🇻🇳 越南電子發票登記 (Hóa đơn điện tử)",
   ])
@@ -488,8 +497,46 @@ if user_role == "admin":
     else:
       st.info("目前尚無任何報價單紀錄。")
 
-  # 分頁 2：使用者管理
+  # 分頁 2：公司資訊設定 (修訂抬頭、電話、地址)
   with tab2:
+    st.subheader("🏢 報價單抬頭與公司聯絡資訊設定")
+    st.caption(
+        "在此設定的資訊將會**自動套用與印製**於前台業務產出的 PDF 報價單抬頭。"
+    )
+
+    cp = st.session_state.company_profile
+    with st.form("company_profile_form"):
+      col_cp1, col_cp2 = st.columns(2)
+      with col_cp1:
+        cp_name = st.text_input("公司名稱 (Company Name)", cp["name"])
+        cp_tax_id = st.text_input(
+            "統一編號 / 稅號 (Tax ID / VAT No.)", cp["tax_id"]
+        )
+        cp_phone = st.text_input("電話 (Tel)", cp["phone"])
+        cp_fax = st.text_input("傳真 (Fax)", cp["fax"])
+      with col_cp2:
+        cp_email = st.text_input("公司 Email", cp["email"])
+        cp_website = st.text_input("官方網站 (Website)", cp["website"])
+        cp_address = st.text_input("公司地址 (Address)", cp["address"])
+
+      save_cp_btn = st.form_submit_button(
+          "💾 儲存公司設定 (Save Company Profile)", type="primary"
+      )
+      if save_cp_btn:
+        st.session_state.company_profile = {
+            "name": cp_name,
+            "tax_id": cp_tax_id,
+            "phone": cp_phone,
+            "fax": cp_fax,
+            "email": cp_email,
+            "address": cp_address,
+            "website": cp_website,
+        }
+        st.success("✅ 公司資訊已成功更新！前台 PDF 報價單將自動連動套用。")
+        st.rerun()
+
+  # 分頁 3：使用者管理
+  with tab3:
     st.caption(
         "管理者可以在此新增新員工帳號、重設業務員密碼或調整帳號權限。"
     )
@@ -577,8 +624,8 @@ if user_role == "admin":
       else:
         st.info("目前沒有可供修改或刪除的其他使用者。")
 
-  # 分頁 3：越南發票登記
-  with tab3:
+  # 分頁 4：越南發票登記
+  with tab4:
     st.subheader("🇻🇳 越南電子發票自動讀取與登記中心")
     st.caption(
         "您可以透過**手動連線公司信箱**、**上傳 XML 檔案** 或 **手動輸入**"
@@ -691,7 +738,7 @@ if user_role == "admin":
       st.info("目前尚未登記任何越南電子發票。")
 
 # ==========================================
-# 💼 畫面 B：業務人員前台報價系統 (含中空 3D 盒體與容量計算器)
+# 💼 畫面 B：業務人員前台報價系統 (含公司抬頭連動與 PDF 生成)
 # ==========================================
 else:
   LANG_DICT = {
@@ -700,7 +747,7 @@ else:
           "step1_title": "1. 🤖 Gemini AI 需求對話與規格輸入",
           "step2_title": "2. 📐 工業 2D CAD 產品結構模擬",
           "step3_title": "3. 🧊 客製化 3D 中空模型與容量/噸數計算",
-          "pdf_btn": "📄 下載正式 PDF 報價單 (含業務簽名)",
+          "pdf_btn": "📄 下載正式 PDF 報價單 (帶公司抬頭與簽名)",
           "pdf_title": "OFFICIAL PLASTIC INJECTION QUOTATION",
           "item_mold": "Custom Mold Development",
           "item_part": "Production Part Unit Cost",
@@ -842,7 +889,7 @@ else:
       # 🧊 1. 3D 中空盒體與透明上蓋渲染
       render_dynamic_3d_model(st.session_state.current_keyword)
 
-      # 📊 2. 新增：即時工程尺寸與容量/噸數動態計算器
+      # 📊 2. 即時工程尺寸與容量/噸數動態計算器
       st.markdown("### 📐 產品尺寸與內容積 (Volume Calculator)")
 
       col_dim1, col_dim2, col_dim3 = st.columns(3)
@@ -861,10 +908,10 @@ else:
 
       # 動態計算容量
       box_vol_cm3 = length_cm * width_cm * height_cm
-      box_vol_ml = box_vol_cm3  # 1 cm³ = 1 ml
+      box_vol_ml = box_vol_cm3
       box_vol_liters = box_vol_ml / 1000.0
 
-      # 估算所需的射出鎖模噸數 (投影面積 cm² * 0.3~0.5 噸/cm²)
+      # 估算鎖模噸數
       proj_area = length_cm * width_cm
       est_tonnage = int(proj_area * 0.4)
 
@@ -879,21 +926,51 @@ else:
           f" 射出模具開發費 $4,500 USD (建議機台: {est_tonnage}T)"
       )
 
+      # 📄 動態帶入主管在後台設定的公司 Profile 生成正式 PDF
       def generate_multilingual_pdf():
         pdf_path = "official_quotation.pdf"
         doc = SimpleDocTemplate(pdf_path, pagesize=letter)
         styles = getSampleStyleSheet()
         story = []
 
+        cp = st.session_state.company_profile
+
+        # 公司抬頭標題 (Company Header)
         title_style = ParagraphStyle(
             "TitleStyle",
             parent=styles["Heading1"],
-            fontSize=14,
+            fontSize=12,
             textColor=colors.HexColor("#0f172a"),
             fontName="Helvetica-Bold",
         )
-        story.append(Paragraph(f"<b>{L['pdf_title']}</b>", title_style))
-        story.append(Spacer(1, 15))
+        story.append(Paragraph(f"<b>{cp['name']}</b>", title_style))
+
+        # 公司詳細聯絡資訊
+        sub_style = ParagraphStyle(
+            "SubStyle",
+            parent=styles["Normal"],
+            fontSize=8,
+            textColor=colors.HexColor("#475569"),
+            fontName="Helvetica",
+        )
+        company_info_text = (
+            f"Tax ID: {cp['tax_id']} | Tel: {cp['phone']} | Fax: {cp['fax']}<br/>"
+            f"Email: {cp['email']} | Web: {cp['website']}<br/>"
+            f"Address: {cp['address']}"
+        )
+        story.append(Paragraph(company_info_text, sub_style))
+        story.append(Spacer(1, 10))
+
+        # 報價單名稱
+        q_title_style = ParagraphStyle(
+            "QTitleStyle",
+            parent=styles["Heading2"],
+            fontSize=13,
+            textColor=colors.HexColor("#0284c7"),
+            fontName="Helvetica-Bold",
+        )
+        story.append(Paragraph(f"<b>{L['pdf_title']}</b>", q_title_style))
+        story.append(Spacer(1, 10))
 
         info_data = [
             [
@@ -916,11 +993,11 @@ else:
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#334155")),
                 ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ])
         )
         story.append(t_info)
-        story.append(Spacer(1, 15))
+        story.append(Spacer(1, 12))
 
         table_data = [
             [
