@@ -132,10 +132,12 @@ if "monthly_payroll_db" not in st.session_state:
       }
   ]
 
-# 📈 0.3 觀察股票與指數關注清單
+# 📈 0.3 跨國多市場觀察股票與指數關注清單
 if "stock_watchlist" not in st.session_state:
   st.session_state.stock_watchlist = [
+      # 🇹🇼 台灣市場
       {
+          "market": "🇹🇼 台灣 (Taiwan)",
           "ticker": "2330.TW",
           "symbol": "TSMC (2330.TW)",
           "name": "台積電",
@@ -145,6 +147,7 @@ if "stock_watchlist" not in st.session_state:
           "note": "AI 晶片先進封裝獨占，長線穩定成長",
       },
       {
+          "market": "🇹🇼 台灣 (Taiwan)",
           "ticker": "2383.TW",
           "symbol": "Elite (2383.TW)",
           "name": "台光電",
@@ -154,6 +157,7 @@ if "stock_watchlist" not in st.session_state:
           "note": "伺服器高階 PCB 板材，受惠 AI 升級",
       },
       {
+          "market": "🇹🇼 台灣 (Taiwan)",
           "ticker": "2881.TW",
           "symbol": "Fubon (2881.TW)",
           "name": "富邦金",
@@ -162,16 +166,72 @@ if "stock_watchlist" not in st.session_state:
           "signal": "🟢 防禦（高股息避風港）",
           "note": "配息能力強，提供穩健現金流保護",
       },
+      # 🇨🇳 中國/香港市場
       {
+          "market": "🇨🇳 中國/香港 (China/HK)",
+          "ticker": "600519.SS",
+          "symbol": "Moutai (600519.SS)",
+          "name": "貴州茅台",
+          "price": 1450.0,
+          "change": "-12.0 (-0.82%)",
+          "signal": "🟡 觀望（消費打底整理）",
+          "note": "中國內需消費龍頭，現金流極強",
+      },
+      {
+          "market": "🇨🇳 中國/香港 (China/HK)",
+          "ticker": "0700.HK",
+          "symbol": "Tencent (0700.HK)",
+          "name": "騰訊控股",
+          "price": 382.0,
+          "change": "+4.5 (+1.19%)",
+          "signal": "🟢 偏多（雲端與 AI 復甦）",
+          "note": "港股科技巨頭，庫藏股實施支撐股價",
+      },
+      # 🇺🇸 美國市場
+      {
+          "market": "🇺🇸 美國 (USA)",
+          "ticker": "NVDA",
+          "symbol": "NVIDIA (NVDA)",
+          "name": "輝達",
+          "price": 128.5,
+          "change": "+3.2 (+2.55%)",
+          "signal": "🟢 偏多（全球算力龍頭）",
+          "note": " Blackwell 晶片量產，AI 伺服器需求爆發",
+      },
+      {
+          "market": "🇺🇸 美國 (USA)",
+          "ticker": "AAPL",
+          "symbol": "Apple (AAPL)",
+          "name": "蘋果電腦",
+          "price": 225.0,
+          "change": "+1.1 (+0.49%)",
+          "signal": "🟢 偏多（Apple Intelligence 換機潮）",
+          "note": "Edge AI 終端載體，供應鏈訂單增溫",
+      },
+      # 🇻🇳 越南市場
+      {
+          "market": "🇻🇳 越南 (Vietnam)",
           "ticker": "^VNINDEX.HM",
           "symbol": "VN-INDEX",
           "name": "越南胡志明指數",
           "price": 1797.9,
           "change": "-4.2 (-0.23%)",
-          "signal": "🟡 觀望（整理打底中）",
-          "note": "供應鏈移轉長期紅利，平陽廠擴建利多",
+          "signal": "🟡 觀望（區間整理）",
+          "note": "供應鏈移轉長期紅利，東南亞製造中心",
       },
       {
+          "market": "🇻🇳 越南 (Vietnam)",
+          "ticker": "FPT.HM",
+          "symbol": "FPT Group (FPT)",
+          "name": "FPT 科技集團",
+          "price": 132000.0,
+          "change": "+1500.0 (+1.15%)",
+          "signal": "🟢 偏多（越南科技龍頭）",
+          "note": "承接全球軟體外包與 AI 數位轉型需求",
+      },
+      # 🛢️ 原物料與匯率
+      {
+          "market": "🛢️ 原物料與匯率 (Commodities/FX)",
           "ticker": "CL=F",
           "symbol": "Crude Oil (PP Ref)",
           "name": "原油/塑膠原物料",
@@ -179,6 +239,16 @@ if "stock_watchlist" not in st.session_state:
           "change": "+0.45 (+0.63%)",
           "signal": "🟠 提示（原物料成本微升）",
           "note": "建議採購提前準備 1~2 個月原料庫存",
+      },
+      {
+          "market": "🛢️ 原物料與匯率 (Commodities/FX)",
+          "ticker": "VND=X",
+          "symbol": "USD/VND",
+          "name": "美金/越南盾匯率",
+          "price": 24850.0,
+          "change": "-10.0 (-0.04%)",
+          "signal": "🟢 穩定（匯率波幅平緩）",
+          "note": "有利平陽廠出口報價與薪資結算",
       },
   ]
 
@@ -565,7 +635,7 @@ if not st.session_state.authenticated:
 
     st.info("""
         💡 **最新可用測試帳號密碼清單：**
-        - **董事長**：`boss` / `boss123` (進入高階戰情室 & 股市 AI 分析)
+        - **董事長**：`boss` / `boss123` (進入高階戰情室 & 跨國股市 AI 分析)
         - **總經理**：`gm` / `gm123`
         - **人事主管**：`hr_manager` / `hr123`
         - **財務會計**：`accountant` / `fin123`
@@ -597,6 +667,25 @@ if st.sidebar.button("🚪 登出系統", key="btn_logout_main"):
 st.sidebar.divider()
 
 user_role = st.session_state.user_info["role"]
+
+# 📌 側邊欄：高階主管專屬之「跨國股市市場選擇」
+selected_stock_market = "🌐 全部市場 (All Markets)"
+if user_role == "executive":
+  st.sidebar.subheader("📈 股市市場選擇 (Market Filter)")
+  selected_stock_market = st.sidebar.radio(
+      "切換檢視區域",
+      [
+          "🌐 全部市場 (All Markets)",
+          "🇹🇼 台灣 (Taiwan)",
+          "🇨🇳 中國/香港 (China/HK)",
+          "🇺🇸 美國 (USA)",
+          "🇻🇳 越南 (Vietnam)",
+          "🛢️ 原物料與匯率 (Commodities/FX)"
+      ],
+      key="sidebar_market_choice"
+  )
+  st.sidebar.divider()
+
 
 # ==========================================
 # 👑 畫面 A：管理與行政後台 (後端專用 - 非 Sales 權限即可進入)
@@ -633,33 +722,43 @@ if user_role in ["executive", "hr", "finance"]:
     with active_tabs[idx]:
       col_hdr1, col_hdr2 = st.columns([3, 1])
       with col_hdr1:
-        st.subheader("📈 董事長/總經理 專屬 — 即時連線財經戰情室")
-        st.caption("連線 Yahoo Finance API 自動更新最新成交價格與 7 日趨勢。")
+        st.subheader(f"📈 董事長/總經理 專屬 — [{selected_stock_market}] 戰情中心")
+        st.caption("連線 Yahoo Finance API 自動抓取最新價格，透過左側選單輕鬆切換台灣、中國、美國與越南股市。")
       with col_hdr2:
-        if st.button("🔄 立即重新整理最新價格", type="primary", key="btn_refresh_stocks"):
+        if st.button("🔄 刷新最新市場行情", type="primary", key="btn_refresh_stocks"):
           st.rerun()
 
-      # 顯示即時卡片與連線抓取
-      cols_stock = st.columns(len(st.session_state.stock_watchlist))
-      for idx_s, item in enumerate(st.session_state.stock_watchlist):
-        cur_price, cur_change, cur_history = fetch_realtime_stock_data(
-            item.get("ticker", "2330.TW"), item["price"], item["change"]
-        )
-        with cols_stock[idx_s]:
-          st.metric(
-              label=f"{item['name']} ({item['symbol']})",
-              value=f"{cur_price:,.2f}",
-              delta=cur_change
+      # 依左側 Sidebar 選項進行股票過濾
+      if selected_stock_market == "🌐 全部市場 (All Markets)":
+        filtered_watchlist = st.session_state.stock_watchlist
+      else:
+        filtered_watchlist = [item for item in st.session_state.stock_watchlist if item["market"] == selected_stock_market]
+
+      if filtered_watchlist:
+        cols_stock = st.columns(min(len(filtered_watchlist), 5))
+        for idx_s, item in enumerate(filtered_watchlist):
+          cur_price, cur_change, cur_history = fetch_realtime_stock_data(
+              item.get("ticker", "2330.TW"), item["price"], item["change"]
           )
-          st.caption(f"**建議燈號**：{item['signal']}")
-          st.line_chart(cur_history, height=80)
+          col_target = cols_stock[idx_s % 5]
+          with col_target:
+            st.metric(
+                label=f"{item['name']} ({item['symbol']})",
+                value=f"{cur_price:,.2f}",
+                delta=cur_change
+            )
+            st.caption(f"**區域**: {item['market']}")
+            st.caption(f"**建議**: {item['signal']}")
+            st.line_chart(cur_history, height=85)
+      else:
+        st.info("該分頁目前無觀察標的，您可以在右側表單自由新增。")
 
       st.divider()
 
       # 💡 高階主管精簡版觀察重點
-      with st.expander("👑 董事長/總經理 專屬觀察重點與理由 (無需懂線圖)", expanded=True):
-        st.markdown("#### 💡 15 秒快速導讀觀點")
-        for item in st.session_state.stock_watchlist:
+      with st.expander("👑 董事長/總經理 專屬觀察重點與理由 (無需看懂線圖)", expanded=True):
+        st.markdown(f"#### 💡 目前檢視分頁：【{selected_stock_market}】15 秒快速導讀觀點")
+        for item in filtered_watchlist:
           st.write(f"• **{item['name']} ({item['symbol']})**：{item['signal']} — *{item['note']}*")
 
       st.divider()
@@ -667,42 +766,53 @@ if user_role in ["executive", "hr", "finance"]:
       col_ai_stock, col_add_stock = st.columns([2, 1])
 
       with col_ai_stock:
-        st.markdown("### 🤖 Gemini AI 每日白話財經摘要")
-        st.caption("點擊下方按鈕，讓 AI 為您用最白話的方式解讀今日市場與原物料。")
+        st.markdown(f"### 🤖 Gemini AI 跨國白話財經摘要 [{selected_stock_market}]")
+        st.caption("點擊下方按鈕，讓 AI 為您用最白話的方式解讀該市場之最新趨勢與製造業策略。")
 
-        if st.button("🚀 生成今日白話市場重點與決策報告", key="btn_gen_stock_ai"):
-          with st.spinner("Gemini AI 正在為您整理今日市場白話摘要..."):
+        if st.button("🚀 生成該區域白話重點與決策報告", key="btn_gen_stock_ai"):
+          with st.spinner("Gemini AI 正在為您整理白話市場摘要..."):
             try:
               model = genai.GenerativeModel("gemini-1.5-flash")
-              stock_prompt = """
-              你是一位給集團董事長的專屬白話顧問。
-              請用『最淺顯易懂、完全不講艱深股票術語』的語言，撰寫一份簡短報告（200字以內）：
-              1. 科技股與半導體 (台積電 2330.TW) 現在表現如何？
-              2. 越南經濟與平陽廠區景氣好不好？
-              3. 塑膠原物料 (PP Resin) 價格會不會變貴？
-              4. 給董事長的 1 句白話建議。
+              stock_prompt = f"""
+              你是一位給集團董事長的專屬白話財經顧問。
+              請針對區域：『{selected_stock_market}』，用最淺顯易懂、完全不講艱深股票術語的語言，撰寫一份簡短報告（150字以內）：
+              1. 該市場目前整體景氣如何？
+              2. 代表性個股/指數表現。
+              3. 對我們塑膠射出集團（台灣/中國東莞/越南平陽廠）的直接影響。
+              4. 給董事長的一句話決策建議。
               """
               res = model.generate_content(stock_prompt)
-              st.markdown(f"#### 📊 AI 每日市場白話摘要：\n{res.text}")
+              st.markdown(f"#### 📊 AI 區域市場白話摘要：\n{res.text}")
             except Exception as e:
-              st.info("""
-              #### 📊 AI 每日市場白話摘要（示範）：
-              1. **半導體與台積電**：整體 AI 需求強勁，晶片訂單相當滿，表現非常穩健。
-              2. **越南與東南亞景氣**：越南胡志明指數小幅整理，但平陽與同奈廠區的接單與建廠需求持續旺盛。
-              3. **塑膠原物料**：受國際油價微幅反彈影響，塑膠顆粒每噸微漲 0.55%，屬於正常波動範圍。
-              4. **💡 董事長白話建議**：集團本業接單穩定，建議採購團隊維持 1~2 個月原料庫存即可，無須過度囤貨。
+              st.info(f"""
+              #### 📊 AI 區域市場白話摘要（示範）：
+              1. **【{selected_stock_market}】整體景氣**：市場表現穩定，資金向具備高護城河與實際獲利的企業集中。
+              2. **代表標的動態**：主力科技與供應鏈龍頭買盤持續，訂單能見度已延伸至下一個季度。
+              3. **對集團影響**：東莞與平陽廠生產排程維持高稼動率，出貨不受市場短期波動影響。
+              4. **💡 董事長決策建議**：維持現行資本支出步調，適度保留現金流以因應匯率波動。
               """)
 
       with col_add_stock:
         st.markdown("### ➕ 新增自訂觀察個股/指數")
         with st.form("add_stock_form"):
-          s_ticker = st.text_input("Yahoo 財經代碼 (如 NVDA 或 2881.TW)", "2881.TW")
+          s_market = st.selectbox(
+              "選擇股票市場區域",
+              [
+                  "🇹🇼 台灣 (Taiwan)",
+                  "🇨🇳 中國/香港 (China/HK)",
+                  "🇺🇸 美國 (USA)",
+                  "🇻🇳 越南 (Vietnam)",
+                  "🛢️ 原物料與匯率 (Commodities/FX)"
+              ]
+          )
+          s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / NVDA / 0700.HK)", "2881.TW")
           s_name = st.text_input("名稱 (如 富邦金)", "富邦金")
           s_price = st.number_input("最新價格", min_value=0.0, value=92.5, step=0.5)
           s_change = st.text_input("漲跌幅度 (如 +1.2 (+1.31%))", "+1.2 (+1.31%)")
 
-          if st.form_submit_button("✅ 新增至觀察清單"):
+          if st.form_submit_button("✅ 新增至該市場清單"):
             st.session_state.stock_watchlist.append({
+                "market": s_market,
                 "ticker": s_ticker,
                 "symbol": f"{s_name} ({s_ticker})",
                 "name": s_name,
@@ -711,7 +821,7 @@ if user_role in ["executive", "hr", "finance"]:
                 "signal": "🟢 偏多（穩健觀察）",
                 "note": "自訂關注標的"
             })
-            st.success(f"已新增 `{s_name}` 至觀察戰情室！")
+            st.success(f"已成功新增 `{s_name}` 至 【{s_market}】！")
             st.rerun()
 
   # ----------------------------------------
