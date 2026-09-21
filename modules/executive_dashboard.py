@@ -10,6 +10,7 @@ try:
 except ImportError:
     HAS_YFINANCE = False
 
+# 預設觀察清單（以越南與東南亞佈局為主軸）
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.0 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
@@ -30,28 +31,30 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
         ticker = yf.Ticker(ticker_symbol)
-        intraday = ticker.history(period="1d", interval="1m")
-        prev_price = None
-        try:
-            prev_price = float(ticker.fast_info.previous_close)
-        except Exception:
-            pass
+        
+        # 1. 抓取近 5 日日 K 線資料（用倒數第二筆做為昨收價基準）
+        hist_5d = ticker.history(period="5d")
+        valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
 
+        # 2. 抓取 1 分鐘級別當日盤中即時成交價
+        intraday = ticker.history(period="1d", interval="1m")
         latest_price = None
         if not intraday.empty:
             valid_intraday = intraday["Close"].dropna().tolist()
             if valid_intraday:
                 latest_price = float(valid_intraday[-1])
 
-        hist_5d = ticker.history(period="5d")
-        valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
-
+        # 若無盤中資料，取日 K 線最後一筆
         if latest_price is None or math.isnan(latest_price):
             latest_price = float(valid_closes[-1]) if valid_closes else default_price
 
-        if prev_price is None or math.isnan(prev_price):
-            prev_price = float(valid_closes[-2]) if len(valid_closes) >= 2 else latest_price
+        # 取前一交易日收盤價做為基準
+        if len(valid_closes) >= 2:
+            prev_price = float(valid_closes[-2])
+        else:
+            prev_price = latest_price
 
+        # 精確計算價差與幅度
         change_val = latest_price - prev_price
         change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
 
@@ -67,12 +70,13 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price] * 7
 
 def fetch_market_news(selected_stock_market):
+    # 關鍵技巧：關鍵字後方加入 when:7d，限制只抓取最近 7 天內的最新新聞
     rss_urls = {
-        "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+Stock+Market+Economy+Binh+Duong&hl=en-US&gl=US&ceid=US:en",
-        "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=Crude+Oil+Plastic+Resin+USD+VND&hl=en-US&gl=US&ceid=US:en",
-        "🇹🇼 台灣 (Taiwan)": "https://news.google.com/rss/search?q=%E5%8F%B0%E8%82%A1+%E8%B3%87%E8%A8%8A&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
-        "🇨🇳 中國/香港 (China/HK)": "https://news.google.com/rss/search?q=%E4%B8%AD%E5%9C%8B%E7%B6%93%E6%BF%9F+%E6%B8%AF%E8%82%A1&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
-        "🇺🇸 美國 (USA)": "https://news.google.com/rss/search?q=US+Stock+Market+Economy&hl=en-US&gl=US&ceid=US:en"
+        "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+economy+stock+market+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=oil+price+plastic+resin+USD+VND+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "🇹🇼 台灣 (Taiwan)": "https://news.google.com/rss/search?q=%E5%8F%B0%E8%82%A1+%E8%B3%87%E8%A8%8A+when:7d&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
+        "🇨🇳 中國/香港 (China/HK)": "https://news.google.com/rss/search?q=%E4%B8%AD%E5%9C%8B%E7%B6%93%E6%BF%9F+%E6%B8%AF%E8%82%A1+when:7d&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
+        "🇺🇸 美國 (USA)": "https://news.google.com/rss/search?q=US+stock+market+economy+when:7d&hl=en-US&gl=US&ceid=US:en"
     }
     target_url = rss_urls.get(selected_stock_market, rss_urls["🇻🇳 越南 (Vietnam)"])
     news_items = []
@@ -85,13 +89,18 @@ def fetch_market_news(selected_stock_market):
                 title = item.find('title').text if item.find('title') is not None else ""
                 link = item.find('link').text if item.find('link') is not None else "#"
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
+                
+                # 自動清除標題尾端的媒體名稱標記，保持介面乾淨
+                if " - " in title:
+                    title = title.rsplit(" - ", 1)[0]
+
                 if title:
                     news_items.append({"title": title, "link": link, "date": pub_date[:16]})
     except Exception:
         news_items = [
-            {"title": f"【{selected_stock_market}】央行發布最新貨幣政策指導方針", "link": "#", "date": "最新行情"},
-            {"title": f"【{selected_stock_market}】電子與製造業出口排單表現超出市場預期", "link": "#", "date": "最新行情"},
-            {"title": f"【{selected_stock_market}】外資資金本週淨流入趨勢分析與觀測", "link": "#", "date": "最新行情"},
+            {"title": f"【{selected_stock_market}】最新一週製造業與出口排單動向", "link": "#", "date": "即時焦點"},
+            {"title": f"【{selected_stock_market}】外資資金最新佈局與市場流向解析", "link": "#", "date": "即時焦點"},
+            {"title": f"【{selected_stock_market}】央行與財政部發布最新經濟指引", "link": "#", "date": "即時焦點"},
         ]
     return news_items
 
@@ -124,7 +133,7 @@ def render_dashboard(selected_stock_market):
     st.divider()
 
     st.markdown(f"### 📰 【{selected_stock_market}】即時財經與產業新聞焦點")
-    st.caption("自動連線國際財經新聞網，擷取該區域當前最新頭條消息：")
+    st.caption("自動連線國際財經新聞網，擷取該區域近 7 天最新頭條消息：")
     
     news_list = fetch_market_news(selected_stock_market)
     for news in news_list:
@@ -325,27 +334,23 @@ def render_dashboard(selected_stock_market):
             if symbol and HAS_YFINANCE:
                 try:
                     ticker = yf.Ticker(symbol)
-                    intraday = ticker.history(period="1d", interval="1m")
-                    prev_price = None
-                    try:
-                        prev_price = float(ticker.fast_info.previous_close)
-                    except Exception:
-                        pass
+                    hist_5d = ticker.history(period="5d")
+                    valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
 
+                    intraday = ticker.history(period="1d", interval="1m")
                     latest_price = None
                     if not intraday.empty:
                         valid_intraday = intraday["Close"].dropna().tolist()
                         if valid_intraday:
                             latest_price = float(valid_intraday[-1])
 
-                    hist_5d = ticker.history(period="5d")
-                    valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
-
                     if latest_price is None or math.isnan(latest_price):
                         latest_price = float(valid_closes[-1]) if valid_closes else 0.0
 
-                    if prev_price is None or math.isnan(prev_price):
-                        prev_price = float(valid_closes[-2]) if len(valid_closes) >= 2 else latest_price
+                    if len(valid_closes) >= 2:
+                        prev_price = float(valid_closes[-2])
+                    else:
+                        prev_price = latest_price
 
                     change_val = latest_price - prev_price
                     change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
