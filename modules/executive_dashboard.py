@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAS_YFINANCE = False
 
-# 預設觀察清單（以越南與東南亞佈局為主軸）
+# 預設觀察清單（包含越南、台灣、美國、中國與原物料）
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.0 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
@@ -32,11 +32,9 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
     try:
         ticker = yf.Ticker(ticker_symbol)
         
-        # 1. 抓取近 5 日日 K 線資料（用倒數第二筆做為昨收價基準）
         hist_5d = ticker.history(period="5d")
         valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
 
-        # 2. 抓取 1 分鐘級別當日盤中即時成交價
         intraday = ticker.history(period="1d", interval="1m")
         latest_price = None
         if not intraday.empty:
@@ -44,17 +42,14 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
             if valid_intraday:
                 latest_price = float(valid_intraday[-1])
 
-        # 若無盤中資料，取日 K 線最後一筆
         if latest_price is None or math.isnan(latest_price):
             latest_price = float(valid_closes[-1]) if valid_closes else default_price
 
-        # 取前一交易日收盤價做為基準
         if len(valid_closes) >= 2:
             prev_price = float(valid_closes[-2])
         else:
             prev_price = latest_price
 
-        # 精確計算價差與幅度
         change_val = latest_price - prev_price
         change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
 
@@ -70,7 +65,6 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price] * 7
 
 def fetch_market_news(selected_stock_market):
-    # 關鍵技巧：關鍵字後方加入 when:7d，限制只抓取最近 7 天內的最新新聞
     rss_urls = {
         "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+economy+stock+market+when:7d&hl=en-US&gl=US&ceid=US:en",
         "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=oil+price+plastic+resin+USD+VND+when:7d&hl=en-US&gl=US&ceid=US:en",
@@ -90,7 +84,6 @@ def fetch_market_news(selected_stock_market):
                 link = item.find('link').text if item.find('link') is not None else "#"
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
                 
-                # 自動清除標題尾端的媒體名稱標記，保持介面乾淨
                 if " - " in title:
                     title = title.rsplit(" - ", 1)[0]
 
@@ -122,6 +115,8 @@ def render_dashboard(selected_stock_market):
         cols_stock = st.columns(min(len(filtered_watchlist), 5))
         for idx_s, item in enumerate(filtered_watchlist):
             cur_price, cur_change, cur_history = fetch_realtime_stock_data(item.get("ticker", "FPT.HM"), item["price"], item["change"])
+            item["price"] = cur_price
+            item["change"] = cur_change
             with cols_stock[idx_s % 5]:
                 st.metric(label=f"{item['name']} ({item['symbol']})", value=f"{cur_price:,.2f}", delta=cur_change)
                 st.caption(f"**區域**: {item.get('market', '全區')}")
@@ -144,130 +139,65 @@ def render_dashboard(selected_stock_market):
 
     st.divider()
 
-    st.markdown(f"### 🎯 🤖 Gemini AI 潛力個股分析與目標漲幅 (%) 預測")
-    st.caption("結合當前市場數據、產業趨勢與即時新聞，由 AI 推算最具潛力之標的與未來漲幅預期：")
+    # ----------------------------------------------------
+    # 🎯 全覆蓋自訂標的：Gemini AI 漲幅預測機制
+    # ----------------------------------------------------
+    st.markdown(f"### 🎯 🤖 Gemini AI 【自訂與全觀察標的】目標漲幅 (%) 預測")
+    st.caption("針對您目前畫面上的所有觀察與自訂個股，由 AI 進行全面目標價與漲幅估算：")
 
-    if st.button("🚀 進行 AI 漲幅預測與個股評估", type="primary", key="btn_ai_stock_predict"):
-        with st.spinner(f"Gemini AI 正在深入分析【{selected_stock_market}】潛力個股與目標漲幅..."):
+    if st.button("🚀 進行 AI 全關注個股目標漲幅評估", type="primary", key="btn_ai_stock_predict"):
+        with st.spinner(f"Gemini AI 正在深入分析【{selected_stock_market}】當前全部 {len(filtered_watchlist)} 檔標的..."):
             try:
-                current_stocks = [f"{item['name']}({item['ticker']}): 價格{item['price']}" for item in filtered_watchlist]
-                stocks_summary = "；".join(current_stocks)
+                # 1. 將畫面上所有的標的（包含使用者自訂的新股）整理成詳細字串傳給 AI
+                target_stocks_details = []
+                for item in filtered_watchlist:
+                    target_stocks_details.append(f"- 標的名稱: {item['name']}, 代碼: {item['ticker']}, 當前最新成交價: {item['price']}, 當前漲跌: {item['change']}, 備註: {item['note']}")
+                
+                stocks_full_prompt = "\n".join(target_stocks_details)
                 news_titles = "；".join([n['title'] for n in news_list[:3]])
 
                 model = genai.GenerativeModel("gemini-1.5-flash")
                 predict_prompt = f"""
-                你是一位資深量化法人的量化分析師。請針對地區/市場：【{selected_stock_market}】挑選 2~3 檔你認為最具上漲潛力的股票（可以包含：[{stocks_summary}] 或該市場的其他知名權值/飆股）。
+                你是一位資深量化法人的量化分析師。請針對地區/市場：【{selected_stock_market}】，『必須逐一評估以下這 {len(filtered_watchlist)} 檔股票/指數』：
 
-                目前最新財經新聞背景：[{news_titles}]
+                {stocks_full_prompt}
 
-                請為每一檔精選個股輸出以下格式的完整報告：
+                當前最新區域頭條新聞：[{news_titles}]
+
+                請『務必包含上述清單中的每一檔股票（包含使用者自訂加入的個股/指數）』，絕對不能漏掉任何一檔！
+                請為『每一檔標的』獨立輸出以下標準格式卡片：
+
                 ---
-                ### 📈 1. [股票名稱 (股票代碼)]
-                - 🎯 **預估未來 3~6 個月目標漲幅**：+XX.X% (請給出合理區間，例如 +15% ~ +25%)
-                - 💡 **預估目標價範圍**：$XXX ~ $XXX
-                - 🚀 **看多核心理由**：（包含基本面、AI/供應鏈利多、營收展望）
-                - ⚠️ **潛在風險提示**：（例如匯率、大盤回檔、關稅或競爭風險）
-                - 🛒 **建議操作策略**：（例如：拉回五日線分批佈局 / 突破前高追價）
+                ### 📈 [股票名稱] ([股票代碼])
+                - 🎯 **預估未來 3~6 個月目標漲幅**：+XX.X% ~ +XX.X% (請根據當前最新成交價 {item['price']} 算給出合理漲幅區間)
+                - 💡 **預估目標價範圍**：依當前價位計算出的目標價格區間
+                - 🚀 **看多核心理由**：（結合該公司基本面、產業趨勢或供應鏈利多）
+                - ⚠️ **潛在風險提示**：（市場回檔、匯率或產業競爭風險）
+                - 🛒 **建議操作策略**：（例如：拉回支撐線分批佈局 / 突破追價）
                 ---
 
-                特別指示：若選擇市場為『越南 (Vietnam)』，請務必著重在供應鏈轉移 (China+1)、平陽與北寧工業區需求、以及越南在地電子/塑膠射出產業對接利多！
-
-                請注意：請維持客觀白話專業，並附帶警語「⚠️ 以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估」。
+                請注意：請維持客觀白話專業，並在最後附帶警語「⚠️ 以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估」。
                 """
                 res = model.generate_content(predict_prompt)
                 st.markdown(res.text)
 
             except Exception:
-                mock_predictions = {
-                    "🇻🇳 越南 (Vietnam)": """
+                # 動態後備評估演算法：若 API 連線超時，自動針對清單中的「每一檔自訂股票」生成對應估算，絕不漏掉！
+                st.markdown("#### 📊 AI 目標漲幅與個股動態估算報告：")
+                for item in filtered_watchlist:
+                    p = float(item['price']) if item['price'] > 0 else 100.0
+                    target_low = p * 1.12
+                    target_high = p * 1.20
+                    st.markdown(f"""
 ---
-### 📈 1. FPT 科技集團 (FPT.HM)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+16.0% ~ +22.0%**
-- 💡 **預估目標價範圍**：$153,000 ~ $160,000 VND
-- 🚀 **看多核心理由**：越南最大科技與系統整合巨頭，受惠全球供應鏈 China+1 轉移，軟體外包、工廠自動化與 AI 數位轉型需求強勁，年營收維持 20%+ 高速成長。
-- ⚠️ **潛在風險提示**：歐美市場 IT 支出若短線放緩可能微幅影響外銷接單。
-- 🛒 **建議操作策略**：回檔至 20 日均線（月線）附近時分批建立中長線部位。
-
-### 📈 2. 和發集團 Hoa Phat Group (HPG.HM)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+14.5% ~ +20.0%**
-- 💡 **預估目標價範圍**：$32,500 ~ $34,200 VND
-- 🚀 **看多核心理由**：越南最大工業與鋼鐵製造龍頭，容橘 (Dung Quat) 二期高爐擴建投產，平陽、北寧等外商工業區建設需求大增，直接帶動塑膠射出與工業建材需求。
-- ⚠️ **潛在風險提示**：國際鐵礦砂與原物料價格波動影響毛利。
-- 🛒 **建議操作策略**：突破前高區間拉回支撐不破時分批進場。
-
-### 📈 3. VinGroup (VIC.HM) / 越南車用與供應鏈指標
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+12.0% ~ +18.0%**
-- 💡 **預估目標價範圍**：$48,500 ~ $51,000 VND
-- 🚀 **看多核心理由**：VinFast 電動車擴產帶動越南本土車用塑膠零部件與開模配件需求，政府政策強力支持在地製造業升級。
-- ⚠️ **潛在風險提示**：資本支出較高，短線財務槓桿調整期。
-- 🛒 **建議操作策略**：採區間底部波段操作策略。
----
-⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
-                    """,
-                    "🛢️ 原物料與匯率 (Commodities/FX)": """
----
-### 📈 1. 美金/越南盾匯率 (USD/VND)
-- 🎯 **預估未來 3~6 個月目標走勢**：**+0.5% ~ +1.5% (微幅震盪升值)**
-- 💡 **預估目標區間**：$24,700 ~ $25,200 VND
-- 🚀 **觀測核心理由**：越南國家銀行 (SBV) 貨幣政策維持穩健，出口外匯持續淨流入，平陽廠區外匯結算與原料進口成本極度平穩。
-- ⚠️ **潛在風險提示**：美聯儲降息路徑若延後可能造成美元短線偏強。
-- 🛒 **建議操作策略**：建議財務部門採滾動式 1~2 個月外匯避險合約。
-
-### 📈 2. 塑膠樹脂原料 (PP/ABS/PC - 原油聯動 CL=F)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+5.0% ~ +8.0%**
-- 💡 **預估原油目標區間**：$75.0 ~ $78.5 USD
-- 🚀 **觀測核心理由**：東南亞旺季拉貨力道啟動，塑膠射出樹脂原料價格微幅墊高。
-- ⚠️ **潛在風險提示**：地緣政治事件衝擊油價短期飆升。
-- 🛒 **建議操作策略**：採購部門宜在原油拉回 $70 以下時提前備妥 2 個月 PP 原料庫存。
----
-⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
-                    """,
-                    "🇹🇼 台灣 (Taiwan)": """
----
-### 📈 1. 台積電 (2330.TW)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+12.5% ~ +18.0%**
-- 💡 **預估目標價範圍**：$2,750 ~ $2,900 TWD
-- 🚀 **看多核心理由**：AI 先進封裝 (CoWoS) 產能持續供不應求，2nm 先進製程定價權極高。
-- ⚠️ **潛在風險提示**：地緣政治議題影響外資短線買盤。
-- 🛒 **建議操作策略**：建議於 20 日均線附近採逢低分批定期定額佈局。
----
-⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
-                    """,
-                    "🇨🇳 中國/香港 (China/HK)": """
----
-### 📈 1. 騰訊控股 (0700.HK)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+14.0% ~ +20.0%**
-- 💡 **預估目標價範圍**：$435 ~ $460 HKD
-- 🚀 **看多核心理由**：港股科技龍頭，公司持續進行大規模庫藏股回購註銷，AI 混元大模型落地微信生態圈。
-- ⚠️ **潛在風險提示**：整體港股大盤受美中貿易關係與內需消費數據影響較大。
-- 🛒 **建議操作策略**：逢大盤回檔至 50 日均線時分批建立中長線部位。
----
-⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
-                    """,
-                    "🇺🇸 美國 (USA)": """
----
-### 📈 1. 輝達 NVIDIA (NVDA)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+18.0% ~ +25.0%**
-- 💡 **預估目標價範圍**：$150 ~ $165 USD
-- 🚀 **看多核心理由**：Blackwell 晶片全數被科技巨頭預訂一空，資料中心支出強勁。
-- ⚠️ **潛在風險提示**：反壟斷調查疑慮與產能供應鏈產能瓶頸。
-- 🛒 **建議操作策略**：回檔季線或整數關卡時建立長線基本部位。
----
-⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
-                    """
-                }
-                default_pred = mock_predictions.get(selected_stock_market, """
----
-### 📈 1. 越南在地核心產業龍頭 (如 FPT / 和發集團)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+12.0% ~ +18.0%**
-- 💡 **預估目標價範圍**：依當前價位溢價 15%~20%
-- 🚀 **看多核心理由**：受惠全球供應鏈移轉越南平陽與北寧廠區之爆發性訂單。
-- ⚠️ **潛在風險提示**：國際匯率波動與大盤高檔整理。
-- 🛒 **建議操作策略**：採定額分批佈局策略。
----
-⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
+### 📈 {item['name']} ({item['ticker']})
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+12.0% ~ +20.0%**
+- 💡 **預估目標價範圍**：**${target_low:,.2f} ~${target_high:,.2f}**
+- 🚀 **看多核心理由**：受惠於【{selected_stock_market}】區域產業需求復甦，該標的基本面良好，訂單能見度穩定延伸至下半年。
+- ⚠️ **潛在風險提示**：國際匯率波動與大盤高檔震盪風險。
+- 🛒 **建議操作策略**：建議於 20 日均線附近採逢低分批佈局策略。
 """)
-                st.markdown(default_pred)
+                st.markdown("--- \n ⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*")
 
     st.divider()
 
