@@ -62,7 +62,7 @@ if "company_profile" not in st.session_state:
       },
   }
 
-# 👥 0.1 初始化越南員工人事資料庫 (含職位、合規日期、額定本薪與保險)
+# 👥 0.1 初始化越南員工人事資料庫
 if "employee_db" not in st.session_state:
   st.session_state.employee_db = [
       {
@@ -85,7 +85,7 @@ if "employee_db" not in st.session_state:
       }
   ]
 
-# 💵 0.2 每月發薪變動扣款資料庫 (Monthly Payroll Records)
+# 💵 0.2 每月發薪變動扣款資料庫
 if "monthly_payroll_db" not in st.session_state:
   st.session_state.monthly_payroll_db = [
       {
@@ -95,12 +95,22 @@ if "monthly_payroll_db" not in st.session_state:
           "position": "射出機技術員",
           "base_salary": 9000000.0,
           "allowance_total": 1530000.0,
-          "insurance_deduct": 945000.0,  # 10.5%
+          "insurance_deduct": 945000.0,
           "tardy_deduct": 150000.0,
           "leave_deduct": 300000.0,
           "advance_deduct": 1000000.0,
           "net_salary": 8135000.0,
       }
+  ]
+
+# 📈 0.3 觀察股票與指數關注清單
+if "stock_watchlist" not in st.session_state:
+  st.session_state.stock_watchlist = [
+      {"symbol": "TSMC (2330.TW)", "name": "台積電", "price": 985.0, "change": "+15.0 (+1.55%)", "trend": "up"},
+      {"symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1285.4, "change": "-3.2 (-0.25%)", "trend": "down"},
+      {"symbol": "S&P 500", "name": "標普 500 指數", "price": 5626.0, "change": "+22.5 (+0.40%)", "trend": "up"},
+      {"symbol": "USD/VND", "name": "美金/越南盾", "price": 24850.0, "change": "-10.0 (-0.04%)", "trend": "down"},
+      {"symbol": "PP Resin", "name": "聚丙烯塑料原物料(噸)", "price": 920.0, "change": "+5.0 (+0.55%)", "trend": "up"},
   ]
 
 
@@ -271,7 +281,7 @@ def render_dynamic_3d_model(product_keyword):
   components.html(three_code, height=370)
 
 
-# 🔐 1. 初始化使用者帳號資料庫 (升級：確保含 admin 帳號相容性與全角色設定)
+# 🔐 1. 初始化使用者帳號資料庫
 if "user_database" not in st.session_state:
   st.session_state.user_database = {
       "admin": {
@@ -486,10 +496,9 @@ if not st.session_state.authenticated:
 
     st.info("""
         💡 **最新可用測試帳號密碼清單：**
-        - **預設最高主管**：`admin` / `admin123`
-        - **董事長**：`boss` / `boss123`
+        - **董事長**：`boss` / `boss123` (進入高階戰情室 & 股市 AI 分析)
         - **總經理**：`gm` / `gm123`
-        - **人事專員**：`hr_manager` / `hr123`
+        - **人事主管**：`hr_manager` / `hr123`
         - **財務會計**：`accountant` / `fin123`
         - **業務專員**：`alex` / `alex123` 或 `david` / `david123`
         """)
@@ -529,6 +538,7 @@ if user_role in ["executive", "hr", "finance"]:
   # 根據角色分權動態顯示 Tab 分頁
   tabs_to_show = []
   if user_role in ["executive"]:
+    tabs_to_show.append("📈 全球股市與 AI 財經動態戰情室")
     tabs_to_show.append("📊 業務報價總覽與資料庫")
     tabs_to_show.append("🏢 跨國多廠區/公司資訊設定")
 
@@ -545,6 +555,77 @@ if user_role in ["executive", "hr", "finance"]:
     tabs_to_show.append("👥 系統使用者與權限管理 (User Management)")
 
   active_tabs = st.tabs(tabs_to_show)
+
+  # ----------------------------------------
+  # 0. 高階主管專屬：全球股市與 AI 財經戰情室 (Executive 專屬)
+  # ----------------------------------------
+  if "📈 全球股市與 AI 財經動態戰情室" in tabs_to_show:
+    idx = tabs_to_show.index("📈 全球股市與 AI 財經動態戰情室")
+    with active_tabs[idx]:
+      st.subheader("📈 董事長/總經理 專屬 — 全球股市與原物料動態戰情室")
+      st.caption("即時追蹤重要股市指數、集團關注個股、美金匯率與塑膠射出原物料（PP/PE/ABS）價格趨勢。")
+
+      # 顯示即時卡片
+      cols_stock = st.columns(len(st.session_state.stock_watchlist))
+      for idx_s, item in enumerate(st.session_state.stock_watchlist):
+        with cols_stock[idx_s]:
+          st.metric(
+              label=f"{item['name']} ({item['symbol']})",
+              value=f"{item['price']:,.1f}",
+              delta=item['change']
+          )
+
+      st.divider()
+
+      col_ai_stock, col_add_stock = st.columns([2, 1])
+
+      with col_ai_stock:
+        st.markdown("### 🤖 Gemini AI 股市與全球總經趨勢每日解析")
+        st.caption("點擊下方按鈕，讓 Gemini AI 為您彙整今日全球市場漲跌主因與對製造業的影響。")
+
+        if st.button("🚀 生成今日全球股市與塑膠原物料 AI 趨勢分析報告", type="primary", key="btn_gen_stock_ai"):
+          with st.spinner("Gemini AI 正在分析全球股市、美聯儲動態與油價/塑膠原物料價格..."):
+            try:
+              model = genai.GenerativeModel("gemini-1.5-flash")
+              stock_prompt = """
+              你是一位專業的高階財務顧問與全球總經分析師。
+              請為製造業集團董事長撰寫一份簡短精練的『今日全球股市與塑膠原物料動態簡報』。
+              包含：
+              1. 科技股與半導體 (如台積電 2330.TW) 漲跌趨勢。
+              2. 越南經濟指數 (VN-INDEX) 與東南亞製造業資金流向。
+              3. 原油與塑膠塑料 (PP/PE/ABS) 原物料成本預測。
+              4. 給管理階層的關鍵決策建議（約 150 字）。
+              請以繁體中文回答，使用專業且清晰的格式。
+              """
+              res = model.generate_content(stock_prompt)
+              st.markdown(f"#### 📊 AI 每日市場情報決策卡：\n{res.text}")
+            except Exception as e:
+              st.info("""
+              #### 📊 AI 每日市場情報決策卡（示範速報）：
+              1. **科技股與半導體趨勢**：台積電 (2330.TW) 受惠於 AI 晶片需求強勁，今日拉漲 +1.55%，帶動供應鏈強勢。
+              2. **越南股市 (VN-INDEX)**：受到美金微幅升值影響，外資今日小幅調節，指數小跌 -0.25%，但平陽與同奈工業區擴廠租賃需求持續旺盛。
+              3. **原物料成本 (PP Resin)**：受國際原油波段反彈影響，塑膠顆粒報價每噸微幅調漲 +0.55%，建議採購團隊適度建立 1~2 個月安全庫存。
+              4. **💡 董事長決策建議**：當前東南亞出貨訂單穩定，塑膠原物料價格處於合理區間，建議維持現行模具與產品報價利潤率，並留意第 4 季美元避險。
+              """)
+
+      with col_add_stock:
+        st.markdown("### ➕ 新增自訂關注個股/指數")
+        with st.form("add_stock_form"):
+          s_symbol = st.text_input("股票代碼 (如 2317.TW / AAPL)", "2317.TW")
+          s_name = st.text_input("名稱 (如 鴻海)", "鴻海")
+          s_price = st.number_input("最新價格", min_value=0.0, value=185.0, step=0.5)
+          s_change = st.text_input("漲跌幅度 (如 +2.5 (+1.37%))", "+2.5 (+1.37%)")
+
+          if st.form_submit_button("✅ 新增至關注戰情室"):
+            st.session_state.stock_watchlist.append({
+                "symbol": s_symbol,
+                "name": s_name,
+                "price": s_price,
+                "change": s_change,
+                "trend": "up" if "+" in s_change else "down"
+            })
+            st.success(f"已新增 `{s_name}` 至高階戰情室！")
+            st.rerun()
 
   # ----------------------------------------
   # 1. 業務報價總覽 (Executive 專屬)
