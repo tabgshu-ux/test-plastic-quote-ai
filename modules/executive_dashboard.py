@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 import urllib.request
+import math
 import streamlit as st
 import google.generativeai as genai
 
@@ -28,14 +29,19 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
         ticker = yf.Ticker(ticker_symbol)
-        hist = ticker.history(period="7d")
-        if not hist.empty and len(hist) >= 2:
-            latest_price = float(hist["Close"].iloc[-1])
-            prev_price = float(hist["Close"].iloc[-2])
-            change_val = latest_price - prev_price
-            change_pct = (change_val / prev_price) * 100
-            change_str = f"{'+' if change_val >= 0 else ''}{change_val:.1f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-            return round(latest_price, 2), change_str, hist["Close"].tolist()
+        hist = ticker.history(period="10d")
+        if not hist.empty:
+            valid_closes = hist["Close"].dropna().tolist()
+            if len(valid_closes) >= 2:
+                latest_price = float(valid_closes[-1])
+                prev_price = float(valid_closes[-2])
+                change_val = latest_price - prev_price
+                change_pct = (change_val / prev_price) * 100 if prev_price > 0 else 0
+                change_str = f"{'+' if change_val >= 0 else ''}{change_val:.1f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
+                return round(latest_price, 2), change_str, valid_closes[-7:]
+            elif len(valid_closes) == 1:
+                latest_price = float(valid_closes[0])
+                return round(latest_price, 2), "+0.0 (+0.00%)", [latest_price] * 7
         return default_price, default_change, [default_price] * 7
     except Exception:
         return default_price, default_change, [default_price] * 7
@@ -48,7 +54,6 @@ def fetch_market_news(selected_stock_market):
         "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+Stock+Market+Economy&hl=en-US&gl=US&ceid=US:en",
         "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=Crude+Oil+Plastic+Resin+USD+VND&hl=en-US&gl=US&ceid=US:en"
     }
-    
     target_url = rss_urls.get(selected_stock_market, rss_urls["🇹🇼 台灣 (Taiwan)"])
     news_items = []
     try:
@@ -98,7 +103,6 @@ def render_dashboard(selected_stock_market):
 
     st.divider()
 
-    # 📰 即時財經新聞焦點區塊
     st.markdown(f"### 📰 【{selected_stock_market}】即時財經與產業新聞焦點")
     st.caption("自動連線國際財經新聞網，擷取該區域當前最新頭條消息：")
     
@@ -111,9 +115,6 @@ def render_dashboard(selected_stock_market):
 
     st.divider()
 
-    # ----------------------------------------------------
-    # 🎯 新增：Gemini AI 潛力飆股預測與 % 估算
-    # ----------------------------------------------------
     st.markdown(f"### 🎯 🤖 Gemini AI 潛力個股分析與目標漲幅 (%) 預測")
     st.caption("結合當前市場數據、產業趨勢與即時新聞，由 AI 推算最具潛力之標的與未來漲幅預期：")
 
@@ -146,7 +147,6 @@ def render_dashboard(selected_stock_market):
                 st.markdown(res.text)
 
             except Exception:
-                # 後備評估預測（萬一 API 連線逾時）
                 mock_predictions = {
                     "🇹🇼 台灣 (Taiwan)": """
 ---
@@ -251,9 +251,9 @@ def render_dashboard(selected_stock_market):
         if "val_stock_name" not in st.session_state: 
             st.session_state["val_stock_name"] = "日月光投控"
         if "val_stock_price" not in st.session_state: 
-            st.session_state["val_stock_price"] = 663.00
+            st.session_state["val_stock_price"] = 160.00
         if "val_stock_change" not in st.session_state: 
-            st.session_state["val_stock_change"] = "+25.00 (+3.92%)"
+            st.session_state["val_stock_change"] = "+2.50 (+1.59%)"
 
         def fetch_stock_info_callback():
             symbol = st.session_state.get("input_stock_ticker", "").strip().upper()
@@ -263,38 +263,60 @@ def render_dashboard(selected_stock_market):
             if symbol and HAS_YFINANCE:
                 try:
                     ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="5d")
+                    hist = ticker.history(period="10d")
+                    
                     if hist.empty and symbol.endswith(".TW") and symbol[:-3].isdigit():
-                        symbol = f"{symbol[:-3]}.TWO"
-                        ticker = yf.Ticker(symbol)
-                        hist = ticker.history(period="5d")
-                    if not hist.empty:
-                        latest_price = float(hist["Close"].iloc[-1])
-                        prev_price = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else latest_price
-                        change_val = latest_price - prev_price
-                        change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
-                        change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-                        try:
-                            info = ticker.info
-                            short_name = info.get("shortName") or info.get("longName") or symbol
-                        except Exception:
-                            short_name = symbol
+                        alt_symbol = f"{symbol[:-3]}.TWO"
+                        ticker = yf.Ticker(alt_symbol)
+                        hist = ticker.history(period="10d")
+                        if not hist.empty:
+                            symbol = alt_symbol
+                            st.session_state["input_stock_ticker"] = symbol
 
-                        st.session_state["val_stock_name"] = short_name
-                        st.session_state["val_stock_price"] = float(round(latest_price, 2))
-                        st.session_state["val_stock_change"] = change_str
-                        st.session_state["input_stock_name"] = short_name
-                        st.session_state["input_stock_price"] = float(round(latest_price, 2))
-                        st.session_state["input_stock_change"] = change_str
-                        st.toast(f"✅ 已成功抓取 {short_name} ({symbol})！", icon="📈")
+                    if not hist.empty:
+                        # 核心防呆：自動清理無效的 NaN 值
+                        valid_closes = hist["Close"].dropna().tolist()
+                        
+                        if len(valid_closes) >= 1:
+                            latest_price = float(valid_closes[-1])
+                            prev_price = float(valid_closes[-2]) if len(valid_closes) >= 2 else latest_price
+                            
+                            change_val = latest_price - prev_price
+                            change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
+                            
+                            # 檢查價格與漲跌幅度是否為 NaN，若是則防呆賦予預設值
+                            if math.isnan(latest_price): latest_price = 0.0
+                            if math.isnan(change_val): change_val = 0.0
+                            if math.isnan(change_pct): change_pct = 0.0
+                            
+                            change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
+                            
+                            try:
+                                info = ticker.info
+                                short_name = info.get("shortName") or info.get("longName") or symbol
+                            except Exception:
+                                short_name = symbol
+
+                            # 強制將數值寫入 Session State
+                            st.session_state["val_stock_name"] = short_name
+                            st.session_state["val_stock_price"] = float(round(latest_price, 2))
+                            st.session_state["val_stock_change"] = change_str
+                            st.session_state["input_stock_name"] = short_name
+                            st.session_state["input_stock_price"] = float(round(latest_price, 2))
+                            st.session_state["input_stock_change"] = change_str
+                            st.toast(f"✅ 已成功抓取 {short_name} ({symbol})！", icon="📈")
+                        else:
+                            st.toast(f"⚠️ 找不到代號 `{symbol}` 的歷史收盤價數據。", icon="⚠️")
+                    else:
+                        st.toast(f"⚠️ 找不到代號 `{symbol}` 的即時資料，請確認代號。", icon="⚠️")
                 except Exception as e:
                     st.toast(f"❌ 抓取失敗: {e}", icon="❌")
 
         with st.expander("➕ 新增觀察個股/指數", expanded=True):
             s_market = st.selectbox("選擇股票市場區域", ["🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"], key="input_stock_market")
-            s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / 2855 / NVDA)", value=st.session_state.get("input_stock_ticker", "2855.TW"), key="input_stock_ticker", on_change=fetch_stock_info_callback)
+            s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / 3711 / NVDA)", value=st.session_state.get("input_stock_ticker", "3711.TW"), key="input_stock_ticker", on_change=fetch_stock_info_callback)
             st.button("🔍 抓取最新股價與名稱", on_click=fetch_stock_info_callback, use_container_width=True)
-            s_name = st.text_input("名稱 (如 統一證)", value=st.session_state["val_stock_name"], key="input_stock_name")
+            s_name = st.text_input("名稱 (如 日月光投控)", value=st.session_state["val_stock_name"], key="input_stock_name")
             s_price = st.number_input("最新價格", min_value=0.0, value=st.session_state["val_stock_price"], step=0.5, format="%.2f", key="input_stock_price")
             s_change = st.text_input("漲跌幅度 (如 +0.50 (+2.10%))", value=st.session_state["val_stock_change"], key="input_stock_change")
 
