@@ -10,7 +10,7 @@ try:
 except ImportError:
     HAS_YFINANCE = False
 
-# 預設觀察清單（包含越南、台灣、美國、中國與原物料）
+# 預設觀察清單（包含越南、原物料、台灣、中國/香港與美股）
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.0 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
@@ -27,29 +27,53 @@ NEW_STOCK_WATCHLIST_DATA = [
 ]
 
 def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
+    """跨國股市相容演算法：解決越南與台美股即時價差計算"""
     if not HAS_YFINANCE:
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
         ticker = yf.Ticker(ticker_symbol)
         
-        hist_5d = ticker.history(period="5d")
-        valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
+        # 1. 抓取近 10 日日 K 線資料
+        hist_10d = ticker.history(period="10d")
+        valid_closes = hist_10d["Close"].dropna().tolist() if not hist_10d.empty else []
 
-        intraday = ticker.history(period="1d", interval="1m")
         latest_price = None
-        if not intraday.empty:
-            valid_intraday = intraday["Close"].dropna().tolist()
-            if valid_intraday:
-                latest_price = float(valid_intraday[-1])
+        prev_price = None
 
-        if latest_price is None or math.isnan(latest_price):
+        # 2. 優先嘗試從 fast_info 取得昨收價與最新成交價
+        try:
+            prev_price = float(ticker.fast_info.previous_close)
+            latest_price = float(ticker.fast_info.last_price)
+        except Exception:
+            pass
+
+        # 3. 嘗試補充 1 分鐘級別盤中即時資料（針對美股、台股）
+        if not ticker_symbol.endswith(".HM"):
+            try:
+                intraday = ticker.history(period="1d", interval="1m")
+                if not intraday.empty:
+                    valid_intraday = intraday["Close"].dropna().tolist()
+                    if valid_intraday:
+                        latest_price = float(valid_intraday[-1])
+            except Exception:
+                pass
+
+        # 4. 保底防呆：若 fast_info 沒抓到（例如越南股市盤後），改從日 K 線歷史倒推（最新筆 vs 前一筆）
+        if latest_price is None or math.isnan(latest_price) or latest_price == 0:
             latest_price = float(valid_closes[-1]) if valid_closes else default_price
 
-        if len(valid_closes) >= 2:
-            prev_price = float(valid_closes[-2])
-        else:
-            prev_price = latest_price
+        if prev_price is None or math.isnan(prev_price) or prev_price == 0:
+            if len(valid_closes) >= 2:
+                prev_price = float(valid_closes[-2])
+            else:
+                prev_price = latest_price
 
+        # 若最新價與前日價相等且有足夠歷史資料，強制使用日 K 線倒數前兩筆相減（避免越南等區域出現 +0.00）
+        if latest_price == prev_price and len(valid_closes) >= 2:
+            latest_price = float(valid_closes[-1])
+            prev_price = float(valid_closes[-2])
+
+        # 5. 精確計算價差與幅度
         change_val = latest_price - prev_price
         change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
 
@@ -65,6 +89,7 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price] * 7
 
 def fetch_market_news(selected_stock_market):
+    """強制限於近 7 天最新新聞焦點 RSS 解析"""
     rss_urls = {
         "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+economy+stock+market+when:7d&hl=en-US&gl=US&ceid=US:en",
         "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=oil+price+plastic+resin+USD+VND+when:7d&hl=en-US&gl=US&ceid=US:en",
@@ -84,6 +109,7 @@ def fetch_market_news(selected_stock_market):
                 link = item.find('link').text if item.find('link') is not None else "#"
                 pub_date = item.find('pubDate').text if item.find('pubDate') is not None else ""
                 
+                # 自動清理標題末端的媒體名稱標記
                 if " - " in title:
                     title = title.rsplit(" - ", 1)[0]
 
@@ -148,7 +174,7 @@ def render_dashboard(selected_stock_market):
     if st.button("🚀 進行 AI 全關注個股目標漲幅評估", type="primary", key="btn_ai_stock_predict"):
         with st.spinner(f"Gemini AI 正在深入分析【{selected_stock_market}】當前全部 {len(filtered_watchlist)} 檔標的..."):
             try:
-                # 1. 將畫面上所有的標的（包含使用者自訂的新股）整理成詳細字串傳給 AI
+                # 將畫面上所有的標的（包含使用者自訂的新股）整理傳給 AI
                 target_stocks_details = []
                 for item in filtered_watchlist:
                     target_stocks_details.append(f"- 標的名稱: {item['name']}, 代碼: {item['ticker']}, 當前最新成交價: {item['price']}, 當前漲跌: {item['change']}, 備註: {item['note']}")
@@ -169,12 +195,14 @@ def render_dashboard(selected_stock_market):
 
                 ---
                 ### 📈 [股票名稱] ([股票代碼])
-                - 🎯 **預估未來 3~6 個月目標漲幅**：+XX.X% ~ +XX.X% (請根據當前最新成交價 {item['price']} 算給出合理漲幅區間)
+                - 🎯 **預估未來 3~6 個月目標漲幅**：+XX.X% ~ +XX.X% (請根據當前最新成交價算給出合理漲幅區間)
                 - 💡 **預估目標價範圍**：依當前價位計算出的目標價格區間
                 - 🚀 **看多核心理由**：（結合該公司基本面、產業趨勢或供應鏈利多）
                 - ⚠️ **潛在風險提示**：（市場回檔、匯率或產業競爭風險）
                 - 🛒 **建議操作策略**：（例如：拉回支撐線分批佈局 / 突破追價）
                 ---
+
+                特別指示：若為越南 (Vietnam) 標的，請著重在供應鏈轉移 (China+1)、平陽與北寧工業區需求對接！
 
                 請注意：請維持客觀白話專業，並在最後附帶警語「⚠️ 以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估」。
                 """
@@ -238,7 +266,7 @@ def render_dashboard(selected_stock_market):
                 
                 except Exception:
                     mock_responses = {
-                        "🇻🇳 越南 (Vietnam)": "1. **景氣**：全球供應鏈移轉（China+1）最大受惠國，外商直接投資 (FDI) 創歷史新高，平陽與北寧工業區租用率爆滿。\n2. **動態**：胡志明指數維持多頭格局，FPT 科技與和發集團等工業指標股買盤強勁。\n3. **影響**：我們越南平陽廠區稼動率維持高檔，越南在地企業訂單強勁，出口美歐享有極高關稅優勢。\n4. **建議**：加快平陽廠自動化設備與開模產能擴建，優先對接越南在地大型客戶需求。",
+                        "🇻🇳 越南 (Vietnam)": "1. **景氣**：全球供應鏈移轉（China+1）最大受惠國，外商直接投資 (FDI) 創歷史新高，平陽與北寧工業區租用率爆滿。\n2. **動態**：胡志明指數維繫多頭格局，FPT 科技與和發集團等工業指標股買盤強勁。\n3. **影響**：我們越南平陽廠區稼動率維持高檔，越南在地企業訂單強勁，出口美歐享有極高關稅優勢。\n4. **建議**：加快平陽廠自動化設備與開模產能擴建，優先對接越南在地大型客戶需求。",
                         "🛢️ 原物料與匯率 (Commodities/FX)": "1. **景氣**：國際原油區間震盪，塑膠樹脂 (PP/ABS/PC) 原料價格呈現溫和墊高趨勢。\n2. **動態**：美金對越南盾 (USD/VND) 匯率維持在 24,850 左右波段平穩，無極端貶值風險。\n3. **影響**：塑膠射出成本受原料微幅上升影響，但匯率穩定非常有利平陽廠出口結算與薪資控管。\n4. **建議**：建議採購部門提前鎖定 1~2 個月的 PP 塑膠原料庫存以規避價格波段漲幅。",
                         "🇹🇼 台灣 (Taiwan)": "1. **景氣**：AI 伺服器與半導體出口極度強勁，台灣電子製造業排單熱絡。\n2. **動態**：台積電等高階晶片產能供不應求，帶動整體供應鏈資金持續流入。\n3. **影響**：有利台灣總部研發開模與高階訂單之利潤率。\n4. **建議**：維持台灣總部高階產能擴建，抓住 AI 升級紅利。",
                         "🇨🇳 中國/香港 (China/HK)": "1. **景氣**：內需消費與房地產仍在打底階段，但政府持續釋放降息與刺激政策。\n2. **動態**：傳統龍頭如茅台維持高現金流，港股科技股則依賴庫藏股實施保護股價。\n3. **影響**：東莞廠區受內需放緩影響，應優先對接外銷與高單價車用訂單。\n4. **建議**：東莞廠適度收緊信用期，優化應收帳款管理。",
@@ -264,23 +292,40 @@ def render_dashboard(selected_stock_market):
             if symbol and HAS_YFINANCE:
                 try:
                     ticker = yf.Ticker(symbol)
-                    hist_5d = ticker.history(period="5d")
-                    valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
+                    hist_10d = ticker.history(period="10d")
+                    valid_closes = hist_10d["Close"].dropna().tolist() if not hist_10d.empty else []
 
-                    intraday = ticker.history(period="1d", interval="1m")
                     latest_price = None
-                    if not intraday.empty:
-                        valid_intraday = intraday["Close"].dropna().tolist()
-                        if valid_intraday:
-                            latest_price = float(valid_intraday[-1])
+                    prev_price = None
 
-                    if latest_price is None or math.isnan(latest_price):
+                    try:
+                        prev_price = float(ticker.fast_info.previous_close)
+                        latest_price = float(ticker.fast_info.last_price)
+                    except Exception:
+                        pass
+
+                    if not symbol.endswith(".HM"):
+                        try:
+                            intraday = ticker.history(period="1d", interval="1m")
+                            if not intraday.empty:
+                                valid_intraday = intraday["Close"].dropna().tolist()
+                                if valid_intraday:
+                                    latest_price = float(valid_intraday[-1])
+                        except Exception:
+                            pass
+
+                    if latest_price is None or math.isnan(latest_price) or latest_price == 0:
                         latest_price = float(valid_closes[-1]) if valid_closes else 0.0
 
-                    if len(valid_closes) >= 2:
+                    if prev_price is None or math.isnan(prev_price) or prev_price == 0:
+                        if len(valid_closes) >= 2:
+                            prev_price = float(valid_closes[-2])
+                        else:
+                            prev_price = latest_price
+
+                    if latest_price == prev_price and len(valid_closes) >= 2:
+                        latest_price = float(valid_closes[-1])
                         prev_price = float(valid_closes[-2])
-                    else:
-                        prev_price = latest_price
 
                     change_val = latest_price - prev_price
                     change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
@@ -303,7 +348,7 @@ def render_dashboard(selected_stock_market):
                     st.session_state["input_stock_name"] = short_name
                     st.session_state["input_stock_price"] = float(round(latest_price, 2))
                     st.session_state["input_stock_change"] = change_str
-                    st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 盤中即時資料！", icon="📈")
+                    st.toast(f"✅ 已成功抓取 {short_name} ({symbol}) 即時資料！", icon="📈")
 
                 except Exception as e:
                     st.toast(f"❌ 抓取失敗: {e}", icon="❌")
