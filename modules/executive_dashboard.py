@@ -11,17 +11,18 @@ except ImportError:
     HAS_YFINANCE = False
 
 NEW_STOCK_WATCHLIST_DATA = [
+    {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
+    {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.0 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
+    {"market": "🇻🇳 越南 (Vietnam)", "ticker": "HPG.HM", "symbol": "Hoa Phat (HPG)", "name": "和發集團 (工業/鋼鐵/製造)", "price": 28500.0, "change": "+450.0 (+1.60%)", "signal": "🟢 偏多（工業區擴建受惠）", "note": "越南廠房建置與工業基礎設施需求指標"},
+    {"market": "🇻🇳 越南 (Vietnam)", "ticker": "VIC.HM", "symbol": "Vingroup (VIC)", "name": "VinGroup (車用/製造/地產)", "price": 43500.0, "change": "-200.0 (-0.46%)", "signal": "🟡 觀望（電動車轉型）", "note": "越南最大民營集團，帶動在地供應鏈需求"},
+    {"market": "🛢️ 原物料與匯率 (Commodities/FX)", "ticker": "CL=F", "symbol": "Crude Oil (PP Ref)", "name": "原油/塑膠原物料", "price": 71.5, "change": "+0.45 (+0.63%)", "signal": "🟠 提示（原物料成本微升）", "note": "建議採購提前準備 1~2 個月原料庫存"},
+    {"market": "🛢️ 原物料與匯率 (Commodities/FX)", "ticker": "VND=X", "symbol": "USD/VND", "name": "美金/越南盾匯率", "price": 24850.0, "change": "-10.0 (-0.04%)", "signal": "🟢 穩定（匯率波幅平緩）", "note": "有利平陽廠出口報價與薪資結算"},
     {"market": "🇹🇼 台灣 (Taiwan)", "ticker": "2330.TW", "symbol": "TSMC (2330.TW)", "name": "台積電", "price": 2480.0, "change": "+35.0 (+1.44%)", "signal": "🟢 偏多（適合逢低定額）", "note": "AI 晶片先進封裝獨占，長線穩定成長"},
     {"market": "🇹🇼 台灣 (Taiwan)", "ticker": "2383.TW", "symbol": "Elite (2383.TW)", "name": "台光電", "price": 5490.0, "change": "+15.0 (+0.27%)", "signal": "🟡 觀望（高檔區間震盪）", "note": "伺服器高階 PCB 板材，受惠 AI 升級"},
-    {"market": "🇹🇼 台灣 (Taiwan)", "ticker": "2881.TW", "symbol": "Fubon (2881.TW)", "name": "富邦金", "price": 92.5, "change": "+1.2 (+1.31%)", "signal": "🟢 防禦（高股息避風港）", "note": "配息能力強，提供穩健現金流保護"},
     {"market": "🇨🇳 中國/香港 (China/HK)", "ticker": "600519.SS", "symbol": "Moutai (600519.SS)", "name": "貴州茅台", "price": 1450.0, "change": "-12.0 (-0.82%)", "signal": "🟡 觀望（消費打底整理）", "note": "中國內需消費龍頭，現金流極強"},
     {"market": "🇨🇳 中國/香港 (China/HK)", "ticker": "0700.HK", "symbol": "Tencent (0700.HK)", "name": "騰訊控股", "price": 382.0, "change": "+4.5 (+1.19%)", "signal": "🟢 偏多（雲端與 AI 復甦）", "note": "港股科技巨頭，庫藏股實施支撐股價"},
     {"market": "🇺🇸 美國 (USA)", "ticker": "NVDA", "symbol": "NVIDIA (NVDA)", "name": "輝達", "price": 128.5, "change": "+3.2 (+2.55%)", "signal": "🟢 偏多（全球算力龍頭）", "note": " Blackwell 晶片量產，AI 伺服器需求爆發"},
     {"market": "🇺🇸 美國 (USA)", "ticker": "AAPL", "symbol": "Apple (AAPL)", "name": "蘋果電腦", "price": 225.0, "change": "+1.1 (+0.49%)", "signal": "🟢 偏多（Apple Intelligence 換機潮）", "note": "Edge AI 終端載體，供應鏈訂單增溫"},
-    {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.2 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
-    {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.0 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
-    {"market": "🛢️ 原物料與匯率 (Commodities/FX)", "ticker": "CL=F", "symbol": "Crude Oil (PP Ref)", "name": "原油/塑膠原物料", "price": 71.5, "change": "+0.45 (+0.63%)", "signal": "🟠 提示（原物料成本微升）", "note": "建議採購提前準備 1~2 個月原料庫存"},
-    {"market": "🛢️ 原物料與匯率 (Commodities/FX)", "ticker": "VND=X", "symbol": "USD/VND", "name": "美金/越南盾匯率", "price": 24850.0, "change": "-10.0 (-0.04%)", "signal": "🟢 穩定（匯率波幅平緩）", "note": "有利平陽廠出口報價與薪資結算"},
 ]
 
 def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
@@ -29,19 +30,12 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
         ticker = yf.Ticker(ticker_symbol)
-        
-        # 1. 抓取 1 天 1 分鐘級別的分時盤中資料 (Intraday Data)
         intraday = ticker.history(period="1d", interval="1m")
-        
-        # 2. 抓取昨收價 (previous_close)
         prev_price = None
         try:
             prev_price = float(ticker.fast_info.previous_close)
         except Exception:
-            try:
-                prev_price = float(ticker.info.get("regularMarketPreviousClose"))
-            except Exception:
-                pass
+            pass
 
         latest_price = None
         if not intraday.empty:
@@ -49,7 +43,6 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
             if valid_intraday:
                 latest_price = float(valid_intraday[-1])
 
-        # 備用防呆：若沒有 1m 資料（如非交易時間或指數），改用 5d 歷史資料
         hist_5d = ticker.history(period="5d")
         valid_closes = hist_5d["Close"].dropna().tolist() if not hist_5d.empty else []
 
@@ -67,7 +60,6 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         if math.isnan(change_pct): change_pct = 0.0
 
         change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-        
         history_list = valid_closes[-7:] if len(valid_closes) >= 7 else [latest_price] * 7
         return round(latest_price, 2), change_str, history_list
 
@@ -76,13 +68,13 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
 
 def fetch_market_news(selected_stock_market):
     rss_urls = {
+        "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+Stock+Market+Economy+Binh+Duong&hl=en-US&gl=US&ceid=US:en",
+        "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=Crude+Oil+Plastic+Resin+USD+VND&hl=en-US&gl=US&ceid=US:en",
         "🇹🇼 台灣 (Taiwan)": "https://news.google.com/rss/search?q=%E5%8F%B0%E8%82%A1+%E8%B3%87%E8%A8%8A&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
         "🇨🇳 中國/香港 (China/HK)": "https://news.google.com/rss/search?q=%E4%B8%AD%E5%9C%8B%E7%B6%93%E6%BF%9F+%E6%B8%AF%E8%82%A1&hl=zh-TW&gl=TW&ceid=TW:zh-Hant",
-        "🇺🇸 美國 (USA)": "https://news.google.com/rss/search?q=US+Stock+Market+Economy&hl=en-US&gl=US&ceid=US:en",
-        "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+Stock+Market+Economy&hl=en-US&gl=US&ceid=US:en",
-        "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=Crude+Oil+Plastic+Resin+USD+VND&hl=en-US&gl=US&ceid=US:en"
+        "🇺🇸 美國 (USA)": "https://news.google.com/rss/search?q=US+Stock+Market+Economy&hl=en-US&gl=US&ceid=US:en"
     }
-    target_url = rss_urls.get(selected_stock_market, rss_urls["🇹🇼 台灣 (Taiwan)"])
+    target_url = rss_urls.get(selected_stock_market, rss_urls["🇻🇳 越南 (Vietnam)"])
     news_items = []
     try:
         req = urllib.request.Request(target_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -120,7 +112,7 @@ def render_dashboard(selected_stock_market):
     if filtered_watchlist:
         cols_stock = st.columns(min(len(filtered_watchlist), 5))
         for idx_s, item in enumerate(filtered_watchlist):
-            cur_price, cur_change, cur_history = fetch_realtime_stock_data(item.get("ticker", "2330.TW"), item["price"], item["change"])
+            cur_price, cur_change, cur_history = fetch_realtime_stock_data(item.get("ticker", "FPT.HM"), item["price"], item["change"])
             with cols_stock[idx_s % 5]:
                 st.metric(label=f"{item['name']} ({item['symbol']})", value=f"{cur_price:,.2f}", delta=cur_change)
                 st.caption(f"**區域**: {item.get('market', '全區')}")
@@ -169,6 +161,8 @@ def render_dashboard(selected_stock_market):
                 - 🛒 **建議操作策略**：（例如：拉回五日線分批佈局 / 突破前高追價）
                 ---
 
+                特別指示：若選擇市場為『越南 (Vietnam)』，請務必著重在供應鏈轉移 (China+1)、平陽與北寧工業區需求、以及越南在地電子/塑膠射出產業對接利多！
+
                 請注意：請維持客觀白話專業，並附帶警語「⚠️ 以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估」。
                 """
                 res = model.generate_content(predict_prompt)
@@ -176,21 +170,68 @@ def render_dashboard(selected_stock_market):
 
             except Exception:
                 mock_predictions = {
+                    "🇻🇳 越南 (Vietnam)": """
+---
+### 📈 1. FPT 科技集團 (FPT.HM)
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+16.0% ~ +22.0%**
+- 💡 **預估目標價範圍**：$153,000 ~ $160,000 VND
+- 🚀 **看多核心理由**：越南最大科技與系統整合巨頭，受惠全球供應鏈 China+1 轉移，軟體外包、工廠自動化與 AI 數位轉型需求強勁，年營收維持 20%+ 高速成長。
+- ⚠️ **潛在風險提示**：歐美市場 IT 支出若短線放緩可能微幅影響外銷接單。
+- 🛒 **建議操作策略**：回檔至 20 日均線（月線）附近時分批建立中長線部位。
+
+### 📈 2. 和發集團 Hoa Phat Group (HPG.HM)
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+14.5% ~ +20.0%**
+- 💡 **預估目標價範圍**：$32,500 ~ $34,200 VND
+- 🚀 **看多核心理由**：越南最大工業與鋼鐵製造龍頭，容橘 (Dung Quat) 二期高爐擴建投產，平陽、北寧等外商工業區建設需求大增，直接帶動塑膠射出與工業建材需求。
+- ⚠️ **潛在風險提示**：國際鐵礦砂與原物料價格波動影響毛利。
+- 🛒 **建議操作策略**：突破前高區間拉回支撐不破時分批進場。
+
+### 📈 3. VinGroup (VIC.HM) / 越南車用與供應鏈指標
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+12.0% ~ +18.0%**
+- 💡 **預估目標價範圍**：$48,500 ~ $51,000 VND
+- 🚀 **看多核心理由**：VinFast 電動車擴產帶動越南本土車用塑膠零部件與開模配件需求，政府政策強力支持在地製造業升級。
+- ⚠️ **潛在風險提示**：資本支出較高，短線財務槓桿調整期。
+- 🛒 **建議操作策略**：採區間底部波段操作策略。
+---
+⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
+                    """,
+                    "🛢️ 原物料與匯率 (Commodities/FX)": """
+---
+### 📈 1. 美金/越南盾匯率 (USD/VND)
+- 🎯 **預估未來 3~6 個月目標走勢**：**+0.5% ~ +1.5% (微幅震盪升值)**
+- 💡 **預估目標區間**：$24,700 ~ $25,200 VND
+- 🚀 **觀測核心理由**：越南國家銀行 (SBV) 貨幣政策維持穩健，出口外匯持續淨流入，平陽廠區外匯結算與原料進口成本極度平穩。
+- ⚠️ **潛在風險提示**：美聯儲降息路徑若延後可能造成美元短線偏強。
+- 🛒 **建議操作策略**：建議財務部門採滾動式 1~2 個月外匯避險合約。
+
+### 📈 2. 塑膠樹脂原料 (PP/ABS/PC - 原油聯動 CL=F)
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+5.0% ~ +8.0%**
+- 💡 **預估原油目標區間**：$75.0 ~ $78.5 USD
+- 🚀 **觀測核心理由**：東南亞旺季拉貨力道啟動，塑膠射出樹脂原料價格微幅墊高。
+- ⚠️ **潛在風險提示**：地緣政治事件衝擊油價短期飆升。
+- 🛒 **建議操作策略**：採購部門宜在原油拉回 $70 以下時提前備妥 2 個月 PP 原料庫存。
+---
+⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
+                    """,
                     "🇹🇼 台灣 (Taiwan)": """
 ---
 ### 📈 1. 台積電 (2330.TW)
 - 🎯 **預估未來 3~6 個月目標漲幅**：**+12.5% ~ +18.0%**
 - 💡 **預估目標價範圍**：$2,750 ~ $2,900 TWD
-- 🚀 **看多核心理由**：AI 先進封裝 (CoWoS) 產能持續供不應求，2nm 先進製程定價權極高，全年營收成長預期樂觀。
-- ⚠️ **潛在風險提示**：地緣政治議題影響外資短線買盤，美股科技股回檔修正壓力。
+- 🚀 **看多核心理由**：AI 先進封裝 (CoWoS) 產能持續供不應求，2nm 先進製程定價權極高。
+- ⚠️ **潛在風險提示**：地緣政治議題影響外資短線買盤。
 - 🛒 **建議操作策略**：建議於 20 日均線附近採逢低分批定期定額佈局。
-
-### 📈 2. 台光電 (2383.TW)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+15.0% ~ +22.0%**
-- 💡 **預估目標價範圍**：$6,300 ~ $6,700 TWD
-- 🚀 **看多核心理由**：AI 伺服器高階銅箔基板 (CCL) 獨占率高，Blackwell 晶片出貨量產直接帶動平均單價 (ASP) 提升。
-- ⚠️ **潛在風險提示**：高檔區間震盪較大，短線籌碼面法人工減碼。
-- 🛒 **建議操作策略**：待突破前高區間拉回拉回支撐不破時進場。
+---
+⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
+                    """,
+                    "🇨🇳 中國/香港 (China/HK)": """
+---
+### 📈 1. 騰訊控股 (0700.HK)
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+14.0% ~ +20.0%**
+- 💡 **預估目標價範圍**：$435 ~ $460 HKD
+- 🚀 **看多核心理由**：港股科技龍頭，公司持續進行大規模庫藏股回購註銷，AI 混元大模型落地微信生態圈。
+- ⚠️ **潛在風險提示**：整體港股大盤受美中貿易關係與內需消費數據影響較大。
+- 🛒 **建議操作策略**：逢大盤回檔至 50 日均線時分批建立中長線部位。
 ---
 ⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
                     """,
@@ -199,26 +240,19 @@ def render_dashboard(selected_stock_market):
 ### 📈 1. 輝達 NVIDIA (NVDA)
 - 🎯 **預估未來 3~6 個月目標漲幅**：**+18.0% ~ +25.0%**
 - 💡 **預估目標價範圍**：$150 ~ $165 USD
-- 🚀 **看多核心理由**：Blackwell 晶片全數被科技巨頭 (CSP) 預訂一空，資料中心 Capex 支出持續強勁推升毛利率。
+- 🚀 **看多核心理由**：Blackwell 晶片全數被科技巨頭預訂一空，資料中心支出強勁。
 - ⚠️ **潛在風險提示**：反壟斷調查疑慮與產能供應鏈產能瓶頸。
 - 🛒 **建議操作策略**：回檔季線或整數關卡時建立長線基本部位。
-
-### 📈 2. 蘋果 Apple (AAPL)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+10.0% ~ +15.0%**
-- 💡 **預估目標價範圍**：$245 ~ $260 USD
-- 🚀 **看多核心理由**：Apple Intelligence 終端 AI 應用推動全球 iPhone 巨大換機潮，服務業收續費穩健增長。
-- ⚠️ **潛在風險提示**：中國市場手機競爭加劇，專利訴訟成本。
-- 🛒 **建議操作策略**：新機發表後觀望拉回點分批進場。
 ---
 ⚠️ *以上為 AI 大數據演算與產業趨勢預測，不構成任何直接投資建議，投資請謹慎評估。*
                     """
                 }
                 default_pred = mock_predictions.get(selected_stock_market, """
 ---
-### 📈 1. 代表性龍頭個股 (市場主軸)
-- 🎯 **預估未來 3~6 個月目標漲幅**：**+10.0% ~ +16.0%**
-- 💡 **預估目標價範圍**：依各股當前價位微幅溢價 15%
-- 🚀 **看多核心理由**：受惠全球供應鏈復甦與訂單能見度延伸至下半年。
+### 📈 1. 越南在地核心產業龍頭 (如 FPT / 和發集團)
+- 🎯 **預估未來 3~6 個月目標漲幅**：**+12.0% ~ +18.0%**
+- 💡 **預估目標價範圍**：依當前價位溢價 15%~20%
+- 🚀 **看多核心理由**：受惠全球供應鏈移轉越南平陽與北寧廠區之爆發性訂單。
 - ⚠️ **潛在風險提示**：國際匯率波動與大盤高檔整理。
 - 🛒 **建議操作策略**：採定額分批佈局策略。
 ---
@@ -254,7 +288,7 @@ def render_dashboard(selected_stock_market):
                     目前的市場觀察標的數據如下：[{stocks_summary}]
                     最新財經新聞頭條包括：[{news_titles}]
                     
-                    請用最淺顯易懂、完全不講艱深股票術語的語言，回覆以下4點：
+                    請用最淺顯易懂、完全不講艱深股票術語的語言，回覆以下4點（請務必加入對我們越南平陽廠與台灣總部營運的具體建議）：
                     1. 景氣：{selected_stock_market} 當前總體經濟與製造業景氣白話說明。
                     2. 動態：結合近期頭條新聞 [{news_titles}] 與個股表現進行解析。
                     3. 影響：此市場情勢對我們集團（台灣總部/東莞廠/越南平陽廠）的具體衝擊或紅利。
@@ -265,11 +299,11 @@ def render_dashboard(selected_stock_market):
                 
                 except Exception:
                     mock_responses = {
+                        "🇻🇳 越南 (Vietnam)": "1. **景氣**：全球供應鏈移轉（China+1）最大受惠國，外商直接投資 (FDI) 創歷史新高，平陽與北寧工業區租用率爆滿。\n2. **動態**：胡志明指數維持多頭格局，FPT 科技與和發集團等工業指標股買盤強勁。\n3. **影響**：我們越南平陽廠區稼動率維持高檔，越南在地企業訂單強勁，出口美歐享有極高關稅優勢。\n4. **建議**：加快平陽廠自動化設備與開模產能擴建，優先對接越南在地大型客戶需求。",
+                        "🛢️ 原物料與匯率 (Commodities/FX)": "1. **景氣**：國際原油區間震盪，塑膠樹脂 (PP/ABS/PC) 原料價格呈現溫和墊高趨勢。\n2. **動態**：美金對越南盾 (USD/VND) 匯率維持在 24,850 左右波段平穩，無極端貶值風險。\n3. **影響**：塑膠射出成本受原料微幅上升影響，但匯率穩定非常有利平陽廠出口結算與薪資控管。\n4. **建議**：建議採購部門提前鎖定 1~2 個月的 PP 塑膠原料庫存以規避價格波段漲幅。",
                         "🇹🇼 台灣 (Taiwan)": "1. **景氣**：AI 伺服器與半導體出口極度強勁，台灣電子製造業排單熱絡。\n2. **動態**：台積電等高階晶片產能供不應求，帶動整體供應鏈資金持續流入。\n3. **影響**：有利台灣總部研發開模與高階訂單之利潤率。\n4. **建議**：維持台灣總部高階產能擴建，抓住 AI 升級紅利。",
                         "🇨🇳 中國/香港 (China/HK)": "1. **景氣**：內需消費與房地產仍在打底階段，但政府持續釋放降息與刺激政策。\n2. **動態**：傳統龍頭如茅台維持高現金流，港股科技股則依賴庫藏股實施保護股價。\n3. **影響**：東莞廠區受內需放緩影響，應優先對接外銷與高單價車用訂單。\n4. **建議**：東莞廠適度收緊信用期，優化應收帳款管理。",
-                        "🇺🇸 美國 (USA)": "1. **景氣**：軟著陸預期強烈，終端消費力道維持韌性，AI 資本支出大增。\n2. **動態**：輝達與蘋果引領美股科技板塊，Edge AI 裝置迎來換機潮。\n3. **影響**：北美客戶拉貨動能強勁，帶動集團全球廠區訂單總量。\n4. **建議**：優先滿足美系客戶的產能排程，穩固高毛利客戶關係。",
-                        "🇻🇳 越南 (Vietnam)": "1. **景氣**：全球供應鏈轉移（China+1）最大受惠國，外商直接投資 (FDI) 創高。\n2. **動態**：胡志明指數區間整理，FPT 等在地科技與物流板塊買盤穩定。\n3. **影響**：平陽廠區稼動率維持高檔，出口至美歐享受低關稅優勢。\n4. **建議**：加快越南平陽廠的自動化設備升級，降低人工成本上漲衝擊。",
-                        "🛢️ 原物料與匯率 (Commodities/FX)": "1. **景氣**：國際原油價格波段震盪，帶動塑膠樹脂 (PP/ABS/PC) 原料價格微幅波動。\n2. **動態**：美金對越南盾與台幣匯率相對平穩，有利出口結算。\n3. **影響**：塑膠射出成本受原料影響小幅上升，但匯率無巨大貶值風險。\n4. **建議**：建議採購部門提前鎖定 1~2 個月的 PP 原料庫存以規避漲價。"
+                        "🇺🇸 美國 (USA)": "1. **景氣**：軟著陸預期強烈，終端消費力道維持韌性，AI 資本支出大增。\n2. **動態**：輝達與蘋果引領美股科技板塊，Edge AI 裝置迎來換機潮。\n3. **影響**：北美客戶拉貨動能強勁，帶動集團全球廠區訂單總量。\n4. **建議**：優先滿足美系客戶的產能排程，穩固高毛利客戶關係。"
                     }
                     default_msg = mock_responses.get(selected_stock_market, "1. **景氣**：該區域市場整體表現平穩。\n2. **動態**：龍頭個股買盤持續。\n3. **影響**：集團產能維持高稼動率。\n4. **建議**：保持穩健資本支出。")
                     st.markdown(f"#### 📊 AI 區域市場白話摘要：\n{default_msg}")
@@ -277,11 +311,11 @@ def render_dashboard(selected_stock_market):
     with col_add_stock:
         st.markdown("### 🛠️ 管理自訂觀察關注標的")
         if "val_stock_name" not in st.session_state: 
-            st.session_state["val_stock_name"] = "日月光投控"
+            st.session_state["val_stock_name"] = "FPT Group"
         if "val_stock_price" not in st.session_state: 
-            st.session_state["val_stock_price"] = 663.00
+            st.session_state["val_stock_price"] = 132000.00
         if "val_stock_change" not in st.session_state: 
-            st.session_state["val_stock_change"] = "+25.00 (+3.92%)"
+            st.session_state["val_stock_change"] = "+1500.00 (+1.15%)"
 
         def fetch_stock_info_callback():
             symbol = st.session_state.get("input_stock_ticker", "").strip().upper()
@@ -291,19 +325,12 @@ def render_dashboard(selected_stock_market):
             if symbol and HAS_YFINANCE:
                 try:
                     ticker = yf.Ticker(symbol)
-                    
-                    # 1. 抓取 1 天 1 分鐘級別盤中資料
                     intraday = ticker.history(period="1d", interval="1m")
-                    
-                    # 2. 抓取昨收價
                     prev_price = None
                     try:
                         prev_price = float(ticker.fast_info.previous_close)
                     except Exception:
-                        try:
-                            prev_price = float(ticker.info.get("regularMarketPreviousClose"))
-                        except Exception:
-                            pass
+                        pass
 
                     latest_price = None
                     if not intraday.empty:
@@ -347,12 +374,12 @@ def render_dashboard(selected_stock_market):
                     st.toast(f"❌ 抓取失敗: {e}", icon="❌")
 
         with st.expander("➕ 新增觀察個股/指數", expanded=True):
-            s_market = st.selectbox("選擇股票市場區域", ["🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"], key="input_stock_market")
-            s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / 3711 / NVDA)", value=st.session_state.get("input_stock_ticker", "3711.TW"), key="input_stock_ticker", on_change=fetch_stock_info_callback)
+            s_market = st.selectbox("選擇股票市場區域", ["🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)"], key="input_stock_market")
+            s_ticker = st.text_input("Yahoo 財經代碼 (如 FPT.HM / HPG.HM / 2881.TW)", value=st.session_state.get("input_stock_ticker", "FPT.HM"), key="input_stock_ticker", on_change=fetch_stock_info_callback)
             st.button("🔍 抓取最新股價與名稱", on_click=fetch_stock_info_callback, use_container_width=True)
-            s_name = st.text_input("名稱 (如 日月光投控)", value=st.session_state["val_stock_name"], key="input_stock_name")
+            s_name = st.text_input("名稱 (如 FPT 科技)", value=st.session_state["val_stock_name"], key="input_stock_name")
             s_price = st.number_input("最新價格", min_value=0.0, value=st.session_state["val_stock_price"], step=0.5, format="%.2f", key="input_stock_price")
-            s_change = st.text_input("漲跌幅度 (如 +0.50 (+2.10%))", value=st.session_state["val_stock_change"], key="input_stock_change")
+            s_change = st.text_input("漲跌幅度 (如 +1500.00 (+1.15%))", value=st.session_state["val_stock_change"], key="input_stock_change")
 
             if st.button("✅ 新增至該市場清單", type="primary", key="btn_add_stock_to_list"):
                 if s_ticker and s_name:
