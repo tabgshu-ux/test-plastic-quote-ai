@@ -2,9 +2,10 @@ import os
 import streamlit as st
 import google.generativeai as genai
 
-# 匯入各個獨立模組
+# 匯入各個獨立模組（包含新建的 erp_dashboard）
 from modules import (
     executive_dashboard,
+    erp_dashboard,
     sales_quotation,
     employee_management,
     payroll_management,
@@ -138,6 +139,7 @@ if user_role in ["executive", "hr", "finance"]:
     menu_options = []
     if user_role in ["executive"]:
         menu_options.append("📈 全球股市與 AI 戰情室")
+        menu_options.append("📊 企業 ERP 營運與財務 KPI")  # 💡 獨立分頁新增於此！
         menu_options.append("📊 業務報價總覽與資料庫")
         menu_options.append("🏢 跨國多廠區/公司設定")
 
@@ -158,7 +160,7 @@ if user_role in ["executive", "hr", "finance"]:
 
     st.sidebar.divider()
 
-    # 3. 若為高階主管，在左側額外顯示股市區域篩選
+    # 3. 若為高階主管且選擇「全球股市與 AI 戰情室」，在左側額外顯示股市區域篩選
     selected_stock_market = "🌐 全部市場 (All Markets)"
     if user_role == "executive" and selected_menu == "📈 全球股市與 AI 戰情室":
         st.sidebar.subheader("📈 股市市場選擇")
@@ -180,6 +182,8 @@ if user_role in ["executive", "hr", "finance"]:
 
     if selected_menu == "📈 全球股市與 AI 戰情室":
         executive_dashboard.render_dashboard(selected_stock_market)
+    elif selected_menu == "📊 企業 ERP 營運與財務 KPI":
+        erp_dashboard.render_erp_dashboard()  # 💡 呼叫獨立 ERP 看板！
     elif selected_menu == "📊 業務報價總覽與資料庫":
         sales_quotation.render_sales_overview()
     elif selected_menu == "🏢 跨國多廠區/公司設定":
