@@ -1,7 +1,14 @@
 import re
 import math
+import io
 import streamlit as st
 import google.generativeai as genai
+
+# 匯入 ReportLab 產生標準商務 PDF
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 def parse_dimensions_and_type(prompt_text):
     """精準動態解析尺寸與產品類型"""
@@ -20,12 +27,12 @@ def parse_dimensions_and_type(prompt_text):
         width = float(nums[1])
 
     if "鞋" in prompt_text or "底" in prompt_text or "橡膠" in prompt_text:
-        prod_type = "👟 橡膠大底 / 鞋底 (Rubber Outsole Only)"
-        material = "天然橡膠 (NR) / 合成橡膠 (SBR/EVA)"
+        prod_type = "Rubber Outsole Only"
+        material = "Natural Rubber (NR) / Synthetic Rubber (SBR)"
         clamp_ton = math.ceil((length * width) * 0.15)
     else:
-        prod_type = "📦 射出成型件 (Injection Molded Part)"
-        material = "PP / ABS / PC 工程塑膠"
+        prod_type = "Injection Molded Part"
+        material = "PP / ABS / PC Engineering Plastics"
         clamp_ton = math.ceil((length * width) * 0.2)
 
     vol_cm3 = length * width * height
@@ -40,8 +47,100 @@ def parse_dimensions_and_type(prompt_text):
         "clamp_ton": max(clamp_ton, 120)
     }
 
+def generate_pdf_quotation(user_prompt, spec):
+    """使用 ReportLab 動態繪製商務 PDF 報價單」"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    story = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        textColor=colors.HexColor("#1e293b"),
+        alignment=1,
+        spaceAfter=12
+    )
+
+    h2_style = ParagraphStyle(
+        'H2Style',
+        parent=styles['Heading2'],
+        fontSize=12,
+        textColor=colors.HexColor("#0284c7"),
+        spaceBefore=10,
+        spaceAfter=6
+    )
+
+    body_style = ParagraphStyle(
+        'BodyStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor("#334155"),
+        spaceAfter=6
+    )
+
+    # 抬頭與公司資訊
+    story.append(Paragraph("<b>GLOBAL INJECTION MOLDING CORP.</b>", title_style))
+    story.append(Paragraph("<font size=10 color='#64748b'>Official Preliminary Quotation & Technical Evaluation</font>", ParagraphStyle('SubTitle', alignment=1)))
+    story.append(Spacer(1, 15))
+
+    # 客戶與產品規格表格
+    info_data = [
+        ["Date:", "2026-03-24", "Quotation No:", f"QT-{spec['clamp_ton']}-2026"],
+        ["Customer Req:", user_prompt[:30] + "...", "Product Type:", spec['prod_type']],
+        ["Dimensions:", f"{spec['length']} x {spec['width']} x {spec['height']} cm", "Volume:", f"{spec['volume_cm3']} cm3"],
+        ["Material:", spec['material'], "Clamp Force:", f"{spec['clamp_ton']} Tons"]
+    ]
+    t_info = Table(info_data, colWidths=[90, 180, 90, 180])
+    t_info.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f8fafc")),
+        ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#334155")),
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#cbd5e1")),
+    ]))
+    story.append(t_info)
+    story.append(Spacer(1, 15))
+
+    # 費用明細表格
+    story.append(Paragraph("<b>Cost Breakdown & Pricing Structure</b>", h2_style))
+    cost_data = [
+        ["Item Description", "Specification / Details", "Est. Cost (USD)"],
+        ["Steel Mold Cost", "1 Mold / 2 Cavities (CNC Deep Groove Engraving)", "$7,200.00 USD"],
+        ["Unit Price (MOQ 3,000 Pairs)", "Rubber Injection / Hot Press Molding", "$4.85 USD / Pair"],
+        ["Unit Price (MOQ 10,000 Pairs)", "Volume Discount Price", "$4.20 USD / Pair"],
+        ["3D Rapid Prototyping", "TPU 85A Flexible Material Printing", "INCLUDED (FREE)"]
+    ]
+    t_cost = Table(cost_data, colWidths=[180, 240, 120])
+    t_cost.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#0284c7")),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('ALIGN', (2,0), (2,-1), 'RIGHT'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#f1f5f9")]),
+    ]))
+    story.append(t_cost)
+    story.append(Spacer(1, 15))
+
+    # 條款與說明
+    story.append(Paragraph("<b>Terms & Production Notes</b>", h2_style))
+    story.append(Paragraph("1. Mold Development Lead Time: 25 Days (Includes T1 Trial & Water Drainage Testing).", body_style))
+    story.append(Paragraph("2. Mass Production Lead Time: 15 Days after T1 sample confirmation.", body_style))
+    story.append(Paragraph("3. Payment Terms: 50% Mold Deposit, 50% upon T1 Sample Approval.", body_style))
+    story.append(Spacer(1, 20))
+
+    story.append(Paragraph("<font color='#94a3b8' size=8>This is an AI-generated official preliminary quotation valid for 30 days. Approved by Global Injection Molding Corp.</font>", ParagraphStyle('Footer', alignment=1)))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
 def draw_2d_outsole_cad(length, width, height):
-    """繪製 2D 喬丹 10 代排水溝槽與尺寸線 CAD SVG"""
+    """繪製 2D 平面 CAD 圖"""
     return f"""
     <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
@@ -66,7 +165,7 @@ def draw_2d_outsole_cad(length, width, height):
     """
 
 def draw_3d_outsole_render(length, width, height):
-    """繪製 3D 橡膠質感立體渲染視角 SVG"""
+    """繪製 3D 立體渲染視角 SVG"""
     return f"""
     <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
@@ -91,19 +190,18 @@ def draw_3d_outsole_render(length, width, height):
     """
 
 def generate_mock_stl_content(spec):
-    """產生標準 3D 列印 STL 標頭資料內容"""
-    return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
-  facet normal 0.000000e+00 0.000000e+00 1.000000e+00
+    """產生 3D 列印 STL 檔案內容"""
+    return f"""solid Outsole_Jordan10
+  facet normal 0 0 1
     outer loop
-      vertex 0.000000e+00 0.000000e+00 {spec['height']}
-      vertex {spec['length']}00000e+01 0.000000e+00 {spec['height']}
-      vertex {spec['length']}00000e+01 {spec['width']}00000e+01 {spec['height']}
+      vertex 0 0 {spec['height']}
+      vertex {spec['length']} 0 {spec['height']}
+      vertex {spec['length']} {spec['width']} {spec['height']}
     endloop
   endfacet
 endsolid Outsole_Jordan10"""
 
 def render_sales_overview():
-    """業務報價總覽後台"""
     st.subheader("📊 業務報價總覽與資料庫中心")
     st.caption("即時追蹤業務同仁提交之 AI 自動報價單、客戶評估紀錄與模具開發預算。")
     
@@ -118,9 +216,8 @@ def render_sales_overview():
         st.write(f"• **產品需求**: {q['product']} | **建議材質**: {q['material']}")
 
 def render_sales_frontend():
-    """業務前台 (四階段流程：2D概念圖 -> 3D渲染 -> 3D列印打樣 -> 報價單下載)"""
     st.subheader("💼 AI 業務即時報價與 2D/3D 設計圖/3D列印串接系統")
-    st.caption("輸入客戶規格需求，系統自動執行【2D 平面圖 $\\rightarrow$ 3D 渲染圖 $\\rightarrow$ 3D 列印打樣 $\\rightarrow$ 正式報價單下載】完整流程。")
+    st.caption("輸入客戶規格需求，系統自動執行【2D 平面圖 $\\rightarrow$ 3D 渲染圖 $\\rightarrow$ 3D 列印打樣 $\\rightarrow$ 正式 PDF 報價單下載】完整流程。")
 
     col_input, col_preview = st.columns([1, 1])
 
@@ -155,12 +252,8 @@ def render_sales_frontend():
 
     st.divider()
 
-    # ----------------------------------------------------
-    # 🖨️ 新增：階段三：3D 列印機即時串接與模型匯出
-    # ----------------------------------------------------
+    # 3D 列印機串接
     st.markdown("### 🖨️ 階段三：樣品快速打樣 — 3D 列印機即時串接")
-    st.caption("將 3D 模型自動匯出為 3D 列印通用檔 (.STL)，並可直接發送指令至廠區 3D 列印機進行 TPU 軟膠快速打樣：")
-
     col_print1, col_print2 = st.columns([1, 1])
     
     with col_print1:
@@ -174,69 +267,31 @@ def render_sales_frontend():
             type="primary",
             key="btn_download_stl"
         )
-        st.caption("適用於 Cura, PrusaSlicer, Bambu Studio 等所有 3D 列印切片軟體。")
 
     with col_print2:
         st.markdown("#### 🖨️ 2. 網路連線廠區 3D 列印機")
         printer_site = st.selectbox("選擇列印打樣廠區", ["🇻🇳 越南平陽廠樣品室 (TPU 85A 軟膠機)", "🇹🇼 台灣總部研發中心 (光固化/TPU)", "🇨🇳 中國東莞廠工程部"], key="select_3d_printer")
         
         if st.button("🚀 即時發送 G-Code 至 3D 列印機啟動打樣", key="btn_send_3d_printer"):
-            with st.spinner(f"正在透過 OctoPrint API 連線 [{printer_site}] 機台切換參數..."):
-                st.success(f"✅ 已成功將【喬丹10代鞋底樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
-                st.info("⏱️ **估算列印打樣時間**: 3 小時 20 分鐘 | **使用材料**: TPU 柔軟橡膠線材 (~140g)")
+            st.success(f"✅ 已成功將【喬丹10代鞋底樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
 
     st.divider()
 
-    # ----------------------------------------------------
-    # 階段四：生成正式報價單與一鍵下載功能
-    # ----------------------------------------------------
-    st.markdown("### 📄 階段四：產出正式業務預估報價單與下載")
+    # 📄 階段四：PDF 正式報價單生成與下載
+    st.markdown("### 📄 階段四：產出正式 PDF 業務預估報價單")
     
-    if st.button("🚀 生成正式預估報價單與下載檔", type="primary", key="btn_gen_quote_doc"):
-        with st.spinner("Gemini AI 正在核算開模成本與單價分析..."):
-            quote_content = f"""==================================================
-        環球塑膠射出工業股份有限公司
-        GLOBAL INJECTION MOLDING CORP.
-        正式業務預估報價單 (PRELIMINARY QUOTATION)
-==================================================
-
-日    期：2026-03-24
-客戶需求：{user_prompt}
-產品類型：{spec['prod_type']}
-精算規格：長 {spec['length']} cm × 寬 {spec['width']} cm × 厚 {spec['height']} cm (體積 {spec['volume_cm3']} cm³)
-建議材質：{spec['material']}
-建議設備：{spec['clamp_ton']} 噸 橡膠熱壓/射出成型機
-打樣測試：已同步匯出 3D 列印打樣檔 (.STL) 進行 TPU 軟膠快速驗證
-
---------------------------------------------------
-💰 費用與成本精算明細：
---------------------------------------------------
-1. 鋼模開發費用 (Mold Cost)：
-   • 估算金額：$7,200.00 USD (1模2穴，鋼材 NAK80)
-   • 加工說明：含喬丹 10 代深溝槽 CNC 精雕與 CNC 排水紋路刻字
-
-2. 產品量產單價 (Unit Price)：
-   • MOQ 3,000 雙：$4.85 USD / 雙
-   • MOQ 10,000 雙：$4.20 USD / 雙
-
-3. 開模週期與交期 (Lead Time)：
-   • 模具開發時間：25 天 (含 T1 試模與防滑排水測試)
-   • 批量生產週期：15 天
-
---------------------------------------------------
-⚠️ 備註與說明：
-• 本報價單由 AI 根據材料成本與機台噸數自動精算產出。
-• 模具開模前需再由工程部進行 3D DFM 模流分析確認。
-=================================================="""
-
-            st.markdown("#### 📄 報價單預覽：")
-            st.code(quote_content, language="markdown")
-
+    if st.button("🚀 生成正式 PDF 業務預估報價單", type="primary", key="btn_gen_quote_doc"):
+        with st.spinner("ReportLab 正在繪製表格化 PDF 報價單..."):
+            pdf_bytes = generate_pdf_quotation(user_prompt, spec)
+            
+            st.success("✅ PDF 報價單已成功產出！")
+            
+            # 提供下 PDF 按鈕
             st.download_button(
-                label="📥 點擊下載正式業務預估報價單 (.txt / .doc)",
-                data=quote_content,
-                file_name=f"Quotation_{spec['length']}x{spec['width']}x{spec['height']}.txt",
-                mime="text/plain",
+                label="📥 點擊下載正式商務 PDF 報價單 (.pdf)",
+                data=pdf_bytes,
+                file_name=f"Quotation_Global_Injection_{spec['length']}x{spec['width']}x{spec['height']}.pdf",
+                mime="application/pdf",
                 type="primary",
-                key="btn_download_quote_file"
+                key="btn_download_pdf_file"
             )
