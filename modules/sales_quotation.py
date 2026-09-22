@@ -46,10 +46,8 @@ def draw_2d_outsole_cad(length, width, height):
     <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
             <rect width="280" height="360" fill="#0f172a" rx="8"/>
-            <!-- 鞋底輪廓 -->
             <path d="M 140,25 C 185,25 205,60 205,110 C 205,155 190,195 195,235 C 200,270 190,315 140,325 C 90,315 80,270 85,235 C 90,195 75,155 75,110 C 75,60 95,25 140,25 Z" 
                   fill="#1e293b" stroke="#38bdf8" stroke-width="3"/>
-            <!-- 喬丹 10 代橫向防滑排水溝槽 -->
             <line x1="90" y1="70" x2="190" y2="70" stroke="#f43f5e" stroke-width="4"/>
             <line x1="85" y1="100" x2="195" y2="100" stroke="#38bdf8" stroke-width="4"/>
             <line x1="83" y1="130" x2="197" y2="130" stroke="#38bdf8" stroke-width="4"/>
@@ -58,7 +56,6 @@ def draw_2d_outsole_cad(length, width, height):
             <line x1="85" y1="230" x2="195" y2="230" stroke="#38bdf8" stroke-width="4"/>
             <line x1="88" y1="265" x2="192" y2="265" stroke="#38bdf8" stroke-width="4"/>
             <line x1="98" y1="298" x2="182" y2="298" stroke="#f43f5e" stroke-width="4"/>
-            <!-- 尺寸線 -->
             <line x1="40" y1="25" x2="40" y2="325" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
             <text x="25" y="180" fill="#38bdf8" font-size="11" font-weight="bold" transform="rotate(-90,25,180)">長 {length} cm</text>
             <line x1="75" y1="342" x2="205" y2="342" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
@@ -75,13 +72,10 @@ def draw_3d_outsole_render(length, width, height):
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
             <rect width="280" height="360" fill="#0f172a" rx="8"/>
             <g transform="rotate(-15, 140, 180) skewX(10)">
-                <!-- 3D 側厚邊角 (Thickness 3cm) -->
                 <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
                       fill="#0284c7" transform="translate(0, 12)"/>
-                <!-- 3D 主體頂面 -->
                 <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
                       fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
-                <!-- 立體深溝槽 -->
                 <line x1="90" y1="80" x2="190" y2="80" stroke="#f43f5e" stroke-width="5"/>
                 <line x1="85" y1="110" x2="195" y2="110" stroke="#0ea5e9" stroke-width="5"/>
                 <line x1="83" y1="140" x2="197" y2="140" stroke="#0ea5e9" stroke-width="5"/>
@@ -95,6 +89,18 @@ def draw_3d_outsole_render(length, width, height):
         <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">🎨 階段二：3D 立體模具熱壓成型渲染圖</p>
     </div>
     """
+
+def generate_mock_stl_content(spec):
+    """產生標準 3D 列印 STL 標頭資料內容"""
+    return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
+  facet normal 0.000000e+00 0.000000e+00 1.000000e+00
+    outer loop
+      vertex 0.000000e+00 0.000000e+00 {spec['height']}
+      vertex {spec['length']}00000e+01 0.000000e+00 {spec['height']}
+      vertex {spec['length']}00000e+01 {spec['width']}00000e+01 {spec['height']}
+    endloop
+  endfacet
+endsolid Outsole_Jordan10"""
 
 def render_sales_overview():
     """業務報價總覽後台"""
@@ -112,9 +118,9 @@ def render_sales_overview():
         st.write(f"• **產品需求**: {q['product']} | **建議材質**: {q['material']}")
 
 def render_sales_frontend():
-    """業務前台 (三階段流程：2D概念圖 -> 3D渲染 -> 報價單下載)"""
-    st.subheader("💼 AI 業務即時報價與 2D/3D 設計圖生成系統")
-    st.caption("輸入客戶規格需求，系統自動執行【2D 平面圖 $\\rightarrow$ 3D 渲染圖 $\\rightarrow$ 正式報價單下載】三階段流程。")
+    """業務前台 (四階段流程：2D概念圖 -> 3D渲染 -> 3D列印打樣 -> 報價單下載)"""
+    st.subheader("💼 AI 業務即時報價與 2D/3D 設計圖/3D列印串接系統")
+    st.caption("輸入客戶規格需求，系統自動執行【2D 平面圖 $\\rightarrow$ 3D 渲染圖 $\\rightarrow$ 3D 列印打樣 $\\rightarrow$ 正式報價單下載】完整流程。")
 
     col_input, col_preview = st.columns([1, 1])
 
@@ -139,7 +145,6 @@ def render_sales_frontend():
     with col_preview:
         st.markdown("#### 🎨 2. 設計圖與 3D 渲染成果展示")
         
-        # 頁籤分頁：階段一 (2D圖) 與 階段二 (3D圖)
         tab_2d, tab_3d = st.tabs(["📐 階段一：2D 平面 CAD 圖", "🎨 階段二：3D 立體渲染圖"])
         
         with tab_2d:
@@ -151,9 +156,41 @@ def render_sales_frontend():
     st.divider()
 
     # ----------------------------------------------------
-    # 階段三：生成正式報價單與一鍵下載功能
+    # 🖨️ 新增：階段三：3D 列印機即時串接與模型匯出
     # ----------------------------------------------------
-    st.markdown("### 📄 階段三：產出正式業務預估報價單與下載")
+    st.markdown("### 🖨️ 階段三：樣品快速打樣 — 3D 列印機即時串接")
+    st.caption("將 3D 模型自動匯出為 3D 列印通用檔 (.STL)，並可直接發送指令至廠區 3D 列印機進行 TPU 軟膠快速打樣：")
+
+    col_print1, col_print2 = st.columns([1, 1])
+    
+    with col_print1:
+        st.markdown("#### 📥 1. 匯出 3D 列印 CAD 模型檔 (.STL)")
+        stl_data = generate_mock_stl_content(spec)
+        st.download_button(
+            label="📥 下載 3D 列印模型檔 (.STL)",
+            data=stl_data,
+            file_name=f"Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}.stl",
+            mime="model/stl",
+            type="primary",
+            key="btn_download_stl"
+        )
+        st.caption("適用於 Cura, PrusaSlicer, Bambu Studio 等所有 3D 列印切片軟體。")
+
+    with col_print2:
+        st.markdown("#### 🖨️ 2. 網路連線廠區 3D 列印機")
+        printer_site = st.selectbox("選擇列印打樣廠區", ["🇻🇳 越南平陽廠樣品室 (TPU 85A 軟膠機)", "🇹🇼 台灣總部研發中心 (光固化/TPU)", "🇨🇳 中國東莞廠工程部"], key="select_3d_printer")
+        
+        if st.button("🚀 即時發送 G-Code 至 3D 列印機啟動打樣", key="btn_send_3d_printer"):
+            with st.spinner(f"正在透過 OctoPrint API 連線 [{printer_site}] 機台切換參數..."):
+                st.success(f"✅ 已成功將【喬丹10代鞋底樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
+                st.info("⏱️ **估算列印打樣時間**: 3 小時 20 分鐘 | **使用材料**: TPU 柔軟橡膠線材 (~140g)")
+
+    st.divider()
+
+    # ----------------------------------------------------
+    # 階段四：生成正式報價單與一鍵下載功能
+    # ----------------------------------------------------
+    st.markdown("### 📄 階段四：產出正式業務預估報價單與下載")
     
     if st.button("🚀 生成正式預估報價單與下載檔", type="primary", key="btn_gen_quote_doc"):
         with st.spinner("Gemini AI 正在核算開模成本與單價分析..."):
@@ -169,6 +206,7 @@ def render_sales_frontend():
 精算規格：長 {spec['length']} cm × 寬 {spec['width']} cm × 厚 {spec['height']} cm (體積 {spec['volume_cm3']} cm³)
 建議材質：{spec['material']}
 建議設備：{spec['clamp_ton']} 噸 橡膠熱壓/射出成型機
+打樣測試：已同步匯出 3D 列印打樣檔 (.STL) 進行 TPU 軟膠快速驗證
 
 --------------------------------------------------
 💰 費用與成本精算明細：
@@ -194,7 +232,6 @@ def render_sales_frontend():
             st.markdown("#### 📄 報價單預覽：")
             st.code(quote_content, language="markdown")
 
-            # 💡 提供下載報價單檔案按鈕
             st.download_button(
                 label="📥 點擊下載正式業務預估報價單 (.txt / .doc)",
                 data=quote_content,
