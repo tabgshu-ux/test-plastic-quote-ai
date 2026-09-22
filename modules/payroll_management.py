@@ -63,3 +63,28 @@ def render_payroll_management():
     if st.session_state.monthly_payroll_db:
         pay_df = pd.DataFrame(st.session_state.monthly_payroll_db)
         st.dataframe(pay_df, use_container_width=True)
+
+# 未來串接網路打卡機 API 的處理邏輯範例
+def process_clock_in_data(employee_id, clock_in_time, shift_start_time="08:00:00", grace_minutes=5):
+    """
+    接受網路打卡機傳入的打卡資料並自動計算遲到時間
+    """
+    from datetime import datetime
+    
+    fmt = "%Y-%m-%d %H:%M:%S"
+    actual_time = datetime.strptime(clock_in_time, fmt)
+    scheduled_time = datetime.strptime(f"{actual_time.strftime('%Y-%m-%d')} {shift_start_time}", fmt)
+    
+    # 計算時間差（分鐘）
+    diff_minutes = (actual_time - scheduled_time).total_seconds() / 60
+    
+    # 扣除緩衝時間
+    late_minutes = max(0, int(diff_minutes - grace_minutes))
+    
+    return {
+        "employee_id": employee_id,
+        "clock_in": clock_in_time,
+        "is_late": late_minutes > 0,
+        "late_minutes": late_minutes,
+        "deduction_note": f"遲到 {late_minutes} 分鐘" if late_minutes > 0 else "正常出勤"
+    }
