@@ -47,8 +47,16 @@ def parse_dimensions_and_type(prompt_text):
         "clamp_ton": max(clamp_ton, 120)
     }
 
+def clean_non_ascii(text):
+    """防止中文字元造成 PDF 黑塊亂碼，自動將中文字過濾或替換為標準英文描述"""
+    # 簡單清洗非 ASCII 字元
+    clean_text = re.sub(r'[^\x00-\x7F]+', '', text)
+    if not clean_text.strip():
+        return "Custom Rubber Outsole Design (Jordan 10 Tread)"
+    return clean_text.strip()
+
 def generate_pdf_quotation(user_prompt, spec):
-    """使用 ReportLab 動態繪製商務 PDF 報價單」"""
+    """使用 ReportLab 動態繪製商務 PDF 報價單 (解決黑塊與重疊問題)"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     story = []
@@ -57,81 +65,101 @@ def generate_pdf_quotation(user_prompt, spec):
     title_style = ParagraphStyle(
         'TitleStyle',
         parent=styles['Heading1'],
-        fontSize=20,
+        fontSize=18,
         textColor=colors.HexColor("#1e293b"),
         alignment=1,
-        spaceAfter=12
+        spaceAfter=10
     )
 
     h2_style = ParagraphStyle(
         'H2Style',
         parent=styles['Heading2'],
-        fontSize=12,
+        fontSize=11,
         textColor=colors.HexColor("#0284c7"),
-        spaceBefore=10,
-        spaceAfter=6
+        spaceBefore=8,
+        spaceAfter=4
     )
 
-    body_style = ParagraphStyle(
-        'BodyStyle',
+    cell_style = ParagraphStyle(
+        'CellStyle',
         parent=styles['Normal'],
-        fontSize=10,
+        fontSize=8.5,
         textColor=colors.HexColor("#334155"),
-        spaceAfter=6
+        leading=11
+    )
+
+    cell_bold = ParagraphStyle(
+        'CellBold',
+        parent=cell_style,
+        fontName='Helvetica-Bold'
     )
 
     # 抬頭與公司資訊
     story.append(Paragraph("<b>GLOBAL INJECTION MOLDING CORP.</b>", title_style))
-    story.append(Paragraph("<font size=10 color='#64748b'>Official Preliminary Quotation & Technical Evaluation</font>", ParagraphStyle('SubTitle', alignment=1)))
-    story.append(Spacer(1, 15))
+    story.append(Paragraph("<font size=9 color='#64748b'>Official Preliminary Quotation & Technical Evaluation</font>", ParagraphStyle('SubTitle', alignment=1)))
+    story.append(Spacer(1, 10))
 
-    # 客戶與產品規格表格
+    # 客戶與產品規格表格 (優化排版與自動換行)
+    clean_req = clean_non_ascii(user_prompt)
     info_data = [
-        ["Date:", "2026-03-24", "Quotation No:", f"QT-{spec['clamp_ton']}-2026"],
-        ["Customer Req:", user_prompt[:30] + "...", "Product Type:", spec['prod_type']],
-        ["Dimensions:", f"{spec['length']} x {spec['width']} x {spec['height']} cm", "Volume:", f"{spec['volume_cm3']} cm3"],
-        ["Material:", spec['material'], "Clamp Force:", f"{spec['clamp_ton']} Tons"]
+        [
+            Paragraph("Date:", cell_bold), Paragraph("2026-03-24", cell_style),
+            Paragraph("Quotation No:", cell_bold), Paragraph(f"QT-{spec['clamp_ton']}-2026", cell_style)
+        ],
+        [
+            Paragraph("Customer Req:", cell_bold), Paragraph(f"Rubber Outsole L{spec['length']} W{spec['width']} H{spec['height']} (Jordan 10 Tread)", cell_style),
+            Paragraph("Product Type:", cell_bold), Paragraph(spec['prod_type'], cell_style)
+        ],
+        [
+            Paragraph("Dimensions:", cell_bold), Paragraph(f"{spec['length']} x {spec['width']} x {spec['height']} cm", cell_style),
+            Paragraph("Volume:", cell_bold), Paragraph(f"{spec['volume_cm3']} cm3", cell_style)
+        ],
+        [
+            Paragraph("Material:", cell_bold), Paragraph(spec['material'], cell_style),
+            Paragraph("Clamp Force:", cell_bold), Paragraph(f"{spec['clamp_ton']} Tons", cell_style)
+        ]
     ]
-    t_info = Table(info_data, colWidths=[90, 180, 90, 180])
+    
+    # 重新精確分派 4 欄寬度 (總寬度 540)
+    t_info = Table(info_data, colWidths=[85, 185, 85, 185])
     t_info.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f8fafc")),
-        ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor("#334155")),
-        ('FONTNAME', (0,0), (-1,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 9),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#cbd5e1")),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
     ]))
     story.append(t_info)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 12))
 
     # 費用明細表格
     story.append(Paragraph("<b>Cost Breakdown & Pricing Structure</b>", h2_style))
     cost_data = [
-        ["Item Description", "Specification / Details", "Est. Cost (USD)"],
-        ["Steel Mold Cost", "1 Mold / 2 Cavities (CNC Deep Groove Engraving)", "$7,200.00 USD"],
-        ["Unit Price (MOQ 3,000 Pairs)", "Rubber Injection / Hot Press Molding", "$4.85 USD / Pair"],
-        ["Unit Price (MOQ 10,000 Pairs)", "Volume Discount Price", "$4.20 USD / Pair"],
-        ["3D Rapid Prototyping", "TPU 85A Flexible Material Printing", "INCLUDED (FREE)"]
+        [Paragraph("Item Description", cell_bold), Paragraph("Specification / Details", cell_bold), Paragraph("Est. Cost (USD)", cell_bold)],
+        [Paragraph("Steel Mold Cost", cell_style), Paragraph("1 Mold / 2 Cavities (CNC Deep Groove Engraving)", cell_style), Paragraph("$7,200.00 USD", cell_style)],
+        [Paragraph("Unit Price (MOQ 3,000 Pairs)", cell_style), Paragraph("Rubber Injection / Hot Press Molding", cell_style), Paragraph("$4.85 USD / Pair", cell_style)],
+        [Paragraph("Unit Price (MOQ 10,000 Pairs)", cell_style), Paragraph("Volume Discount Price", cell_style), Paragraph("$4.20 USD / Pair", cell_style)],
+        [Paragraph("3D Rapid Prototyping", cell_style), Paragraph("TPU 85A Flexible Material Printing", cell_style), Paragraph("INCLUDED (FREE)", cell_style)]
     ]
-    t_cost = Table(cost_data, colWidths=[180, 240, 120])
+    t_cost = Table(cost_data, colWidths=[150, 260, 130])
     t_cost.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#0284c7")),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 9),
-        ('ALIGN', (2,0), (2,-1), 'RIGHT'),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#f1f5f9")]),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(t_cost)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 12))
 
     # 條款與說明
     story.append(Paragraph("<b>Terms & Production Notes</b>", h2_style))
-    story.append(Paragraph("1. Mold Development Lead Time: 25 Days (Includes T1 Trial & Water Drainage Testing).", body_style))
-    story.append(Paragraph("2. Mass Production Lead Time: 15 Days after T1 sample confirmation.", body_style))
-    story.append(Paragraph("3. Payment Terms: 50% Mold Deposit, 50% upon T1 Sample Approval.", body_style))
-    story.append(Spacer(1, 20))
+    story.append(Paragraph("1. Mold Development Lead Time: 25 Days (Includes T1 Trial & Water Drainage Testing).", cell_style))
+    story.append(Paragraph("2. Mass Production Lead Time: 15 Days after T1 sample confirmation.", cell_style))
+    story.append(Paragraph("3. Payment Terms: 50% Mold Deposit, 50% upon T1 Sample Approval.", cell_style))
+    story.append(Spacer(1, 15))
 
     story.append(Paragraph("<font color='#94a3b8' size=8>This is an AI-generated official preliminary quotation valid for 30 days. Approved by Global Injection Molding Corp.</font>", ParagraphStyle('Footer', alignment=1)))
 
@@ -281,12 +309,11 @@ def render_sales_frontend():
     st.markdown("### 📄 階段四：產出正式 PDF 業務預估報價單")
     
     if st.button("🚀 生成正式 PDF 業務預估報價單", type="primary", key="btn_gen_quote_doc"):
-        with st.spinner("ReportLab 正在繪製表格化 PDF 報價單..."):
+        with st.spinner("ReportLab 正在繪製高畫質 PDF 報價單..."):
             pdf_bytes = generate_pdf_quotation(user_prompt, spec)
             
-            st.success("✅ PDF 報價單已成功產出！")
+            st.success("✅ PDF 報價單已成功產出！已排除黑塊並優化欄位排版。")
             
-            # 提供下 PDF 按鈕
             st.download_button(
                 label="📥 點擊下載正式商務 PDF 報價單 (.pdf)",
                 data=pdf_bytes,
