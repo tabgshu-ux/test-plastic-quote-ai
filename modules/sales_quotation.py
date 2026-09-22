@@ -312,7 +312,7 @@ def render_sales_frontend():
         with st.spinner("ReportLab 正在繪製高畫質 PDF 報價單..."):
             pdf_bytes = generate_pdf_quotation(user_prompt, spec)
             
-            st.success("✅ PDF 報價單已成功產出！已排除黑塊並優化欄位排版。")
+            st.success("✅ PDF 報價單已成功產出！")
             
             st.download_button(
                 label="📥 點擊下載正式商務 PDF 報價單 (.pdf)",
