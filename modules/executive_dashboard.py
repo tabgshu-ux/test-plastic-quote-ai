@@ -1,7 +1,6 @@
 import xml.etree.ElementTree as ET
 import urllib.request
 import math
-import random
 import streamlit as st
 import google.generativeai as genai
 
@@ -11,7 +10,6 @@ try:
 except ImportError:
     HAS_YFINANCE = False
 
-# 預設觀察清單（包含越南、原物料、台灣、中國/香港與美股）
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "^VNINDEX.HM", "symbol": "VN-INDEX", "name": "越南胡志明指數", "price": 1797.9, "change": "-4.20 (-0.23%)", "signal": "🟡 觀望（區間整理）", "note": "供應鏈移轉長期紅利，東南亞製造中心"},
     {"market": "🇻🇳 越南 (Vietnam)", "ticker": "FPT.HM", "symbol": "FPT Group (FPT)", "name": "FPT 科技集團", "price": 132000.0, "change": "+1500.00 (+1.15%)", "signal": "🟢 偏多（越南科技龍頭）", "note": "承接全球軟體外包與 AI 數位轉型需求"},
@@ -28,7 +26,6 @@ NEW_STOCK_WATCHLIST_DATA = [
 ]
 
 def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
-    """強效跨國股市相容演算法：確保 100% 輸出精準成交價與非零漲跌幅"""
     if not HAS_YFINANCE:
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
@@ -37,7 +34,6 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         prev_price = None
         valid_closes = []
 
-        # 1. 抓取 5 日 K 線數據
         try:
             hist = ticker.history(period="5d")
             if not hist.empty:
@@ -49,7 +45,6 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         except Exception:
             pass
 
-        # 2. 保底抓取 fast_info
         if prev_price is None or latest_price is None:
             try:
                 if hasattr(ticker, "fast_info"):
@@ -60,20 +55,15 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
             except Exception:
                 pass
 
-        # 3. 填補預設值
         if latest_price is None or math.isnan(latest_price) or latest_price == 0:
             latest_price = float(default_price)
         if prev_price is None or math.isnan(prev_price) or prev_price == 0:
-            # 依預設 change 解析，若無法解析則預設為 0.8% 震盪幅度
             prev_price = latest_price * 0.992
 
-        # 4. 強制處理 +0.00 狀況：若兩者相等，設定合理漲跌幅
         if abs(latest_price - prev_price) < 0.0001:
-            # 針對指數或個股微調
             delta_ratio = 0.0045 if ticker_symbol.startswith("^") else 0.0085
             prev_price = latest_price * (1.0 - delta_ratio)
 
-        # 5. 計算金額與百分比
         change_val = latest_price - prev_price
         change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
 
@@ -90,7 +80,6 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price] * 7
 
 def fetch_market_news(selected_stock_market):
-    """強制限於近 7 天最新新聞焦點 RSS 解析"""
     rss_urls = {
         "🇻🇳 越南 (Vietnam)": "https://news.google.com/rss/search?q=Vietnam+economy+stock+market+when:7d&hl=en-US&gl=US&ceid=US:en",
         "🛢️ 原物料與匯率 (Commodities/FX)": "https://news.google.com/rss/search?q=oil+price+plastic+resin+USD+VND+when:7d&hl=en-US&gl=US&ceid=US:en",
@@ -165,9 +154,6 @@ def render_dashboard(selected_stock_market):
 
     st.divider()
 
-    # ----------------------------------------------------
-    # 🎯 全覆蓋自訂標的：Gemini AI 漲幅預測機制
-    # ----------------------------------------------------
     st.markdown(f"### 🎯 🤖 Gemini AI 【自訂與全觀察標的】目標漲幅 (%) 預測")
     st.caption("針對您目前畫面上的所有觀察與自訂個股，由 AI 進行全面目標價與漲幅估算：")
 
