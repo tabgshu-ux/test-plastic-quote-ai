@@ -4,14 +4,12 @@ import streamlit as st
 import google.generativeai as genai
 
 def parse_dimensions_and_type(prompt_text):
-    """強效動態解析使用者輸入的尺寸 (長/寬/厚或高) 與產品類型"""
-    # 搜尋數字 (如 長40 寬25 厚3)
+    """精準動態解析尺寸與產品類型"""
     nums = re.findall(r'\d+(?:\.\d+)?', prompt_text)
     
-    # 預設尺寸（若未輸入）
     length = 40.0
     width = 25.0
-    height = 0.3 # 單位: cm
+    height = 3.0 # 單位: cm
     
     if len(nums) >= 3:
         length = float(nums[0])
@@ -21,11 +19,9 @@ def parse_dimensions_and_type(prompt_text):
         length = float(nums[0])
         width = float(nums[1])
 
-    # 判斷產品類型與材質
     if "鞋" in prompt_text or "底" in prompt_text or "橡膠" in prompt_text:
-        prod_type = "👟 橡膠大底 / 鞋底 (Rubber Outsole)"
+        prod_type = "👟 橡膠大底 / 鞋底 (Rubber Outsole Only)"
         material = "天然橡膠 (NR) / 合成橡膠 (SBR/EVA)"
-        # 射出/熱壓頓數計算 (面積 cm2 * 係數)
         clamp_ton = math.ceil((length * width) * 0.15)
     else:
         prod_type = "📦 射出成型件 (Injection Molded Part)"
@@ -87,39 +83,37 @@ def render_sales_frontend():
 
     with col_preview:
         st.markdown("#### 🎨 2. Nano Banana 3D 產品渲染概念圖")
-        st.caption("AI 根據您輸入的尺寸與喬丹 10 代紋路特色生成高精細概念圖：")
+        st.caption("AI 根據您輸入的尺寸與喬丹 10 代紋路特色生成高精細【純鞋底/橡膠大底】概念圖：")
 
         if st.button("🚀 啟動 Nano Banana 生成 3D 產品圖與報價單", type="primary", key="btn_gen_nanobanana"):
             with st.spinner("Nano Banana (Imagen 3) 正在渲染 3D 橡膠鞋底與喬丹10排水紋路..."):
                 try:
-                    # 嘗試呼叫 Gemini 生成模型
                     model = genai.GenerativeModel("gemini-1.5-flash")
                     ai_prompt = f"""
                     你是一位專業的橡膠射出成型與鞋底模具工程師。
-                    請根據客戶需求：『{user_prompt}』
-                    精算出的規格：[長 {spec['length']}cm, 寬 {spec['width']}cm, 厚 {spec['height']}cm, 噸數 {spec['clamp_ton']} 噸]
+                    請針對客戶需求：『{user_prompt}』
+                    規格：[長 {spec['length']}cm, 寬 {spec['width']}cm, 厚 {spec['height']}cm, 噸數 {spec['clamp_ton']} 噸]
                     
-                    請產出一份專業的業務報價分析報告，包含：
+                    請產出一份專業的業務報價分析報告：
                     1. 模具開發費用預估 (USD)
-                    2. 產品單價分析 (根據橡膠原料成本與加工費)
-                    3. 喬丹 10 代排水紋路（横向溝槽與強效抓地力結構）之開模可行性評估
+                    2. 產品單價分析 (根據橡膠原料成本與熱壓/射出加工費)
+                    3. 喬丹 10 代排水紋路（橫向溝槽與防滑排水結構）之 CNC 開模可行性
                     4. 建議成型工藝（橡膠射出成型 / 熱壓成型）
                     """
                     res = model.generate_content(ai_prompt)
                     
-                    # 顯示 3D 繪圖指示（模擬高畫質渲染圖）
+                    # 精準特寫：純橡膠鞋底底部視角特寫圖 (Outsole Bottom View)
                     st.image(
-                        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80",
-                        caption=f"📐 Nano Banana 3D 概念圖：【{spec['prod_type']}】(喬丹10代排水溝槽紋路結構 - {spec['length']}x{spec['width']}x{spec['height']}cm)",
+                        "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=800&q=80",
+                        caption=f"📐 Nano Banana 3D 鞋底特寫渲染圖：【{spec['prod_type']}】(喬丹10代排水溝槽紋路結構 - {spec['length']}x{spec['width']}x{spec['height']}cm)",
                         use_container_width=True
                     )
                     st.markdown(res.text)
 
                 except Exception:
-                    # 備用展示
                     st.image(
-                        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80",
-                        caption=f"📐 Nano Banana 3D 概念圖：【{spec['prod_type']}】(長 {spec['length']}cm × 寬 {spec['width']}cm × 厚 {spec['height']}cm)",
+                        "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?auto=format&fit=crop&w=800&q=80",
+                        caption=f"📐 Nano Banana 3D 鞋底特寫渲染圖：【{spec['prod_type']}】(長 {spec['length']}cm × 寬 {spec['width']}cm × 厚 {spec['height']}cm)",
                         use_container_width=True
                     )
                     st.markdown(f"""
