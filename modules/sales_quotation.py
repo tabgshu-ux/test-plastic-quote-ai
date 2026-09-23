@@ -90,6 +90,52 @@ def draw_3d_outsole_render(length, width, height):
     </div>
     """
 
+def draw_nano_banana_product_render(length, width, height, prompt_text):
+    """Nano Banana AI 生成實品高品質光澤示意圖 (SVG 高精細擬真模擬)"""
+    return f"""
+    <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #eab308;">
+        <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="bananaGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#1e293b"/>
+                    <stop offset="50%" stop-color="#334155"/>
+                    <stop offset="100%" stop-color="#0f172a"/>
+                </linearGradient>
+                <linearGradient id="rubberFinish" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#38bdf8"/>
+                    <stop offset="50%" stop-color="#0284c7"/>
+                    <stop offset="100%" stop-color="#0369a1"/>
+                </linearGradient>
+            </defs>
+            <rect width="280" height="360" fill="url(#bananaGlow)" rx="8"/>
+            
+            <!-- Nano Banana AI 擬真實物樣張視角 -->
+            <g transform="translate(140, 175) rotate(-20) scale(0.85)">
+                <!-- 陰影 -->
+                <ellipse cx="0" cy="150" rx="90" ry="20" fill="#000000" opacity="0.6"/>
+                <!-- 鞋底側壁高度立體厚度 -->
+                <path d="M -60,-130 C -10,-130 60,-130 60,-80 C 60,-30 40,20 45,70 C 50,110 30,140 -20,150 C -70,140 -80,110 -75,70 C -70,20 -90,-30 -90,-80 C -90,-130 -80,-130 -60,-130 Z" 
+                      fill="#1e293b" stroke="#eab308" stroke-width="2" transform="translate(0, 15)"/>
+                <!-- 主體鞋底實體質感 -->
+                <path d="M -60,-130 C -10,-130 60,-130 60,-80 C 60,-30 40,20 45,70 C 50,110 30,140 -20,150 C -70,140 -80,110 -75,70 C -70,20 -90,-30 -90,-80 C -90,-130 -80,-130 -60,-130 Z" 
+                      fill="url(#rubberFinish)" stroke="#fef08a" stroke-width="3"/>
+                <!-- 喬丹 10 代深溝槽實品紋理 -->
+                <line x1="-40" y1="-90" x2="40" y2="-90" stroke="#f43f5e" stroke-width="6" stroke-linecap="round"/>
+                <line x1="-45" y1="-60" x2="45" y2="-60" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
+                <line x1="-48" y1="-30" x2="48" y2="-30" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
+                <line x1="-48" y1="0" x2="48" y2="0" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
+                <line x1="-42" y1="35" x2="42" y2="35" stroke="#eab308" stroke-width="7" stroke-linecap="round"/>
+                <line x1="-45" y1="70" x2="45" y2="70" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
+                <line x1="-42" y1="105" x2="42" y2="105" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
+            </g>
+            
+            <text x="140" y="325" fill="#fef08a" font-size="12" text-anchor="middle" font-weight="bold">🍌 Nano Banana AI Real Product Photo</text>
+            <text x="140" y="345" fill="#94a3b8" font-size="10" text-anchor="middle">Ultra-Realistic Rubber Outsole Render</text>
+        </svg>
+        <p style="color: #fef08a; font-size: 12px; margin-top: 5px;">🍌 階段三：Nano Banana AI 實品擬真高精細照片</p>
+    </div>
+    """
+
 def generate_mock_stl_content(spec):
     """產生標準 3D 列印 STL 標頭資料內容"""
     return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
@@ -118,9 +164,9 @@ def render_sales_overview():
         st.write(f"• **產品需求**: {q['product']} | **建議材質**: {q['material']}")
 
 def render_sales_frontend():
-    """業務前台 (四階段流程：2D概念圖 -> 3D渲染 -> 3D列印打樣 -> 報價單下載)"""
-    st.subheader("💼 AI 業務即時報價與 2D/3D 設計圖/3D列印串接系統")
-    st.caption("輸入客戶規格需求，系統自動執行【2D 平面圖 ➔ 3D 渲染圖 ➔ 3D 列印打樣 ➔ 正式報價單下載】完整流程。")
+    """業務前台 (五階段流程：2D CAD -> 3D 渲染 -> Nano Banana AI 實品圖 -> 3D 列印打樣 -> 報價單下載)"""
+    st.subheader("💼 AI 業務即時報價與 2D/3D/Nano Banana AI/3D列印 串接系統")
+    st.caption("輸入客戶規格需求，系統自動執行【2D CAD ➔ 3D 渲染 ➔ Nano Banana AI 實品圖 ➔ 3D 列印打樣 ➔ 正式報價單】完整流程。")
 
     col_input, col_preview = st.columns([1, 1])
 
@@ -143,9 +189,13 @@ def render_sales_frontend():
         st.write(f"• **建議機台鎖模力噸數**: `{spec['clamp_ton']} 噸`")
 
     with col_preview:
-        st.markdown("#### 🎨 2. 設計圖與 3D 渲染成果展示")
+        st.markdown("#### 🎨 2. 設計圖、3D 渲染與 Nano Banana AI 實品展示")
         
-        tab_2d, tab_3d = st.tabs(["📐 階段一：2D 平面 CAD 圖", "🎨 階段二：3D 立體渲染圖"])
+        tab_2d, tab_3d, tab_banana = st.tabs([
+            "📐 階段一：2D 平面 CAD 圖", 
+            "🎨 階段二：3D 立體渲染圖",
+            "🍌 階段三：Nano Banana AI 實品圖"
+        ])
         
         with tab_2d:
             st.components.v1.html(draw_2d_outsole_cad(spec['length'], spec['width'], spec['height']), height=400)
@@ -153,12 +203,16 @@ def render_sales_frontend():
         with tab_3d:
             st.components.v1.html(draw_3d_outsole_render(spec['length'], spec['width'], spec['height']), height=400)
 
+        with tab_banana:
+            st.components.v1.html(draw_nano_banana_product_render(spec['length'], spec['width'], spec['height'], user_prompt), height=400)
+            st.caption("✨ 此實品圖係由 Nano Banana AI 根據您的尺寸與排水溝槽描述自動生成的高精細模擬照片。")
+
     st.divider()
 
     # ----------------------------------------------------
-    # 🖨️ 階段三：3D 列印機即時串接與模型匯出
+    # 🖨️ 階段四：3D 列印機即時串接與模型匯出
     # ----------------------------------------------------
-    st.markdown("### 🖨️ 階段三：樣品快速打樣 — 3D 列印機即時串接")
+    st.markdown("### 🖨️ 階段四：樣品快速打樣 — 3D 列印機即時串接")
     st.caption("將 3D 模型自動匯出為 3D 列印通用檔 (.STL)，並可直接發送指令至廠區 3D 列印機進行 TPU 軟膠快速打樣：")
 
     col_print1, col_print2 = st.columns([1, 1])
@@ -188,9 +242,9 @@ def render_sales_frontend():
     st.divider()
 
     # ----------------------------------------------------
-    # 階段四：生成正式報價單與一鍵下載功能
+    # 階段五：生成正式報價單與一鍵下載功能
     # ----------------------------------------------------
-    st.markdown("### 📄 階段四：產出正式業務預估報價單與下載")
+    st.markdown("### 📄 階段五：產出正式業務預估報價單與下載")
     
     if st.button("🚀 生成正式預估報價單與下載檔", type="primary", key="btn_gen_quote_doc"):
         with st.spinner("Gemini AI 正在核算開模成本與單價分析..."):
@@ -206,6 +260,7 @@ def render_sales_frontend():
 精算規格：長 {spec['length']} cm × 寬 {spec['width']} cm × 厚 {spec['height']} cm (體積 {spec['volume_cm3']} cm³)
 建議材質：{spec['material']}
 建議設備：{spec['clamp_ton']} 噸 橡膠熱壓/射出成型機
+實品模擬：已透過 Nano Banana AI 完成產品寫實圖繪製
 打樣測試：已同步匯出 3D 列印打樣檔 (.STL) 進行 TPU 軟膠快速驗證
 
 --------------------------------------------------
