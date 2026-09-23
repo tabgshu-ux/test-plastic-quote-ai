@@ -7,6 +7,81 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------
+# 🌐 跨國多語系字典定義 (i18n Dictionary)
+# ----------------------------------------------------
+I18N = {
+    "繁體中文": {
+        "title": "🏭 AI ERP 系統選單",
+        "lang_select": "🌐 選擇系統語系 (Language):",
+        "dept_select": "請選擇部門/模組分類：",
+        "depts": [
+            "📈 營運戰情室 (Executive)",
+            "💼 業務/行銷 (Sales & Marketing)",
+            "🛠️ 研發/技術 (R&D & Engineering)",
+            "🧾 財務 (Finance)",
+            "👥 人事/行政 (HR & Admin)",
+            "💻 資訊/IT (IT & System Admin)"
+        ]
+    },
+    "Tiếng Việt": {
+        "title": "🏭 Menu Hệ Thống AI ERP",
+        "lang_select": "🌐 Chọn ngôn ngữ (Language):",
+        "dept_select": "Vui lòng chọn phòng ban/phân hệ:",
+        "depts": [
+            "📈 Phòng Điều Hành (Executive)",
+            "💼 Kinh Doanh / Marketing",
+            "🛠️ R&D / Kỹ Thuật",
+            "🧾 Tài Chính / Kế Toán",
+            "👥 Nhân Sự / Hành Chính",
+            "💻 Công Nghệ Thông Tin (IT)"
+        ]
+    },
+    "简体中文": {
+        "title": "🏭 AI ERP 系统菜单",
+        "lang_select": "🌐 选择系统语系 (Language):",
+        "dept_select": "请选择部门/模块分类：",
+        "depts": [
+            "📈 营运战情室 (Executive)",
+            "💼 业务/营销 (Sales & Marketing)",
+            "🛠️ 研发/技术 (R&D & Engineering)",
+            "🧾 财务 (Finance)",
+            "👥 人事/行政 (HR & Admin)",
+            "💻 信息/IT (IT & System Admin)"
+        ]
+    },
+    "English": {
+        "title": "🏭 AI ERP System Menu",
+        "lang_select": "🌐 System Language:",
+        "dept_select": "Select Department / Module:",
+        "depts": [
+            "📈 Executive Dashboard",
+            "💼 Sales & Marketing",
+            "🛠️ R&D & Engineering",
+            "🧾 Finance",
+            "👥 HR & Administration",
+            "💻 IT & System Admin"
+        ]
+    },
+    "Bahasa Indonesia": {
+        "title": "🏭 Menu Sistem AI ERP",
+        "lang_select": "🌐 Pilih Bahasa (Language):",
+        "dept_select": "Pilih Departemen / Modul:",
+        "depts": [
+            "📈 Dasbor Eksekutif",
+            "💼 Penjualan & Pemasaran",
+            "🛠️ R&D & Teknik",
+            "🧾 Keuangan",
+            "👥 SDM & Administrasi",
+            "💻 IT & Admin Sistem"
+        ]
+    }
+}
+
+# 初始化預設語系
+if "lang" not in st.session_state:
+    st.session_state.lang = "繁體中文"
+
+# ----------------------------------------------------
 # 安全動態載入模組
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
@@ -29,87 +104,81 @@ render_asset = load_module_function("asset_management", ["render_asset_managemen
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
 # ----------------------------------------------------
-# 一級選單：側邊欄部門分類 (含 💻 資訊/IT 部門)
+# 側邊欄：語言切換器 & 部門選單
 # ----------------------------------------------------
-st.sidebar.title("🏭 AI ERP 系統選單")
+st.sidebar.title("🏭 AI ERP")
 
-department = st.sidebar.radio(
-    "請選擇部門/模組分類：",
-    [
-        "📈 營運戰情室 (Executive)",
-        "💼 業務/行銷 (Sales & Marketing)",
-        "🛠️ 研發/技術 (R&D & Engineering)",
-        "🧾 財務 (Finance)",
-        "👥 人事/行政 (HR & Admin)",
-        "💻 資訊/IT (IT & System Admin)"
-    ]
+# 語系切換下拉選單 (放置於最頂端)
+selected_lang = st.sidebar.selectbox(
+    "🌐 系統語系 (Language):",
+    ["繁體中文", "Tiếng Việt", "简体中文", "English", "Bahasa Indonesia"],
+    index=["繁體中文", "Tiếng Việt", "简体中文", "English", "Bahasa Indonesia"].index(st.session_state.lang),
+    key="lang_selector"
+)
+st.session_state.lang = selected_lang
+lang_dict = I18N[selected_lang]
+
+st.sidebar.markdown("---")
+
+# 根據選擇的語系顯示部門選單
+department_idx = st.sidebar.radio(
+    lang_dict["dept_select"],
+    options=list(range(len(lang_dict["depts"]))),
+    format_func=lambda x: lang_dict["depts"][x]
 )
 
 st.sidebar.markdown("---")
 
 # ----------------------------------------------------
-# 二級動態選單：依據選擇的部門，在側邊欄下方展開對應業務
+# 頁面路由分流 (將目前語系傳入各模組)
 # ----------------------------------------------------
-if department == "📈 營運戰情室 (Executive)":
-    st.sidebar.subheader("📈 股市與匯率觀測區域")
+if department_idx == 0:  # 營運戰情室
     sub_option = st.sidebar.selectbox(
-        "選擇觀察市場：",
-        [
-            "🌐 全部市場 (All Markets)",
-            "🇹🇼 台灣 (Taiwan)",
-            "🇨🇳 中國/香港 (China/HK)",
-            "🇺🇸 美國 (USA)",
-            "🇻🇳 越南 (Vietnam)",
-            "🛢️ 原物料與匯率 (Commodities/FX)"
-        ],
+        "選擇觀察市場 (Market):",
+        ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
         key="sub_exec_market"
     )
-    render_exec_db(sub_option)
+    render_exec_db(sub_option, selected_lang)
 
-elif department == "💼 業務/行銷 (Sales & Marketing)":
-    st.sidebar.subheader("💼 業務功能選單")
+elif department_idx == 1:  # 業務/行銷
     sub_option = st.sidebar.selectbox(
-        "選擇業務項目：",
+        "業務項目 (Sales Items):",
         ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
         key="sub_sales_option"
     )
     render_sales(sub_option)
 
-elif department == "🛠️ 研發/技術 (R&D & Engineering)":
-    st.sidebar.subheader("🛠️ 研發與技術功能選單")
+elif department_idx == 2:  # 研發/技術
     sub_option = st.sidebar.selectbox(
-        "選擇技術項目：",
+        "技術項目 (Engineering Items):",
         ["📦 跨國資產與模具管理", "⚡ 廠區營運與機台 OEE KPI"],
         key="sub_rd_option"
     )
-    if sub_option == "📦 跨國資產與模具管理":
+    if "資產" in sub_option or "Asset" in sub_option:
         render_asset()
     else:
         render_erp_db()
 
-elif department == "🧾 財務 (Finance)":
-    st.sidebar.subheader("🧾 財務功能選單")
+elif department_idx == 3:  # 財務
     sub_option = st.sidebar.selectbox(
-        "選擇財務項目：",
+        "財務項目 (Finance Items):",
         ["📧 通用信箱電子發票讀取 (IMAP)", "🇻🇳 越南 XML 電子發票解析"],
         key="sub_finance_option"
     )
     render_invoice(sub_option)
 
-elif department == "👥 人事/行政 (HR & Admin)":
-    st.sidebar.subheader("👥 人事行政功能選單")
+elif department_idx == 4:  # 人事/行政
     sub_option = st.sidebar.selectbox(
-        "選擇人事項目：",
+        "人事項目 (HR Items):",
         ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
         key="sub_hr_option"
     )
     render_payroll(sub_option)
 
-elif department == "💻 資訊/IT (IT & System Admin)":
-    st.sidebar.subheader("💻 資訊系統管理選單")
+elif department_idx == 5:  # 資訊/IT
     sub_option = st.sidebar.selectbox(
-        "選擇管理項目：",
-        ["👥 人員帳號與網頁授權", "🏢 跨國部門架構管理", "🔒 模組權限矩陣 (RBAC)"],
+        "管理項目 (IT Items):",
+        ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"],
         key="sub_it_option"
     )
     render_user_mgmt(sub_option)
