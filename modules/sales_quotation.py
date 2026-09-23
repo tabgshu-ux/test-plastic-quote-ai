@@ -322,3 +322,17 @@ def render_sales_frontend():
                 type="primary",
                 key="btn_download_pdf_file"
             )
+# ====================================================
+# 頁面主進入點（供 app.py 呼叫）
+# ====================================================
+def render_sales_quotation_page():
+    st.title("💼 業務報價 & CAD/3D/PDF Pipeline 系統")
+    
+    # 建立頁面分頁
+    tab1, tab2 = st.tabs(["📝 即時 AI 報價與 CAD/3D 設計", "📊 歷史報價單據與資料庫"])
+    
+    with tab1:
+        render_sales_frontend()
+        
+    with tab2:
+        render_sales_overview()
