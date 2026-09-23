@@ -94,7 +94,6 @@ def load_module_function(module_name, func_names):
         for fname in func_names:
             if hasattr(mod, fname):
                 func = getattr(mod, fname)
-                # 安全包裝函式，能自動適應傳入 1 個、2 個或 0 個參數，防止 TypeError
                 def safe_wrapper(*args, **kwargs):
                     try:
                         return func(*args, **kwargs)
@@ -133,20 +132,20 @@ lang_dict = I18N[selected_lang]
 
 st.sidebar.markdown("---")
 
-# 固定選單 key 值，確保輸入鍵盤不跑色、跑格
+# 主部門單選鈕
 selected_dept = st.sidebar.radio(
     lang_dict["dept_select"],
-    options=I18N["繁體中文"]["depts"],  # 使用固定 Key 索引
+    options=I18N["繁體中文"]["depts"],
     key="fixed_sidebar_dept_radio_key"
 )
 
 st.sidebar.markdown("---")
 
 # ----------------------------------------------------
-# 頁面路由與子選單
+# 頁面路由與直觀展開的子選單 (使用 radio 取代 selectbox)
 # ----------------------------------------------------
 if "📈 營運戰情室" in selected_dept:
-    sub_option = st.sidebar.selectbox(
+    sub_option = st.sidebar.radio(
         "選擇觀察市場 (Market):",
         ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
         key="fixed_sub_exec_market_key"
@@ -154,36 +153,37 @@ if "📈 營運戰情室" in selected_dept:
     render_exec_db(sub_option, selected_lang)
 
 elif "💼 業務/行銷" in selected_dept:
-    sub_option = st.sidebar.selectbox(
-        "業務項目 (Sales Items):",
+    sub_option = st.sidebar.radio(
+        "業務功能清單：",
         ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
         key="fixed_sub_sales_option_key"
     )
     render_sales(sub_option)
 
 elif "🛠️ 研發/技術" in selected_dept:
-    sub_option = st.sidebar.selectbox(
-        "技術項目 (Engineering Items):",
+    sub_option = st.sidebar.radio(
+        "研發技術清單：",
         ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
         key="fixed_sub_rd_option_key"
     )
     render_asset(sub_option)
 
 elif "🏭 廠務/設備" in selected_dept:
-    sub_option = st.sidebar.selectbox(
-        "廠務項目 (Plant & IoT Items):",
+    sub_option = st.sidebar.radio(
+        "廠務設備清單：",
         ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
         key="fixed_sub_plant_iot_option_key"
     )
     render_erp_db(sub_option)
 
 elif "🧾 財務" in selected_dept:
-    sub_option = st.sidebar.selectbox(
-        "財務項目 (Finance Items):",
+    sub_option = st.sidebar.radio(
+        "財務功能清單：",
         [
-            "🌐 全球跨國稅務 AI 智慧問答 (Global Tax AI)",
+            "📄 越南電子發票 XML 解析與登錄",
             "📧 通用信箱電子發票讀取 (IMAP)",
-            "🇻🇳 越南 XML 電子發票解析"
+            "📊 電子發票張數監控與加購預警",
+            "🌐 全球跨國稅務 AI 智慧問答"
         ],
         key="fixed_sub_finance_option_key"
     )
@@ -193,16 +193,16 @@ elif "🧾 財務" in selected_dept:
         render_invoice(sub_option)
 
 elif "👥 人事/行政" in selected_dept:
-    sub_option = st.sidebar.selectbox(
-        "人事項目 (HR Items):",
+    sub_option = st.sidebar.radio(
+        "人事行政清單：",
         ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
         key="fixed_sub_hr_option_key"
     )
     render_payroll(sub_option)
 
 elif "💻 資訊/IT" in selected_dept:
-    sub_option = st.sidebar.selectbox(
-        "管理項目 (IT Items):",
+    sub_option = st.sidebar.radio(
+        "資訊管理清單：",
         ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"],
         key="fixed_sub_it_option_key"
     )
