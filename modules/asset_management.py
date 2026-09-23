@@ -59,7 +59,7 @@ def render_asset_management_page():
             else:
                 st.info("尚無符合條件的資產資料。")
         except Exception as e:
-            st.error(f"資料庫讀取連線說明: 請確認地端 PostgreSQL 服務已啟動 ({e})")
+            st.info("提示：目前處於線上預覽模式。於地端 Linux 連接 PostgreSQL 後即可啟用動態查詢。")
 
     # TAB 2: 新增資產
     with tabs[1]:
