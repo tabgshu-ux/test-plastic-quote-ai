@@ -11,7 +11,7 @@ def query_multinational_tax_ai(country, user_query):
 
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeAIModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         system_prompt = f"""
 你是一位精通全球跨國財會與稅務法規的資深國際稅務顧問（Specialized in Global Tax & Compliance）。
@@ -130,7 +130,7 @@ def render_finance_tax_page():
             st.write("2. **銀行轉帳憑證 (Chứng từ thanh toán không dùng tiền mặt)**：單筆含稅金額滿 2,000 萬越南盾 (VND) 以上者，必須透過公司銀行帳戶對轉，否則進項 VAT 不得抵扣，CIT 亦不得列為合理費用。")
             st.write("3. **轉移定價 (Transfer Pricing)**：關聯方交易需依 Nghị định 132/2020/NĐ-CP 每年準備同期文檔 (Local file & Master file)。")
 
-        with exp := st.expander("🇹🇼 台灣 (Taiwan) 核心稅務憑證規範"):
+        with st.expander("🇹🇼 台灣 (Taiwan) 核心稅務憑證規範"):
             st.write("1. **營業稅進項憑證**：統一發票、海關代徵營業稅繳納證。")
             st.write("2. **營利事業所得稅**：交際費/廣告費需備妥發票與簽呈/業務相關證明文件。")
 
