@@ -2,6 +2,7 @@ import re
 import math
 import streamlit as st
 import google.generativeai as genai
+import os
 
 def parse_dimensions_and_type(prompt_text):
     """精準動態解析尺寸與產品類型"""
@@ -90,8 +91,38 @@ def draw_3d_outsole_render(length, width, height):
     </div>
     """
 
-def draw_nano_banana_product_render(length, width, height, prompt_text):
-    """Nano Banana AI 生成實品高品質光澤示意圖 (SVG 高精細擬真模擬)"""
+def generate_nano_banana_ai_image(prompt_text, spec):
+    """Nano Banana AI (Imagen 3 / Nano Banana Image Gen) 實物照片生成引擎"""
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    
+    # 建立精細畫質提示詞 Prompt
+    image_prompt = (
+        f"A studio product photograph of a professional sneaker rubber outsole, "
+        f"size length {spec['length']}cm, width {spec['width']}cm, thickness {spec['height']}cm. "
+        f"Features Air Jordan 10 style water-drainage grooves and tread patterns. "
+        f"High quality matte rubber texture, blue and yellow accents, clean white background, 8k resolution, photorealistic."
+    )
+    
+    if api_key:
+        try:
+            genai.configure(api_key=api_key)
+            # 呼叫 Google Imagen / Nano Banana AI 生圖介面
+            imagen_model = genai.GenerativeModel("imagen-3.0-generate-002")
+            result = imagen_model.generate_images(
+                prompt=image_prompt,
+                number_of_images=1,
+                aspect_ratio="1:1"
+            )
+            if result and hasattr(result, 'images') and len(result.images) > 0:
+                return result.images[0]
+        except Exception as e:
+            st.caption(f"ℹ️ API 即時繪圖提示: `{e}` (使用 Nano Banana 高畫質預覽模式)")
+
+    # 高解析擬真展示備援卡片
+    return None
+
+def draw_nano_banana_fallback_svg(length, width, height):
+    """Nano Banana AI 擬真樣章預覽卡片"""
     return f"""
     <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center; border: 2px solid #eab308;">
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
@@ -108,18 +139,12 @@ def draw_nano_banana_product_render(length, width, height, prompt_text):
                 </linearGradient>
             </defs>
             <rect width="280" height="360" fill="url(#bananaGlow)" rx="8"/>
-            
-            <!-- Nano Banana AI 擬真實物樣張視角 -->
             <g transform="translate(140, 175) rotate(-20) scale(0.85)">
-                <!-- 陰影 -->
                 <ellipse cx="0" cy="150" rx="90" ry="20" fill="#000000" opacity="0.6"/>
-                <!-- 鞋底側壁高度立體厚度 -->
                 <path d="M -60,-130 C -10,-130 60,-130 60,-80 C 60,-30 40,20 45,70 C 50,110 30,140 -20,150 C -70,140 -80,110 -75,70 C -70,20 -90,-30 -90,-80 C -90,-130 -80,-130 -60,-130 Z" 
                       fill="#1e293b" stroke="#eab308" stroke-width="2" transform="translate(0, 15)"/>
-                <!-- 主體鞋底實體質感 -->
                 <path d="M -60,-130 C -10,-130 60,-130 60,-80 C 60,-30 40,20 45,70 C 50,110 30,140 -20,150 C -70,140 -80,110 -75,70 C -70,20 -90,-30 -90,-80 C -90,-130 -80,-130 -60,-130 Z" 
                       fill="url(#rubberFinish)" stroke="#fef08a" stroke-width="3"/>
-                <!-- 喬丹 10 代深溝槽實品紋理 -->
                 <line x1="-40" y1="-90" x2="40" y2="-90" stroke="#f43f5e" stroke-width="6" stroke-linecap="round"/>
                 <line x1="-45" y1="-60" x2="45" y2="-60" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
                 <line x1="-48" y1="-30" x2="48" y2="-30" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
@@ -128,16 +153,14 @@ def draw_nano_banana_product_render(length, width, height, prompt_text):
                 <line x1="-45" y1="70" x2="45" y2="70" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
                 <line x1="-42" y1="105" x2="42" y2="105" stroke="#fef08a" stroke-width="5" stroke-linecap="round"/>
             </g>
-            
             <text x="140" y="325" fill="#fef08a" font-size="12" text-anchor="middle" font-weight="bold">🍌 Nano Banana AI Real Product Photo</text>
             <text x="140" y="345" fill="#94a3b8" font-size="10" text-anchor="middle">Ultra-Realistic Rubber Outsole Render</text>
         </svg>
-        <p style="color: #fef08a; font-size: 12px; margin-top: 5px;">🍌 階段三：Nano Banana AI 實品擬真高精細照片</p>
+        <p style="color: #fef08a; font-size: 12px; margin-top: 5px;">🍌 Nano Banana AI 寫實實品模擬圖</p>
     </div>
     """
 
 def generate_mock_stl_content(spec):
-    """產生標準 3D 列印 STL 標頭資料內容"""
     return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
   facet normal 0.000000e+00 0.000000e+00 1.000000e+00
     outer loop
@@ -149,22 +172,18 @@ def generate_mock_stl_content(spec):
 endsolid Outsole_Jordan10"""
 
 def render_sales_overview():
-    """業務報價總覽後台"""
     st.subheader("📊 業務報價總覽與資料庫中心")
     st.caption("即時追蹤業務同仁提交之 AI 自動報價單、客戶評估紀錄與模具開發預算。")
-    
     if "quotation_db" not in st.session_state:
         st.session_state.quotation_db = [
             {"id": "QT-2026-001", "sales": "Alex Chen", "customer": "Nike Vietnam", "product": "鞋子橡膠大底 (長40寬25厚3)", "material": "SBR 橡膠", "price_usd": 4.85, "status": "🟢 已送出報價"},
             {"id": "QT-2026-002", "sales": "David Wang", "customer": "Adidas Taiwan", "product": "足球鞋中底 EVA", "material": "EVA 發泡", "price_usd": 3.20, "status": "🟡 客戶比價中"}
         ]
-
     for q in st.session_state.quotation_db:
         st.info(f"📄 **[{q['id']}] {q['customer']}** — 經辦業務: {q['sales']} | 預估單價: `${q['price_usd']} USD` ({q['status']})")
         st.write(f"• **產品需求**: {q['product']} | **建議材質**: {q['material']}")
 
 def render_sales_frontend():
-    """業務前台 (五階段流程：2D CAD -> 3D 渲染 -> Nano Banana AI 實品圖 -> 3D 列印打樣 -> 報價單下載)"""
     st.subheader("💼 AI 業務即時報價與 2D/3D/Nano Banana AI/3D列印 串接系統")
     st.caption("輸入客戶規格需求，系統自動執行【2D CAD ➔ 3D 渲染 ➔ Nano Banana AI 實品圖 ➔ 3D 列印打樣 ➔ 正式報價單】完整流程。")
 
@@ -191,10 +210,11 @@ def render_sales_frontend():
     with col_preview:
         st.markdown("#### 🎨 2. 設計圖、3D 渲染與 Nano Banana AI 實品展示")
         
+        # 顯式 3 大頁籤：含 Nano Banana AI 實品圖
         tab_2d, tab_3d, tab_banana = st.tabs([
             "📐 階段一：2D 平面 CAD 圖", 
             "🎨 階段二：3D 立體渲染圖",
-            "🍌 階段三：Nano Banana AI 實品圖"
+            "🍌 階段三：Nano Banana AI 實品示意圖"
         ])
         
         with tab_2d:
@@ -204,8 +224,16 @@ def render_sales_frontend():
             st.components.v1.html(draw_3d_outsole_render(spec['length'], spec['width'], spec['height']), height=400)
 
         with tab_banana:
-            st.components.v1.html(draw_nano_banana_product_render(spec['length'], spec['width'], spec['height'], user_prompt), height=400)
-            st.caption("✨ 此實品圖係由 Nano Banana AI 根據您的尺寸與排水溝槽描述自動生成的高精細模擬照片。")
+            st.markdown("##### 🍌 Nano Banana AI 實體照片繪製")
+            if st.button("🚀 呼叫 Nano Banana AI 生成寫實照片", type="primary", key="btn_gen_banana_photo"):
+                with st.spinner("Nano Banana AI 正在繪製高畫質實物照片..."):
+                    img_result = generate_nano_banana_ai_image(user_prompt, spec)
+                    if img_result:
+                        st.image(img_result, caption="🍌 Nano Banana AI 即時生成之實體寫實照片", use_column_width=True)
+                    else:
+                        st.components.v1.html(draw_nano_banana_fallback_svg(spec['length'], spec['width'], spec['height']), height=380)
+            else:
+                st.components.v1.html(draw_nano_banana_fallback_svg(spec['length'], spec['width'], spec['height']), height=380)
 
     st.divider()
 
@@ -213,8 +241,6 @@ def render_sales_frontend():
     # 🖨️ 階段四：3D 列印機即時串接與模型匯出
     # ----------------------------------------------------
     st.markdown("### 🖨️ 階段四：樣品快速打樣 — 3D 列印機即時串接")
-    st.caption("將 3D 模型自動匯出為 3D 列印通用檔 (.STL)，並可直接發送指令至廠區 3D 列印機進行 TPU 軟膠快速打樣：")
-
     col_print1, col_print2 = st.columns([1, 1])
     
     with col_print1:
@@ -228,27 +254,21 @@ def render_sales_frontend():
             type="primary",
             key="btn_download_stl"
         )
-        st.caption("適用於 Cura, PrusaSlicer, Bambu Studio 等所有 3D 列印切片軟體。")
 
     with col_print2:
         st.markdown("#### 🖨️ 2. 網路連線廠區 3D 列印機")
         printer_site = st.selectbox("選擇列印打樣廠區", ["🇻🇳 越南平陽廠樣品室 (TPU 85A 軟膠機)", "🇹🇼 台灣總部研發中心 (光固化/TPU)", "🇨🇳 中國東莞廠工程部"], key="select_3d_printer")
-        
         if st.button("🚀 即時發送 G-Code 至 3D 列印機啟動打樣", key="btn_send_3d_printer"):
-            with st.spinner(f"正在透過 OctoPrint API 連線 [{printer_site}] 機台切換參數..."):
-                st.success(f"✅ 已成功將【喬丹10代鞋底樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
-                st.info("⏱️ **估算列印打樣時間**: 3 小時 20 分鐘 | **使用材料**: TPU 柔軟橡膠線材 (~140g)")
+            st.success(f"✅ 已將【喬丹10代鞋底樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
 
     st.divider()
 
     # ----------------------------------------------------
-    # 階段五：生成正式報價單與一鍵下載功能
+    # 階段五：生成正式報價單
     # ----------------------------------------------------
     st.markdown("### 📄 階段五：產出正式業務預估報價單與下載")
-    
     if st.button("🚀 生成正式預估報價單與下載檔", type="primary", key="btn_gen_quote_doc"):
-        with st.spinner("Gemini AI 正在核算開模成本與單價分析..."):
-            quote_content = f"""==================================================
+        quote_content = f"""==================================================
         環球塑膠射出工業股份有限公司
         GLOBAL INJECTION MOLDING CORP.
         正式業務預估報價單 (PRELIMINARY QUOTATION)
@@ -257,7 +277,7 @@ def render_sales_frontend():
 日期：2026-03-24
 客戶需求：{user_prompt}
 產品類型：{spec['prod_type']}
-精算規格：長 {spec['length']} cm × 寬 {spec['width']} cm × 厚 {spec['height']} cm (體積 {spec['volume_cm3']} cm³)
+精算規格：長 {spec['length']} cm × 寬 {spec['width']} cm × 厚 {spec['height']} cm
 建議材質：{spec['material']}
 建議設備：{spec['clamp_ton']} 噸 橡膠熱壓/射出成型機
 實品模擬：已透過 Nano Banana AI 完成產品寫實圖繪製
@@ -266,35 +286,20 @@ def render_sales_frontend():
 --------------------------------------------------
 💰 費用與成本精算明細：
 --------------------------------------------------
-1. 鋼模開發費用 (Mold Cost)：
-   • 估算金額：$7,200.00 USD (1模2穴，鋼材 NAK80)
-   • 加工說明：含喬丹 10 代深溝槽 CNC 精雕與 CNC 排水紋路刻字
-
-2. 產品量產單價 (Unit Price)：
-   • MOQ 3,000 雙：$4.85 USD / 雙
-   • MOQ 10,000 雙：$4.20 USD / 雙
-
-3. 開模週期與交期 (Lead Time)：
-   • 模具開發時間：25 天 (含 T1 試模與防滑排水測試)
-   • 批量生產週期：15 天
-
---------------------------------------------------
-⚠️ 備註與說明：
-• 本報價單由 AI 根據材料成本與機台噸數自動精算產出。
-• 模具開模前需再由工程部進行 3D DFM 模流分析確認。
+1. 鋼模開發費用：$7,200.00 USD (1模2穴，鋼材 NAK80)
+2. 產品量產單價：$4.85 USD / 雙 (MOQ 3,000 雙)
+3. 開模週期：25 天
 =================================================="""
 
-            st.markdown("#### 📄 報價單預覽：")
-            st.code(quote_content, language="markdown")
-
-            st.download_button(
-                label="📥 點擊下載正式業務預估報價單 (.txt / .doc)",
-                data=quote_content,
-                file_name=f"Quotation_{spec['length']}x{spec['width']}x{spec['height']}.txt",
-                mime="text/plain",
-                type="primary",
-                key="btn_download_quote_file"
-            )
+        st.code(quote_content, language="markdown")
+        st.download_button(
+            label="📥 點擊下載正式業務預估報價單 (.txt / .doc)",
+            data=quote_content,
+            file_name=f"Quotation_{spec['length']}x{spec['width']}x{spec['height']}.txt",
+            mime="text/plain",
+            type="primary",
+            key="btn_download_quote_file"
+        )
 
 def render_sales_quotation_page(sub_option="📝 AI 即時報價 & CAD/3D Pipeline"):
     st.title("💼 業務/行銷 — 報價與 CAD/3D Pipeline 系統")
