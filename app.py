@@ -18,6 +18,7 @@ I18N = {
             "📈 營運戰情室 (Executive)",
             "💼 業務/行銷 (Sales & Marketing)",
             "🛠️ 研發/技術 (R&D & Engineering)",
+            "🏭 廠務/設備 (Plant & IoT)",
             "🧾 財務 (Finance)",
             "👥 人事/行政 (HR & Admin)",
             "💻 資訊/IT (IT & System Admin)"
@@ -31,6 +32,7 @@ I18N = {
             "📈 Phòng Điều Hành (Executive)",
             "💼 Kinh Doanh / Marketing",
             "🛠️ R&D / Kỹ Thuật",
+            "🏭 Quản Lý Nhà Máy & IoT",
             "🧾 Tài Chính / Kế Toán",
             "👥 Nhân Sự / Hành Chính",
             "💻 Công Nghệ Thông Tin (IT)"
@@ -44,6 +46,7 @@ I18N = {
             "📈 营运战情室 (Executive)",
             "💼 业务/营销 (Sales & Marketing)",
             "🛠️ 研发/技术 (R&D & Engineering)",
+            "🏭 厂务/设备 (Plant & IoT)",
             "🧾 财务 (Finance)",
             "👥 人事/行政 (HR & Admin)",
             "💻 信息/IT (IT & System Admin)"
@@ -57,6 +60,7 @@ I18N = {
             "📈 Executive Dashboard",
             "💼 Sales & Marketing",
             "🛠️ R&D & Engineering",
+            "🏭 Plant & IoT Engineering",
             "🧾 Finance",
             "👥 HR & Administration",
             "💻 IT & System Admin"
@@ -70,6 +74,7 @@ I18N = {
             "📈 Dasbor Eksekutif",
             "💼 Penjualan & Pemasaran",
             "🛠️ R&D & Teknik",
+            "🏭 Teknik Pabrik & IoT",
             "🧾 Keuangan",
             "👥 SDM & Administrasi",
             "💻 IT & Admin Sistem"
@@ -77,12 +82,11 @@ I18N = {
     }
 }
 
-# 初始化預設語系
 if "lang" not in st.session_state:
     st.session_state.lang = "繁體中文"
 
 # ----------------------------------------------------
-# 安全動態載入模組
+# 安全動態載入模組 (具備自動相容與容錯保護)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -94,7 +98,7 @@ def load_module_function(module_name, func_names):
     except Exception as e:
         return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-# 載入 7 大核心模組
+# 載入核心模組
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "render_dashboard", "show", "main"])
 render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "render_sales_frontend", "show", "main"])
@@ -104,81 +108,84 @@ render_asset = load_module_function("asset_management", ["render_asset_managemen
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
 # ----------------------------------------------------
-# 側邊欄：語言切換器 & 部門選單
+# 側邊欄：固定 key 值的語系切換器與部門選單
 # ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP")
 
-# 語系切換下拉選單 (放置於最頂端)
 selected_lang = st.sidebar.selectbox(
     "🌐 系統語系 (Language):",
     ["繁體中文", "Tiếng Việt", "简体中文", "English", "Bahasa Indonesia"],
-    index=["繁體中文", "Tiếng Việt", "简体中文", "English", "Bahasa Indonesia"].index(st.session_state.lang),
-    key="lang_selector"
+    key="fixed_lang_selector_key"
 )
 st.session_state.lang = selected_lang
 lang_dict = I18N[selected_lang]
 
 st.sidebar.markdown("---")
 
-# 根據選擇的語系顯示部門選單
-department_idx = st.sidebar.radio(
+# 固定選單 key 值，確保輸入鍵盤不跑色、跑格
+selected_dept = st.sidebar.radio(
     lang_dict["dept_select"],
-    options=list(range(len(lang_dict["depts"]))),
-    format_func=lambda x: lang_dict["depts"][x]
+    options=I18N["繁體中文"]["depts"],  # 使用固定 Key 索引
+    key="fixed_sidebar_dept_radio_key"
 )
 
 st.sidebar.markdown("---")
 
 # ----------------------------------------------------
-# 頁面路由分流 (將目前語系傳入各模組)
+# 頁面路由與子選單
 # ----------------------------------------------------
-if department_idx == 0:  # 營運戰情室
+if "📈 營運戰情室" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "選擇觀察市場 (Market):",
         ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
-        key="sub_exec_market"
+        key="fixed_sub_exec_market_key"
     )
     render_exec_db(sub_option, selected_lang)
 
-elif department_idx == 1:  # 業務/行銷
+elif "💼 業務/行銷" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "業務項目 (Sales Items):",
         ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
-        key="sub_sales_option"
+        key="fixed_sub_sales_option_key"
     )
     render_sales(sub_option)
 
-elif department_idx == 2:  # 研發/技術
+elif "🛠️ 研發/技術" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "技術項目 (Engineering Items):",
-        ["📦 跨國資產與模具管理", "⚡ 廠區營運與機台 OEE KPI"],
-        key="sub_rd_option"
+        ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
+        key="fixed_sub_rd_option_key"
     )
-    if "資產" in sub_option or "Asset" in sub_option:
-        render_asset()
-    else:
-        render_erp_db()
+    render_asset()
 
-elif department_idx == 3:  # 財務
+elif "🏭 廠務/設備" in selected_dept:  # <-- 新增廠務/設備部門
+    sub_option = st.sidebar.selectbox(
+        "廠務項目 (Plant & IoT Items):",
+        ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
+        key="fixed_sub_plant_iot_option_key"
+    )
+    render_erp_db()
+
+elif "🧾 財務" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "財務項目 (Finance Items):",
         ["📧 通用信箱電子發票讀取 (IMAP)", "🇻🇳 越南 XML 電子發票解析"],
-        key="sub_finance_option"
+        key="fixed_sub_finance_option_key"
     )
     render_invoice(sub_option)
 
-elif department_idx == 4:  # 人事/行政
+elif "👥 人事/行政" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "人事項目 (HR Items):",
         ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
-        key="sub_hr_option"
+        key="fixed_sub_hr_option_key"
     )
     render_payroll(sub_option)
 
-elif department_idx == 5:  # 資訊/IT
+elif "💻 資訊/IT" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "管理項目 (IT Items):",
         ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"],
-        key="sub_it_option"
+        key="fixed_sub_it_option_key"
     )
     render_user_mgmt(sub_option)
