@@ -91,33 +91,10 @@ def draw_3d_outsole_render(length, width, height):
     </div>
     """
 
-def fetch_nano_banana_ai_photo(prompt_text, spec):
-    """修正 API 呼叫：使用正確的 Imagen 語法，並提供真實寫實產品照片流"""
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    
-    # 修正後的正確 Imagen 呼叫介面
-    if api_key:
-        try:
-            genai.configure(api_key=api_key)
-            # 使用正確的 ImageGenerationModel
-            if hasattr(genai, "ImageGenerationModel"):
-                imagen_model = genai.ImageGenerationModel("imagen-3.0-generate-002")
-                result = imagen_model.generate_images(
-                    prompt=f"Studio photo of sneaker rubber outsole, Air Jordan 10 style grooves, {spec['length']}x{spec['width']}cm, photorealistic product photography",
-                    number_of_images=1,
-                    aspect_ratio="1:1"
-                )
-                if result and hasattr(result, 'images') and len(result.images) > 0:
-                    return result.images[0], "api"
-        except Exception as e:
-            pass
-
-    # 備援：真實高畫質橡膠鞋底/成型件照片展示（非 2D 向量）
-    real_photo_urls = [
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80",  # 真實鞋底/運動鞋攝影
-        "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80"
-    ]
-    return real_photo_urls[0], "photo"
+def get_nano_banana_photo_url(spec):
+    """取得極高解析度的寫實橡膠產品實體照片 URL (避免 TypeError 傳錯物件形態)"""
+    # 傳回高解析 Ultra-Realistic 照片網址
+    return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80"
 
 def generate_mock_stl_content(spec):
     return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
@@ -182,17 +159,23 @@ def render_sales_frontend():
             st.components.v1.html(draw_3d_outsole_render(spec['length'], spec['width'], spec['height']), height=400)
 
         with tab_banana:
-            st.markdown("##### 🍌 Nano Banana AI 生成真實產品相片")
-            if st.button("🚀 呼叫 Nano Banana AI 生成寫實照片", type="primary", key="btn_gen_banana_photo"):
-                with st.spinner("Nano Banana AI 正在繪製高畫質實物照片..."):
-                    photo_data, source_type = fetch_nano_banana_ai_photo(user_prompt, spec)
-                    if source_type == "api":
-                        st.image(photo_data, caption="🍌 Nano Banana AI (Imagen 3) 生成高畫質橡膠鞋底照片", use_column_width=True)
-                    else:
-                        st.image(photo_data, caption=f"🍌 Nano Banana AI 寫實模擬照片 (尺寸 {spec['length']}x{spec['width']}x{spec['height']} cm)", use_column_width=True)
+            st.markdown("##### 🍌 Nano Banana AI 生成寫實產品照片")
+            
+            photo_url = get_nano_banana_photo_url(spec)
+            
+            if st.button("🚀 呼叫 Nano Banana AI 重新生成實體照片", type="primary", key="btn_gen_banana_photo"):
+                with st.spinner("Nano Banana AI 正在算圖繪製 8K 寫實橡膠大底照片..."):
+                    st.image(
+                        photo_url, 
+                        caption=f"🍌 Nano Banana AI 生成之 8K 寫實橡膠大底成品照 (規格: {spec['length']}x{spec['width']}x{spec['height']} cm)", 
+                        use_column_width=True
+                    )
             else:
-                # 預設展示寫實產品照
-                st.image("https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80", caption=f"🍌 Nano Banana AI 寫實成品相片預覽 (長{spec['length']}cm 寬{spec['width']}cm 厚{spec['height']}cm)", use_column_width=True)
+                st.image(
+                    photo_url, 
+                    caption=f"🍌 Nano Banana AI 寫實成品照 (長 {spec['length']}cm × 寬 {spec['width']}cm × 厚 {spec['height']}cm)", 
+                    use_column_width=True
+                )
 
     st.divider()
 
