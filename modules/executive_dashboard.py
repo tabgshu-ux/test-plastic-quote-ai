@@ -11,7 +11,7 @@ except ImportError:
     HAS_YFINANCE = False
 
 # ----------------------------------------------------
-# 預設股市觀察清單主資料 (完全保留您的原始資料)
+# 預設股市觀察清單主資料
 # ----------------------------------------------------
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇹🇼 台灣 (Taiwan)", "ticker": "2330.TW", "symbol": "TSMC (2330.TW)", "name": "台積電", "price": 2480.0, "change": "+35.0 (+1.44%)", "signal": "🟢 偏多（適合逢低定額）", "note": "AI 晶片先進封裝獨占，長線穩定成長"},
@@ -34,15 +34,11 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
     try:
         ticker = yf.Ticker(ticker_symbol)
         hist = ticker.history(period="7d")
-        
-        # 清除歷史數據中的 NaN 空值
         if not hist.empty:
             close_series = hist["Close"].dropna()
             if len(close_series) >= 2:
                 latest_price = float(close_series.iloc[-1])
                 prev_price = float(close_series.iloc[-2])
-                
-                # 檢查數值是否有效（非 nan）
                 if not math.isnan(latest_price) and not math.isnan(prev_price) and prev_price > 0:
                     change_val = latest_price - prev_price
                     change_pct = (change_val / prev_price) * 100
@@ -52,56 +48,20 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
                 latest_price = float(close_series.iloc[-1])
                 if not math.isnan(latest_price):
                     return round(latest_price, 2), default_change, [latest_price] * 7
-
-        # 若抓取失敗或數值為 NaN，自動退回預設備援數據
         return default_price, default_change, [default_price] * 7
     except Exception:
         return default_price, default_change, [default_price] * 7
 
-def render_stock_module():
-    """結合頂層集團核心看板與完整個股管理的股市模組"""
-    
-    # ----------------------------------------------------
-    # 1. 頂層：集團核心客戶與匯率即時監控看板 (新增部分)
-    # ----------------------------------------------------
-    st.subheader("🏛️ 集團核心客戶與國際匯率即時監控")
-    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
-
-    p_tsm, c_tsm, _ = fetch_realtime_stock_data("2330.TW", 2480.0, "+35.0 (+1.44%)")
-    p_nke, c_nke, _ = fetch_realtime_stock_data("NKE", 78.4, "-0.85 (-1.07%)")
-    p_add, c_add, _ = fetch_realtime_stock_data("ADDYY", 108.2, "+2.10 (+1.98%)")
-    p_vnd, c_vnd, _ = fetch_realtime_stock_data("VND=X", 24850.0, "-10.0 (-0.04%)")
-
-    col_k1.metric("台積電 (2330.TW)", f"{p_tsm:,.2f}", delta=c_tsm)
-    col_k2.metric("Nike 核心客戶 (NKE)", f"${p_nke:,.2f}", delta=c_nke)
-    col_k3.metric("Adidas 品牌 (ADDYY)", f"${p_add:,.2f}", delta=c_add)
-    col_k4.metric("美金/越南盾 (USD/VND)", f"₫ {p_vnd:,.0f}", delta=c_vnd)
-
-    with st.expander("📌 點擊查看【核心監控標的之戰略意義說明】", expanded=False):
-        st.markdown("""
-        * **台積電 (2330.TW)**：全球半導體指標。其股價走勢反映整體科技業與電子產業鏈景氣。
-        * **Nike (NKE)**：集團**橡膠射出大底/鞋材模具**之核心終端客戶。直接牽動平陽廠與東莞廠之拉貨動能。
-        * **Adidas (ADDYY)**：歐美運動鞋履競爭與合作指標，監控其庫存去化狀況。
-        * **USD / VND 匯率**：平陽廠出口報價與當地薪資結算之關鍵匯率指標。
-        """)
-
-    st.divider()
-
-    # ----------------------------------------------------
-    # 2. 中層：區域各國股市選擇與清單 (您的原始完整功能)
-    # ----------------------------------------------------
+def render_stock_module(selected_stock_market="🌐 全部市場 (All Markets)"):
+    """根據左側選單選擇的股市區域渲染對應看板"""
     if "stock_watchlist" not in st.session_state or ("stock_watchlist" in st.session_state and "market" not in st.session_state.stock_watchlist[0]):
         st.session_state.stock_watchlist = NEW_STOCK_WATCHLIST_DATA
 
-    col_select, col_refresh = st.columns([3, 1])
-    with col_select:
-        selected_stock_market = st.selectbox(
-            "請選擇欲觀察的股市/匯率區域：",
-            ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
-            key="select_stock_market_filter"
-        )
-    with col_refresh:
-        st.write("<br>", unsafe_allow_html=True)
+    col_hdr1, col_hdr2 = st.columns([3, 1])
+    with col_hdr1:
+        st.subheader(f"📈 董事長/總經理 專屬 — [{selected_stock_market}] 戰情中心")
+        st.caption("連線 Yahoo Finance API 自動抓取最新價格，透過左側選單輕鬆切換台灣、中國、美國與越南股市。")
+    with col_hdr2:
         if st.button("🔄 刷新最新市場行情", type="primary", key="btn_refresh_stocks"):
             st.rerun()
 
@@ -127,10 +87,6 @@ def render_stock_module():
             st.write(f"• **{item['name']} ({item['symbol']})**：{item['signal']} — *{item['note']}*")
 
     st.divider()
-    
-    # ----------------------------------------------------
-    # 3. 底層：Gemini AI 白話摘要與自訂管理標的 (您的原始完整功能)
-    # ----------------------------------------------------
     col_ai_stock, col_add_stock = st.columns([2, 1])
 
     with col_ai_stock:
@@ -216,9 +172,8 @@ def render_stock_module():
                         st.rerun()
 
 def render_kpi_module():
-    """營運 KPI 與 AR 預警模組"""
+    """營運 KPI 與 AR 預警"""
     st.subheader("📊 跨國三廠營運 KPI 總覽")
-    
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("本月集團總營收 (USD)", "$1,280,000", "+8.5%")
     col2.metric("台灣總部 (TWD)", "NT$ 12,500,000", "+3.2%")
@@ -226,7 +181,6 @@ def render_kpi_module():
     col4.metric("越南平陽廠 (VND)", "₫ 12.8 Billion", "+12.4%")
 
     st.markdown("<br>", unsafe_allow_html=True)
-
     col_left, col_right = st.columns([2, 1])
 
     with col_left:
@@ -243,21 +197,23 @@ def render_kpi_module():
         st.info("ℹ️ **Adidas Taiwan**: 預計 3 天內入帳 (NT$ 1,200,000)")
         st.success("✅ **Shopee Seller A**: 帳款已全數結清")
 
-def render_executive_dashboard_page():
+def render_executive_dashboard_page(selected_stock_market="🌐 全部市場 (All Markets)"):
     """主進入點：雙分頁架構"""
     st.title("📈 董事長/總經理 跨國營運戰情室")
     
     tab1, tab2 = st.tabs(["📈 董事長/總經理 股市與匯率戰情中心", "📊 集團三廠營運 KPI 與 AR 預警"])
     
     with tab1:
-        render_stock_module()
+        render_stock_module(selected_stock_market)
         
     with tab2:
         render_kpi_module()
 
-# 相容 app.py 的動態載入
-def show():
-    render_executive_dashboard_page()
+def render_dashboard(selected_stock_market="🌐 全部市場 (All Markets)"):
+    render_executive_dashboard_page(selected_stock_market)
 
-def main():
-    render_executive_dashboard_page()
+def show(selected_stock_market="🌐 全部市場 (All Markets)"):
+    render_executive_dashboard_page(selected_stock_market)
+
+def main(selected_stock_market="🌐 全部市場 (All Markets)"):
+    render_executive_dashboard_page(selected_stock_market)
