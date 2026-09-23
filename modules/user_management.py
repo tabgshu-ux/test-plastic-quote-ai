@@ -78,10 +78,11 @@ def render_user_management_page(sub_option="👥 人員帳號與網頁授權"):
         
         with col_d2:
             st.markdown("#### 🏢 現有部門組織")
+            # 修正處：補齊 "廠區" 陣列長度為 4 個元素，與代碼及名稱對齊
             depts_df = pd.DataFrame({
                 "部門代碼": ["DEPT-TW-HQ", "DEPT-DG-ENG", "DEPT-BH-PROD", "DEPT-BH-FIN"],
                 "部門名稱": ["台灣總部管理階層", "東莞工程研發部", "平陽射出製造部", "平陽財務課"],
-                "廠區": ["台灣總部", "東莞廠", "平陽廠"]
+                "廠區": ["台灣總部", "東莞廠", "平陽廠", "平陽廠"]
             })
             st.table(depts_df)
 
