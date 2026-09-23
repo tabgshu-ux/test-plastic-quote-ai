@@ -12,18 +12,59 @@ def get_db_connection():
         port=os.getenv("DB_PORT", "5432")
     )
 
-def render_user_management_page(sub_option="👥 人員帳號與網頁授權"):
+def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"):
     st.title("💻 資訊/IT 部門 — 權限與系統管理中心")
-    st.caption("管理集團部門結構、使用者帳號新增，以及跨國 ERP 模組授權 (RBAC)")
+    st.caption("管理集團部門結構、全球廠區據點擴建，以及跨國 ERP 模組授權 (RBAC)")
 
-    tabs = st.tabs(["👥 人員帳號與網頁授權", "🏢 部門管理", "🔒 模組權限矩陣設定"])
+    tabs = st.tabs(["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣設定"])
 
     # ----------------------------------------------------
-    # TAB 1: 人員帳號與網頁授權
+    # TAB 1: 跨國廠區與子公司動態管理 (動態新增廠區)
     # ----------------------------------------------------
     with tabs[0]:
+        st.subheader("🌐 全球廠區與海外子公司據點維護")
+        st.caption("支援跨國企業動態擴張，隨時新增海外新設廠房、研發中心或子公司")
+
+        col_f1, col_f2 = st.columns([1, 1])
+
+        # 初始化 Session State 模擬廠區清單（確保即使在地端 DB 未連線時亦可即時擴展）
+        if "factory_list" not in st.session_state:
+            st.session_state.factory_list = [
+                {"id": "FACT-TW-01", "name": "🇹🇼 台灣總部研發中心", "country": "台灣", "currency": "TWD", "revenue": "NT$ 12.5M", "status": "🟢 營運中"},
+                {"id": "FACT-DG-01", "name": "🇨🇳 東莞一廠 (橡膠/塑膠)", "country": "中國", "currency": "RMB", "revenue": "¥ 3.4M", "status": "🟢 營運中"},
+                {"id": "FACT-BH-01", "name": "🇻🇳 越南平陽廠 (鞋底/大底)", "country": "越南", "currency": "VND", "revenue": "₫ 12.8B", "status": "🟢 營運中"}
+            ]
+
+        with col_f1:
+            st.markdown("#### ➕ 新增海外廠房/分公司據點")
+            with st.form("add_factory_form", clear_on_submit=True):
+                f_id = st.text_input("廠區代碼*", placeholder="例如: FACT-ID-01 (印尼廠)")
+                f_name = st.text_input("廠區/子公司名稱*", placeholder="例如: 🇮🇩 印尼爪哇新廠")
+                f_country = st.text_input("所在國家/區域*", placeholder="例如: 印尼 (Indonesia)")
+                f_currency = st.selectbox("當地記帳本位幣*", ["USD", "VND", "TWD", "RMB", "IDR", "MXN", "EUR"])
+                f_status = st.selectbox("廠區營運狀態", ["🟢 營運中", "🏗️ 建廠/試產中", "🟡 規劃中"])
+
+                if st.form_submit_button("💾 儲存並將新廠區加入集團戰情室"):
+                    if not f_id or not f_name:
+                        st.warning("請輸入廠區代碼與名稱！")
+                    else:
+                        st.session_state.factory_list.append({
+                            "id": f_id, "name": f_name, "country": f_country, 
+                            "currency": f_currency, "revenue": "$0.00", "status": f_status
+                        })
+                        st.success(f"🎉 新廠區據點 [{f_name}] 已成功建立！集團戰情室與 KPI 面板已同步更新連動。")
+                        st.rerun()
+
+        with col_f2:
+            st.markdown("#### 🌍 現有全球廠區據點一覽")
+            df_factories = pd.DataFrame(st.session_state.factory_list)
+            st.dataframe(df_factories, use_container_width=True)
+
+    # ----------------------------------------------------
+    # TAB 2: 人員帳號與網頁授權
+    # ----------------------------------------------------
+    with tabs[1]:
         st.subheader("新增人員與選單授權設定")
-        
         col_form, col_list = st.columns([1, 1])
 
         with col_form:
@@ -41,70 +82,36 @@ def render_user_management_page(sub_option="👥 人員帳號與網頁授權"):
                 auth_rd = st.checkbox("🛠️ 研發/技術 (R&D & Engineering)", value=True)
                 auth_finance = st.checkbox("🧾 財務 (Finance)", value=False)
                 auth_hr = st.checkbox("👥 人事/行政 (HR & Admin)", value=False)
-                auth_it = st.checkbox("💻 資訊/IT (IT & Admin)", value=False)
 
                 submit_user = st.form_submit_button("💾 儲存並啟用帳號與授權")
                 if submit_user:
-                    if not username or not full_name:
-                        st.warning("請填寫帳號與姓名！")
-                    else:
-                        st.success(f"✅ 使用者 [{full_name} ({username})] 新增成功！已更新模組授權矩陣。")
+                    st.success(f"✅ 使用者 [{full_name}] 授權設定成功！")
 
         with col_list:
-            st.markdown("#### 📋 目前全集團帳號與權限清單")
+            st.markdown("#### 📋 目前全集團帳號清單")
             mock_users = pd.DataFrame({
-                "帳號": ["admin@global.com", "ceo@global.com", "sales01@global.com", "fin01@global.com"],
-                "姓名": ["IT 管理員", "董事長", "Alex Chen", "Nguyen Van A"],
-                "部門": ["資訊部", "董事長室", "業務部", "越南財務部"],
-                "角色": ["Admin", "Manager", "User", "User"],
-                "可用模組權限": ["全模組 (Full)", "戰情室/業務/研發", "業務/行銷", "財務/發票"]
+                "帳號": ["admin@global.com", "ceo@global.com", "sales01@global.com"],
+                "姓名": ["IT 管理員", "董事長", "Alex Chen"],
+                "部門": ["資訊部", "董事長室", "業務部"],
+                "角色": ["Admin", "Manager", "User"]
             })
             st.dataframe(mock_users, use_container_width=True)
-
-    # ----------------------------------------------------
-    # TAB 2: 部門管理
-    # ----------------------------------------------------
-    with tabs[1]:
-        st.subheader("跨國廠區部門主檔")
-        col_d1, col_d2 = st.columns([1, 1])
-        with col_d1:
-            with st.form("add_dept_form", clear_on_submit=True):
-                st.markdown("#### ➕ 新增組織部門")
-                dept_id = st.text_input("部門代碼", placeholder="DEPT-BH-SALES")
-                dept_name = st.text_input("部門名稱", placeholder="越南平陽廠 — 業務二組")
-                factory = st.selectbox("歸屬廠區", ["TW (台灣總部)", "DG (東莞廠)", "BH (平陽廠)"])
-                if st.form_submit_button("💾 新增部門"):
-                    st.success(f"✅ 部門 [{dept_name}] 已成功新增！")
-        
-        with col_d2:
-            st.markdown("#### 🏢 現有部門組織")
-            # 修正處：補齊 "廠區" 陣列長度為 4 個元素，與代碼及名稱對齊
-            depts_df = pd.DataFrame({
-                "部門代碼": ["DEPT-TW-HQ", "DEPT-DG-ENG", "DEPT-BH-PROD", "DEPT-BH-FIN"],
-                "部門名稱": ["台灣總部管理階層", "東莞工程研發部", "平陽射出製造部", "平陽財務課"],
-                "廠區": ["台灣總部", "東莞廠", "平陽廠", "平陽廠"]
-            })
-            st.table(depts_df)
 
     # ----------------------------------------------------
     # TAB 3: 模組權限矩陣設定
     # ----------------------------------------------------
     with tabs[2]:
         st.subheader("🔒 角色與模組 Access Control List (ACL) 矩陣")
-        st.caption("勾選不同角色對各網頁頁面的存取權限")
-
         acl_df = pd.DataFrame({
             "模組頁面名稱": ["📈 營運戰情室", "💼 業務/行銷", "🛠️ 研發/技術", "🧾 財務", "👥 人事/行政", "💻 資訊/IT"],
             "Admin (管理員)": [True, True, True, True, True, True],
             "Manager (高層/主管)": [True, True, True, True, True, False],
-            "Sales (業務同仁)": [False, True, False, False, False, False],
-            "Finance (財務人員)": [False, False, False, True, False, False],
-            "Worker (一般員工)": [False, False, True, False, True, False],
+            "Sales (業務同仁)": [False, True, False, False, False, False]
         })
         st.data_editor(acl_df, use_container_width=True)
 
-def show(sub_option="👥 人員帳號與網頁授權"):
+def show(sub_option="🏢 跨國廠區與子公司管理"):
     render_user_management_page(sub_option)
 
-def main(sub_option="👥 人員帳號與網頁授權"):
+def main(sub_option="🏢 跨國廠區與子公司管理"):
     render_user_management_page(sub_option)
