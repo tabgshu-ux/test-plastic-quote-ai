@@ -11,7 +11,7 @@ except ImportError:
     HAS_YFINANCE = False
 
 # ----------------------------------------------------
-# 預設股市觀察清單主資料
+# 預設股市觀察清單主資料 (完全保留您的原始資料)
 # ----------------------------------------------------
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇹🇼 台灣 (Taiwan)", "ticker": "2330.TW", "symbol": "TSMC (2330.TW)", "name": "台積電", "price": 2480.0, "change": "+35.0 (+1.44%)", "signal": "🟢 偏多（適合逢低定額）", "note": "AI 晶片先進封裝獨占，長線穩定成長"},
@@ -59,7 +59,37 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
         return default_price, default_change, [default_price] * 7
 
 def render_stock_module():
-    """完整的股票管理與 AI 解讀模組"""
+    """結合頂層集團核心看板與完整個股管理的股市模組"""
+    
+    # ----------------------------------------------------
+    # 1. 頂層：集團核心客戶與匯率即時監控看板 (新增部分)
+    # ----------------------------------------------------
+    st.subheader("🏛️ 集團核心客戶與國際匯率即時監控")
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+
+    p_tsm, c_tsm, _ = fetch_realtime_stock_data("2330.TW", 2480.0, "+35.0 (+1.44%)")
+    p_nke, c_nke, _ = fetch_realtime_stock_data("NKE", 78.4, "-0.85 (-1.07%)")
+    p_add, c_add, _ = fetch_realtime_stock_data("ADDYY", 108.2, "+2.10 (+1.98%)")
+    p_vnd, c_vnd, _ = fetch_realtime_stock_data("VND=X", 24850.0, "-10.0 (-0.04%)")
+
+    col_k1.metric("台積電 (2330.TW)", f"{p_tsm:,.2f}", delta=c_tsm)
+    col_k2.metric("Nike 核心客戶 (NKE)", f"${p_nke:,.2f}", delta=c_nke)
+    col_k3.metric("Adidas 品牌 (ADDYY)", f"${p_add:,.2f}", delta=c_add)
+    col_k4.metric("美金/越南盾 (USD/VND)", f"₫ {p_vnd:,.0f}", delta=c_vnd)
+
+    with st.expander("📌 點擊查看【核心監控標的之戰略意義說明】", expanded=False):
+        st.markdown("""
+        * **台積電 (2330.TW)**：全球半導體指標。其股價走勢反映整體科技業與電子產業鏈景氣。
+        * **Nike (NKE)**：集團**橡膠射出大底/鞋材模具**之核心終端客戶。直接牽動平陽廠與東莞廠之拉貨動能。
+        * **Adidas (ADDYY)**：歐美運動鞋履競爭與合作指標，監控其庫存去化狀況。
+        * **USD / VND 匯率**：平陽廠出口報價與當地薪資結算之關鍵匯率指標。
+        """)
+
+    st.divider()
+
+    # ----------------------------------------------------
+    # 2. 中層：區域各國股市選擇與清單 (您的原始完整功能)
+    # ----------------------------------------------------
     if "stock_watchlist" not in st.session_state or ("stock_watchlist" in st.session_state and "market" not in st.session_state.stock_watchlist[0]):
         st.session_state.stock_watchlist = NEW_STOCK_WATCHLIST_DATA
 
@@ -97,6 +127,10 @@ def render_stock_module():
             st.write(f"• **{item['name']} ({item['symbol']})**：{item['signal']} — *{item['note']}*")
 
     st.divider()
+    
+    # ----------------------------------------------------
+    # 3. 底層：Gemini AI 白話摘要與自訂管理標的 (您的原始完整功能)
+    # ----------------------------------------------------
     col_ai_stock, col_add_stock = st.columns([2, 1])
 
     with col_ai_stock:
