@@ -93,7 +93,17 @@ def load_module_function(module_name, func_names):
         mod = __import__(f"modules.{module_name}", fromlist=["*"])
         for fname in func_names:
             if hasattr(mod, fname):
-                return getattr(mod, fname)
+                func = getattr(mod, fname)
+                # 安全包裝函式，能自動適應傳入 1 個、2 個或 0 個參數，防止 TypeError
+                def safe_wrapper(*args, **kwargs):
+                    try:
+                        return func(*args, **kwargs)
+                    except TypeError:
+                        try:
+                            return func(args[0]) if len(args) > 0 else func()
+                        except TypeError:
+                            return func()
+                return safe_wrapper
         return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到以下任何入口函式: {func_names}")
     except Exception as e:
         return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
@@ -102,7 +112,8 @@ def load_module_function(module_name, func_names):
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "render_dashboard", "show", "main"])
 render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "render_sales_frontend", "show", "main"])
-render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
+render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "render_invoice", "show", "main"])
+render_tax_ai = load_module_function("finance_tax", ["render_finance_tax_page", "show", "main"])
 render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
 render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
@@ -156,23 +167,30 @@ elif "🛠️ 研發/技術" in selected_dept:
         ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
         key="fixed_sub_rd_option_key"
     )
-    render_asset()
+    render_asset(sub_option)
 
-elif "🏭 廠務/設備" in selected_dept:  # <-- 新增廠務/設備部門
+elif "🏭 廠務/設備" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "廠務項目 (Plant & IoT Items):",
         ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
         key="fixed_sub_plant_iot_option_key"
     )
-    render_erp_db()
+    render_erp_db(sub_option)
 
 elif "🧾 財務" in selected_dept:
     sub_option = st.sidebar.selectbox(
         "財務項目 (Finance Items):",
-        ["📧 通用信箱電子發票讀取 (IMAP)", "🇻🇳 越南 XML 電子發票解析"],
+        [
+            "🌐 全球跨國稅務 AI 智慧問答 (Global Tax AI)",
+            "📧 通用信箱電子發票讀取 (IMAP)",
+            "🇻🇳 越南 XML 電子發票解析"
+        ],
         key="fixed_sub_finance_option_key"
     )
-    render_invoice(sub_option)
+    if "全球跨國稅務" in sub_option:
+        render_tax_ai(sub_option)
+    else:
+        render_invoice(sub_option)
 
 elif "👥 人事/行政" in selected_dept:
     sub_option = st.sidebar.selectbox(
