@@ -59,7 +59,6 @@ def draw_2d_cad(spec):
         <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
             <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
                 <rect width="280" height="360" fill="#0f172a" rx="8"/>
-                <!-- 塑膠盒 2D 俯視與展開圖 -->
                 <rect x="40" y="50" width="200" height="150" fill="#1e293b" stroke="#38bdf8" stroke-width="3" rx="10"/>
                 <rect x="55" y="65" width="170" height="120" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4"/>
                 <circle cx="140" cy="50" r="6" fill="#eab308"/>
@@ -82,12 +81,6 @@ def draw_2d_cad(spec):
                       fill="#1e293b" stroke="#38bdf8" stroke-width="3"/>
                 <line x1="90" y1="70" x2="190" y2="70" stroke="#f43f5e" stroke-width="4"/>
                 <line x1="85" y1="100" x2="195" y2="100" stroke="#38bdf8" stroke-width="4"/>
-                <line x1="83" y1="130" x2="197" y2="130" stroke="#38bdf8" stroke-width="4"/>
-                <line x1="83" y1="160" x2="197" y2="160" stroke="#38bdf8" stroke-width="4"/>
-                <line x1="88" y1="195" x2="192" y2="195" stroke="#eab308" stroke-width="5"/>
-                <line x1="85" y1="230" x2="195" y2="230" stroke="#38bdf8" stroke-width="4"/>
-                <line x1="88" y1="265" x2="192" y2="265" stroke="#38bdf8" stroke-width="4"/>
-                <line x1="98" y1="298" x2="182" y2="298" stroke="#f43f5e" stroke-width="4"/>
                 <text x="100" y="355" fill="#38bdf8" font-size="11" font-weight="bold">寬 {width} cm (厚 {height} cm)</text>
             </svg>
             <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">📐 階段一：2D 平面 CAD 鞋底排水結構設計圖</p>
@@ -125,8 +118,6 @@ def draw_3d_render(spec):
                           fill="#0284c7" transform="translate(0, 12)"/>
                     <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
                           fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
-                    <line x1="90" y1="80" x2="190" y2="80" stroke="#f43f5e" stroke-width="5"/>
-                    <line x1="85" y1="110" x2="195" y2="110" stroke="#0ea5e9" stroke-width="5"/>
                 </g>
                 <text x="140" y="350" fill="#38bdf8" font-size="12" text-anchor="middle" font-weight="bold">3D 立體橡膠大底成型模擬</text>
             </svg>
@@ -134,23 +125,15 @@ def draw_3d_render(spec):
         </div>
         """
 
-def get_nano_banana_photo_url(spec, click_count=0):
-    """修正：傳回嚴格分類之高畫質產品寫實照片，排除任何藥盒或無關圖片"""
+def get_nano_banana_photo_url(spec):
+    """鎖定為專業高透光射出成型塑膠收納盒 / 運動橡膠大底的穩定寫實照片"""
     category = spec.get("category", "general")
     if category == "box":
-        # 塑膠收納盒 / 塑膠盒射出成型件專用圖庫 (Plastic Container Boxes)
-        box_photos = [
-            "https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=800&auto=format&fit=crop&q=80", # 透明塑膠收納盒
-            "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=800&auto=format&fit=crop&q=80"  # 塑膠整理盒件
-        ]
-        return box_photos[click_count % len(box_photos)]
+        # 100% 鎖定為精美透明塑膠收納盒 / 射出成型盒實品照
+        return "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80"
     else:
-        # 橡膠鞋底/大底專用圖庫 (Rubber Outsoles)
-        outsole_photos = [
-            "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80", # 運動鞋底
-            "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80"
-        ]
-        return outsole_photos[click_count % len(outsole_photos)]
+        # 運動鞋膠大底實品照
+        return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80"
 
 def generate_mock_stl_content(spec):
     return f"""solid Part_{spec['category']}_{spec['length']}x{spec['width']}x{spec['height']}
@@ -221,15 +204,11 @@ def render_sales_frontend():
         with tab_banana:
             st.markdown("##### 🍌 Nano Banana AI 寫實成品照生成")
             
-            if "banana_click_count" not in st.session_state:
-                st.session_state.banana_click_count = 0
-
             if st.button("🚀 呼叫 Nano Banana AI 算圖生成寫實相片", type="primary", key="btn_gen_banana_photo"):
                 with st.spinner("Nano Banana AI 正在運算 8K 寫實成品照..."):
-                    st.session_state.banana_click_count += 1
                     st.success("🎉 已成功生成 8K 寫實塑膠盒成品照片！")
             
-            photo_url = get_nano_banana_photo_url(spec, st.session_state.banana_click_count)
+            photo_url = get_nano_banana_photo_url(spec)
             
             st.image(
                 photo_url, 
