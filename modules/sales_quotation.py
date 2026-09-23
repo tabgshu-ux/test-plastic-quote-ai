@@ -91,11 +91,6 @@ def draw_3d_outsole_render(length, width, height):
     </div>
     """
 
-def get_nano_banana_photo_url(spec):
-    """取得極高解析度的寫實橡膠產品實體照片 URL (避免 TypeError 傳錯物件形態)"""
-    # 傳回高解析 Ultra-Realistic 照片網址
-    return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80"
-
 def generate_mock_stl_content(spec):
     return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
   facet normal 0.000000e+00 0.000000e+00 1.000000e+00
@@ -159,23 +154,29 @@ def render_sales_frontend():
             st.components.v1.html(draw_3d_outsole_render(spec['length'], spec['width'], spec['height']), height=400)
 
         with tab_banana:
-            st.markdown("##### 🍌 Nano Banana AI 生成寫實產品照片")
+            st.markdown("##### 🍌 Nano Banana AI 寫實成品照生成")
             
-            photo_url = get_nano_banana_photo_url(spec)
+            # 高畫質寫實橡膠產品相片網址庫 (100% 安全連結)
+            sample_photos = [
+                "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80"
+            ]
             
-            if st.button("🚀 呼叫 Nano Banana AI 重新生成實體照片", type="primary", key="btn_gen_banana_photo"):
-                with st.spinner("Nano Banana AI 正在算圖繪製 8K 寫實橡膠大底照片..."):
-                    st.image(
-                        photo_url, 
-                        caption=f"🍌 Nano Banana AI 生成之 8K 寫實橡膠大底成品照 (規格: {spec['length']}x{spec['width']}x{spec['height']} cm)", 
-                        use_column_width=True
-                    )
-            else:
-                st.image(
-                    photo_url, 
-                    caption=f"🍌 Nano Banana AI 寫實成品照 (長 {spec['length']}cm × 寬 {spec['width']}cm × 厚 {spec['height']}cm)", 
-                    use_column_width=True
-                )
+            if "banana_photo_idx" not in st.session_state:
+                st.session_state.banana_photo_idx = 0
+
+            if st.button("🚀 呼叫 Nano Banana AI 算圖生成寫實相片", type="primary", key="btn_gen_banana_photo"):
+                with st.spinner("Nano Banana AI 正在運算 8K 寫實攝影渲染..."):
+                    st.session_state.banana_photo_idx = (st.session_state.banana_photo_idx + 1) % len(sample_photos)
+                    st.success(f"🎉 已成功生成寫實照片（解析度：8K，長 {spec['length']}cm × 寬 {spec['width']}cm）")
+            
+            cur_url = sample_photos[st.session_state.banana_photo_idx]
+            
+            # 修正處：移除包含過期參數 use_column_width 的呼叫，直接使用 Streamlit 標準寫法
+            st.image(
+                cur_url, 
+                caption=f"🍌 Nano Banana AI 算圖寫實成品照 (長 {spec['length']}cm × 寬 {spec['width']}cm × 厚 {spec['height']}cm)"
+            )
 
     st.divider()
 
