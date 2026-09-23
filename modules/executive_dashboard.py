@@ -28,7 +28,6 @@ NEW_STOCK_WATCHLIST_DATA = [
 ]
 
 def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
-    """即時抓取 Yahoo Finance 股票資料（具備美股 NaN 自動清洗與 Fallback 保護）"""
     if not HAS_YFINANCE:
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
@@ -44,24 +43,33 @@ def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
                     change_pct = (change_val / prev_price) * 100
                     change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
                     return round(latest_price, 2), change_str, close_series.tolist()
-            elif len(close_series) == 1:
-                latest_price = float(close_series.iloc[-1])
-                if not math.isnan(latest_price):
-                    return round(latest_price, 2), default_change, [latest_price] * 7
         return default_price, default_change, [default_price] * 7
     except Exception:
         return default_price, default_change, [default_price] * 7
 
 def render_stock_module(selected_stock_market="🌐 全部市場 (All Markets)"):
-    """根據左側選單選擇的股市區域渲染對應看板"""
+    st.subheader("🏛️ 集團核心客戶與國際匯率即時監控")
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+
+    p_tsm, c_tsm, _ = fetch_realtime_stock_data("2330.TW", 2480.0, "+35.0 (+1.44%)")
+    p_nke, c_nke, _ = fetch_realtime_stock_data("NKE", 78.4, "-0.85 (-1.07%)")
+    p_add, c_add, _ = fetch_realtime_stock_data("ADDYY", 108.2, "+2.10 (+1.98%)")
+    p_vnd, c_vnd, _ = fetch_realtime_stock_data("VND=X", 24850.0, "-10.0 (-0.04%)")
+
+    col_k1.metric("台積電 (2330.TW)", f"{p_tsm:,.2f}", delta=c_tsm)
+    col_k2.metric("Nike 核心客戶 (NKE)", f"${p_nke:,.2f}", delta=c_nke)
+    col_k3.metric("Adidas 品牌 (ADDYY)", f"${p_add:,.2f}", delta=c_add)
+    col_k4.metric("美金/越南盾 (USD/VND)", f"₫ {p_vnd:,.0f}", delta=c_vnd)
+
+    st.divider()
+
     if "stock_watchlist" not in st.session_state or ("stock_watchlist" in st.session_state and "market" not in st.session_state.stock_watchlist[0]):
         st.session_state.stock_watchlist = NEW_STOCK_WATCHLIST_DATA
 
-    col_hdr1, col_hdr2 = st.columns([3, 1])
-    with col_hdr1:
-        st.subheader(f"📈 董事長/總經理 專屬 — [{selected_stock_market}] 戰情中心")
-        st.caption("連線 Yahoo Finance API 自動抓取最新價格，透過左側選單輕鬆切換台灣、中國、美國與越南股市。")
-    with col_hdr2:
+    col_select, col_refresh = st.columns([3, 1])
+    with col_select:
+        st.write(f"#### 🌐 目前檢視區域：【{selected_stock_market}】")
+    with col_refresh:
         if st.button("🔄 刷新最新市場行情", type="primary", key="btn_refresh_stocks"):
             st.rerun()
 
@@ -76,141 +84,97 @@ def render_stock_module(selected_stock_market="🌐 全部市場 (All Markets)")
                 st.caption(f"**區域**: {item.get('market', '全區')}")
                 st.caption(f"**建議**: {item['signal']}")
                 st.line_chart(cur_history, height=85)
-    else:
-        st.info("該分頁目前無觀察標的，您可以在右側表單自由新增或刪除。")
 
     st.divider()
 
-    with st.expander("👑 董事長/總經理 專屬觀察重點與理由 (無需看懂線圖)", expanded=True):
-        st.markdown(f"#### 💡 目前檢視分頁：【{selected_stock_market}】15 秒快速導讀觀點")
+    with st.expander("👑 董事長/總經理 專屬觀察重點與理由", expanded=True):
         for item in filtered_watchlist:
             st.write(f"• **{item['name']} ({item['symbol']})**：{item['signal']} — *{item['note']}*")
 
-    st.divider()
-    col_ai_stock, col_add_stock = st.columns([2, 1])
+def render_ar_ap_module():
+    """動態跨國廠區 AR / AP 財務應收應付總覽"""
+    st.subheader("💵 全球廠區與子公司 AR / AP 財務統計")
+    
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("集團總應收帳款 (AR)", "$ 485,000 USD", "+5.2%")
+    m2.metric("集團總應付帳款 (AP)", "$ 210,000 USD", "-2.1%")
+    m3.metric("預估淨營運現金流", "$ 275,000 USD", "+8.4%")
+    m4.metric("平均應收帳款週轉天數 (DSO)", "42 天", "-3 天")
 
-    with col_ai_stock:
-        st.markdown(f"### 🤖 Gemini AI 跨國白話財經摘要 [{selected_stock_market}]")
-        st.caption("點擊下方按鈕，讓 AI 為您用最白話的方式解讀該市場之最新趨勢與製造業策略。")
-        if st.button("🚀 生成該區域白話重點與決策報告", key="btn_gen_stock_ai"):
-            with st.spinner("Gemini AI 正在為您整理白話市場摘要..."):
-                try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    stock_prompt = f"你是一位給集團董事長/總經理的專屬白話財經顧問。請針對區域：『{selected_stock_market}』，用最淺顯易懂、完全不講艱深股票術語的語言，撰寫一份簡短報告（150字以內）：1.景氣現況 2.個股/指數 3.對集團塑膠射出廠影響 4.一句話建議。"
-                    res = model.generate_content(stock_prompt)
-                    st.markdown(f"#### 📊 AI 區域市場白話摘要：\n{res.text}")
-                except Exception:
-                    st.info(f"#### 📊 AI 區域市場白話摘要（示範）：\n1. **景氣**：表現穩定。\n2. **動態**：主力科技與製造買盤持續。\n3. **影響**：工廠稼動率維持高檔，材料報價穩定。\n4. **建議**：適度保留現金流。")
+    st.markdown("---")
+    col_ar, col_ap = st.columns([1, 1])
 
-    with col_add_stock:
-        st.markdown("### 🛠️ 管理自訂觀察關注標的")
-        if "val_stock_name" not in st.session_state: st.session_state["val_stock_name"] = "日月光投控"
-        if "val_stock_price" not in st.session_state: st.session_state["val_stock_price"] = 663.00
-        if "val_stock_change" not in st.session_state: st.session_state["val_stock_change"] = "+25.00 (+3.92%)"
+    with col_ar:
+        st.markdown("### 🚨 客戶應收帳款 (AR) 逾期預警")
+        ar_data = pd.DataFrame({
+            "客戶名稱": ["Nike Vietnam", "Adidas Taiwan", "Shopee Seller A", "Foxconn DG"],
+            "歸屬廠區": ["🇻🇳 平陽廠", "🇹🇼 台灣總部", "🇻🇳 平陽廠", "🇨🇳 東莞廠"],
+            "應收金額 (USD)": ["$ 125,000", "$ 85,000", "$ 32,000", "$ 110,000"],
+            "逾期天數": ["⚠️ 逾期 14 天", "🟢 未逾期", "🔴 逾期 23 天", "🟢 未逾期"]
+        })
+        st.dataframe(ar_data, use_container_width=True)
 
-        def fetch_stock_info_callback():
-            symbol = st.session_state.get("input_stock_ticker", "").strip().upper()
-            if symbol.isdigit():
-                symbol = f"{symbol}.TW"
-                st.session_state["input_stock_ticker"] = symbol
-            if symbol and HAS_YFINANCE:
-                try:
-                    ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="5d")
-                    if hist.empty and symbol.endswith(".TW") and symbol[:-3].isdigit():
-                        symbol = f"{symbol[:-3]}.TWO"
-                        ticker = yf.Ticker(symbol)
-                        hist = ticker.history(period="5d")
-                    if not hist.empty:
-                        close_series = hist["Close"].dropna()
-                        if not close_series.empty:
-                            latest_price = float(close_series.iloc[-1])
-                            prev_price = float(close_series.iloc[-2]) if len(close_series) >= 2 else latest_price
-                            change_val = latest_price - prev_price
-                            change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
-                            change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-                            try:
-                                info = ticker.info
-                                short_name = info.get("shortName") or info.get("longName") or symbol
-                            except Exception:
-                                short_name = symbol
-
-                            st.session_state["val_stock_name"] = short_name
-                            st.session_state["val_stock_price"] = float(round(latest_price, 2))
-                            st.session_state["val_stock_change"] = change_str
-                            st.session_state["input_stock_name"] = short_name
-                            st.session_state["input_stock_price"] = float(round(latest_price, 2))
-                            st.session_state["input_stock_change"] = change_str
-                            st.toast(f"✅ 已成功抓取 {short_name} ({symbol})！", icon="📈")
-                except Exception as e:
-                    st.toast(f"❌ 抓取失敗: {e}", icon="❌")
-
-        with st.expander("➕ 新增觀察個股/指數", expanded=True):
-            s_market = st.selectbox("選擇股票市場區域", ["🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"], key="input_stock_market")
-            s_ticker = st.text_input("Yahoo 財經代碼 (如 2881.TW / 2855 / NVDA)", value=st.session_state.get("input_stock_ticker", "2855.TW"), key="input_stock_ticker", on_change=fetch_stock_info_callback)
-            st.button("🔍 抓取最新股價與名稱", on_click=fetch_stock_info_callback, use_container_width=True)
-            s_name = st.text_input("名稱 (如 統一證)", value=st.session_state["val_stock_name"], key="input_stock_name")
-            s_price = st.number_input("最新價格", min_value=0.0, value=st.session_state["val_stock_price"], step=0.5, format="%.2f", key="input_stock_price")
-            s_change = st.text_input("漲跌幅度 (如 +0.50 (+2.10%))", value=st.session_state["val_stock_change"], key="input_stock_change")
-
-            if st.button("✅ 新增至該市場清單", type="primary", key="btn_add_stock_to_list"):
-                if s_ticker and s_name:
-                    st.session_state.stock_watchlist.append({"market": s_market, "ticker": s_ticker, "symbol": f"{s_name} ({s_ticker})", "name": s_name, "price": s_price, "change": s_change, "signal": "🟢 偏多（穩健觀察）", "note": "自訂關注標的"})
-                    st.success(f"已成功新增 `{s_name}` 至 【{s_market}】！")
-                    st.rerun()
-
-        with st.expander("🗑️ 管理與刪除已關注標的", expanded=True):
-            if st.session_state.stock_watchlist:
-                manageable_stocks = st.session_state.stock_watchlist if selected_stock_market == "🌐 全部市場 (All Markets)" else [item for item in st.session_state.stock_watchlist if item.get("market") == selected_stock_market]
-                if manageable_stocks:
-                    stock_options = [f"{idx} - {item['name']} ({item['ticker']})" for idx, item in enumerate(manageable_stocks)]
-                    selected_del_stock_str = st.selectbox("選擇要移除的標的", stock_options, key="del_stock_select")
-                    if st.button("🗑️ 確認將此標的從關注清單移除", type="primary", key="btn_del_stock_confirm"):
-                        target_ticker = selected_del_stock_str.split(" (")[-1].replace(")", "")
-                        st.session_state.stock_watchlist = [item for item in st.session_state.stock_watchlist if item['ticker'] != target_ticker]
-                        st.success(f"🗑️ 已成功將 `{target_ticker}` 從關注清單移除！")
-                        st.rerun()
+    with col_ap:
+        st.markdown("### 📦 應付帳款 (AP) 付款審核")
+        ap_data = pd.DataFrame({
+            "供應商名稱": ["奇美實業 (ABS)", "台塑橡膠 (SBR)", "東莞精雕 CNC"],
+            "付款廠區": ["🇹🇼 台灣總部", "🇻🇳 平陽廠", "🇨🇳 東莞廠"],
+            "應付金額": ["NT$ 1,200,000", "₫ 450,000,000", "¥ 180,000"],
+            "狀態": ["⏳ 審核中", "🟢 準備支付", "⏳ 簽核中"]
+        })
+        st.dataframe(ap_data, use_container_width=True)
 
 def render_kpi_module():
-    """營運 KPI 與 AR 預警"""
-    st.subheader("📊 跨國三廠營運 KPI 總覽")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("本月集團總營收 (USD)", "$1,280,000", "+8.5%")
-    col2.metric("台灣總部 (TWD)", "NT$ 12,500,000", "+3.2%")
-    col3.metric("東莞廠 (RMB)", "¥ 3,400,000", "-1.5%")
-    col4.metric("越南平陽廠 (VND)", "₫ 12.8 Billion", "+12.4%")
+    """動態讀取全球所有廠區的 KPI 總覽"""
+    st.subheader("📊 全球廠區營運 KPI 總覽 (動態廠區連動)")
+    
+    # 動態讀取 IT 模組建立的廠區清單
+    factories = st.session_state.get("factory_list", [
+        {"name": "🇹🇼 台灣總部研發中心", "revenue": "NT$ 12.5M", "status": "🟢 營運中"},
+        {"name": "🇨🇳 東莞一廠", "revenue": "¥ 3.4M", "status": "🟢 營運中"},
+        {"name": "🇻🇳 越南平陽廠", "revenue": "₫ 12.8B", "status": "🟢 營運中"}
+    ])
+
+    st.markdown(f"**目前全集團營運據點數：`{len(factories)} 個廠區/子公司`**")
+    
+    # 動態展示各廠區 KPI 卡片
+    cols_f = st.columns(min(len(factories), 4))
+    for idx, f in enumerate(factories):
+        with cols_f[idx % 4]:
+            st.metric(label=f["name"], value=f.get("revenue", "$0.00"), delta=f.get("status", "🟢"))
 
     st.markdown("<br>", unsafe_allow_html=True)
     col_left, col_right = st.columns([2, 1])
 
     with col_left:
-        st.subheader("📉 近半季三廠營收成長趨勢 (USD)")
+        st.subheader("📉 各廠區營收成長動態趨勢")
+        factory_names = [f["name"] for f in factories]
         chart_data = pd.DataFrame(
-            np.random.randn(20, 3) * 10000 + [50000, 40000, 35000],
-            columns=['台灣總部 (TW)', '東莞廠 (DG)', '平陽廠 (BH)']
+            np.random.randn(20, len(factories)) * 10000 + 40000,
+            columns=factory_names
         )
         st.line_chart(chart_data)
 
     with col_right:
-        st.subheader("🚨 AR / DSO 應收帳款預警")
-        st.warning("⚠️ **Nike Vietnam**: 帳款逾期 15 天 ($45,000 USD)")
-        st.info("ℹ️ **Adidas Taiwan**: 預計 3 天內入帳 (NT$ 1,200,000)")
-        st.success("✅ **Shopee Seller A**: 帳款已全數結清")
+        st.subheader("🏭 全球廠區機台平均稼動率 (OEE)")
+        for f in factories:
+            st.progress(0.85, text=f"{f['name']}: 85.0% (運作正常)")
 
 def render_executive_dashboard_page(selected_stock_market="🌐 全部市場 (All Markets)"):
-    """主進入點：雙分頁架構"""
     st.title("📈 董事長/總經理 跨國營運戰情室")
     
-    tab1, tab2 = st.tabs(["📈 董事長/總經理 股市與匯率戰情中心", "📊 集團三廠營運 KPI 與 AR 預警"])
+    tab1, tab2, tab3 = st.tabs([
+        "📈 董事長/總經理 股市與匯率戰情中心", 
+        "💵 全球廠區 AR / AP 應收應付財務統計", 
+        "📊 全球廠區營運 KPI 與機台稼动"
+    ])
     
     with tab1:
         render_stock_module(selected_stock_market)
-        
     with tab2:
+        render_ar_ap_module()
+    with tab3:
         render_kpi_module()
-
-def render_dashboard(selected_stock_market="🌐 全部市場 (All Markets)"):
-    render_executive_dashboard_page(selected_stock_market)
 
 def show(selected_stock_market="🌐 全部市場 (All Markets)"):
     render_executive_dashboard_page(selected_stock_market)
