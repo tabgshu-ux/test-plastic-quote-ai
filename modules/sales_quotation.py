@@ -48,15 +48,14 @@ def parse_dimensions_and_type(prompt_text):
     }
 
 def clean_non_ascii(text):
-    """防止中文字元造成 PDF 黑塊亂碼，自動將中文字過濾或替換為標準英文描述"""
-    # 簡單清洗非 ASCII 字元
+    """防止中文字元造成 PDF 黑塊亂碼"""
     clean_text = re.sub(r'[^\x00-\x7F]+', '', text)
     if not clean_text.strip():
         return "Custom Rubber Outsole Design (Jordan 10 Tread)"
     return clean_text.strip()
 
 def generate_pdf_quotation(user_prompt, spec):
-    """使用 ReportLab 動態繪製商務 PDF 報價單 (解決黑塊與重疊問題)"""
+    """使用 ReportLab 動態繪製商務 PDF 報價單"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     story = []
@@ -94,13 +93,10 @@ def generate_pdf_quotation(user_prompt, spec):
         fontName='Helvetica-Bold'
     )
 
-    # 抬頭與公司資訊
     story.append(Paragraph("<b>GLOBAL INJECTION MOLDING CORP.</b>", title_style))
     story.append(Paragraph("<font size=9 color='#64748b'>Official Preliminary Quotation & Technical Evaluation</font>", ParagraphStyle('SubTitle', alignment=1)))
     story.append(Spacer(1, 10))
 
-    # 客戶與產品規格表格 (優化排版與自動換行)
-    clean_req = clean_non_ascii(user_prompt)
     info_data = [
         [
             Paragraph("Date:", cell_bold), Paragraph("2026-03-24", cell_style),
@@ -120,7 +116,6 @@ def generate_pdf_quotation(user_prompt, spec):
         ]
     ]
     
-    # 重新精確分派 4 欄寬度 (總寬度 540)
     t_info = Table(info_data, colWidths=[85, 185, 85, 185])
     t_info.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f8fafc")),
@@ -133,7 +128,6 @@ def generate_pdf_quotation(user_prompt, spec):
     story.append(t_info)
     story.append(Spacer(1, 12))
 
-    # 費用明細表格
     story.append(Paragraph("<b>Cost Breakdown & Pricing Structure</b>", h2_style))
     cost_data = [
         [Paragraph("Item Description", cell_bold), Paragraph("Specification / Details", cell_bold), Paragraph("Est. Cost (USD)", cell_bold)],
@@ -154,7 +148,6 @@ def generate_pdf_quotation(user_prompt, spec):
     story.append(t_cost)
     story.append(Spacer(1, 12))
 
-    # 條款與說明
     story.append(Paragraph("<b>Terms & Production Notes</b>", h2_style))
     story.append(Paragraph("1. Mold Development Lead Time: 25 Days (Includes T1 Trial & Water Drainage Testing).", cell_style))
     story.append(Paragraph("2. Mass Production Lead Time: 15 Days after T1 sample confirmation.", cell_style))
@@ -322,13 +315,14 @@ def render_sales_frontend():
                 type="primary",
                 key="btn_download_pdf_file"
             )
+
 # ====================================================
-# 頁面主進入點（供 app.py 呼叫）
+# 頁面主進入點 (供 app.py 呼叫)
 # ====================================================
 def render_sales_quotation_page():
+    """業務報價模組主渲染進入點"""
     st.title("💼 業務報價 & CAD/3D/PDF Pipeline 系統")
     
-    # 建立頁面分頁
     tab1, tab2 = st.tabs(["📝 即時 AI 報價與 CAD/3D 設計", "📊 歷史報價單據與資料庫"])
     
     with tab1:
