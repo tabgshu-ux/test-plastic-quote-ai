@@ -1,140 +1,191 @@
 import streamlit as st
-import os
 
-# 1. 網頁基本設定
 st.set_page_config(
-    page_title="企業級 AI ERP & 智慧製造管理系統",
+    page_title="跨國塑膠/橡膠射出成型 AI ERP",
     page_icon="🏭",
     layout="wide"
 )
 
-# 2. 安全動態載入各模組
-def load_module(module_name):
+# ----------------------------------------------------
+# 🌐 跨國多語系字典定義 (i18n Dictionary)
+# ----------------------------------------------------
+I18N = {
+    "繁體中文": {
+        "title": "🏭 AI ERP 系統選單",
+        "lang_select": "🌐 選擇系統語系 (Language):",
+        "dept_select": "請選擇部門/模組分類：",
+        "depts": [
+            "📈 營運戰情室 (Executive)",
+            "💼 業務/行銷 (Sales & Marketing)",
+            "🛠️ 研發/技術 (R&D & Engineering)",
+            "🏭 廠務/設備 (Plant & IoT)",
+            "🧾 財務 (Finance)",
+            "👥 人事/行政 (HR & Admin)",
+            "💻 資訊/IT (IT & System Admin)"
+        ]
+    },
+    "Tiếng Việt": {
+        "title": "🏭 Menu Hệ Thống AI ERP",
+        "lang_select": "🌐 Chọn ngôn ngữ (Language):",
+        "dept_select": "Vui lòng chọn phòng ban/phân hệ:",
+        "depts": [
+            "📈 Phòng Điều Hành (Executive)",
+            "💼 Kinh Doanh / Marketing",
+            "🛠️ R&D / Kỹ Thuật",
+            "🏭 Quản Lý Nhà Máy & IoT",
+            "🧾 Tài Chính / Kế Toán",
+            "👥 Nhân Sự / Hành Chính",
+            "💻 Công Nghệ Thông Tin (IT)"
+        ]
+    },
+    "简体中文": {
+        "title": "🏭 AI ERP 系统菜单",
+        "lang_select": "🌐 选择系统语系 (Language):",
+        "dept_select": "请选择部门/模块分类：",
+        "depts": [
+            "📈 营运战情室 (Executive)",
+            "💼 业务/营销 (Sales & Marketing)",
+            "🛠️ 研发/技术 (R&D & Engineering)",
+            "🏭 厂务/设备 (Plant & IoT)",
+            "🧾 财务 (Finance)",
+            "👥 人事/行政 (HR & Admin)",
+            "💻 信息/IT (IT & System Admin)"
+        ]
+    },
+    "English": {
+        "title": "🏭 AI ERP System Menu",
+        "lang_select": "🌐 System Language:",
+        "dept_select": "Select Department / Module:",
+        "depts": [
+            "📈 Executive Dashboard",
+            "💼 Sales & Marketing",
+            "🛠️ R&D & Engineering",
+            "🏭 Plant & IoT Engineering",
+            "🧾 Finance",
+            "👥 HR & Administration",
+            "💻 IT & System Admin"
+        ]
+    },
+    "Bahasa Indonesia": {
+        "title": "🏭 Menu Sistem AI ERP",
+        "lang_select": "🌐 Pilih Bahasa (Language):",
+        "dept_select": "Pilih Departemen / Modul:",
+        "depts": [
+            "📈 Dasbor Eksekutif",
+            "💼 Penjualan & Pemasaran",
+            "🛠️ R&D & Teknik",
+            "🏭 Teknik Pabrik & IoT",
+            "🧾 Keuangan",
+            "👥 SDM & Administrasi",
+            "💻 IT & Admin Sistem"
+        ]
+    }
+}
+
+if "lang" not in st.session_state:
+    st.session_state.lang = "繁體中文"
+
+# ----------------------------------------------------
+# 安全動態載入模組 (具備自動相容與容錯保護)
+# ----------------------------------------------------
+def load_module_function(module_name, func_names):
     try:
-        mod = __import__(f"modules.{module_name}", fromlist=["show", "main", "render_invoice"])
-        return mod
+        mod = __import__(f"modules.{module_name}", fromlist=["*"])
+        for fname in func_names:
+            if hasattr(mod, fname):
+                return getattr(mod, fname)
+        return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到以下任何入口函式: {func_names}")
     except Exception as e:
-        return None
+        return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-sales_quotation = load_module("sales_quotation")
-finance_tax = load_module("finance_tax")
-invoice_mod = load_module("invoice")
+# 載入核心模組
+render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "render_dashboard", "show", "main"])
+render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
+render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "render_sales_frontend", "show", "main"])
+render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
+render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
+render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
+render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
-# 3. Session State 使用者狀態初始化
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = True
-if "user_name" not in st.session_state:
-    st.session_state.user_name = "Alex Chen (資深經理)"
+# ----------------------------------------------------
+# 側邊欄：固定 key 值的語系切換器與部門選單
+# ----------------------------------------------------
+st.sidebar.title("🏭 AI ERP")
 
-# 4. 側邊欄頂部：使用者狀態與登出按鈕
-st.sidebar.markdown("### 👤 使用者狀態")
-if st.session_state.logged_in:
-    st.sidebar.success(f"🟢 已登入：**{st.session_state.user_name}**")
-    if st.sidebar.button("🔒 登出系統", key="btn_logout"):
-        st.session_state.logged_in = False
-        st.rerun()
-else:
-    st.sidebar.warning("🔴 未登入系統")
-    with st.sidebar.form("login_form"):
-        username = st.text_input("帳號", value="admin")
-        password = st.text_input("密碼", type="password", value="123456")
-        submit_login = st.form_submit_button("🚀 登入")
-        if submit_login:
-            st.session_state.logged_in = True
-            st.session_state.user_name = f"{username} (管理者)"
-            st.rerun()
+selected_lang = st.sidebar.selectbox(
+    "🌐 系統語系 (Language):",
+    ["繁體中文", "Tiếng Việt", "简体中文", "English", "Bahasa Indonesia"],
+    key="fixed_lang_selector_key"
+)
+st.session_state.lang = selected_lang
+lang_dict = I18N[selected_lang]
 
-st.sidebar.divider()
+st.sidebar.markdown("---")
 
-if not st.session_state.logged_in:
-    st.warning("🔒 請先於左側邊欄完成登入以使用企業 ERP 系統。")
-    st.stop()
-
-# 5. 完整公司部門組織選單 (Full ERP Departments)
-st.sidebar.title("🏢 企業部門與功能模組")
-
-dept_menu = st.sidebar.radio(
-    "請選擇部門 / 功能分頁：",
-    [
-        "💼 業務/行銷部 (Sales & Marketing)",
-        "💰 財務/會計部 — 跨國稅務 AI (Finance & Tax)",
-        "🏢 董事長 / 總經理室 (Executive Management)",
-        "🔬 研發與工程部 (R&D / Engineering)",
-        "📦 採購與資材部 (Procurement & Logistics)",
-        "🏭 生產與製造部 (Manufacturing & MES)",
-        "🔍 品質保證部 (Quality Assurance - QA)",
-        "📄 智慧發票與進銷項管理 (Invoice)",
-        "⚙️ 系統設定與權限管理 (System Settings)"
-    ]
+# 固定選單 key 值，確保輸入鍵盤不跑色、跑格
+selected_dept = st.sidebar.radio(
+    lang_dict["dept_select"],
+    options=I18N["繁體中文"]["depts"],  # 使用固定 Key 索引
+    key="fixed_sidebar_dept_radio_key"
 )
 
-st.sidebar.divider()
+st.sidebar.markdown("---")
 
-# 6. 導覽邏輯與模組分發
-if "業務/行銷部" in dept_menu:
-    sub_option = st.sidebar.selectbox("業務子功能：", ["📝 AI 即時報價 & CAD/3D Pipeline", "📜 歷史報價紀錄"])
-    if sales_quotation:
-        sales_quotation.show(sub_option)
-    else:
-        st.error("❌ 找不到 sales_quotation 模組。")
+# ----------------------------------------------------
+# 頁面路由與子選單
+# ----------------------------------------------------
+if "📈 營運戰情室" in selected_dept:
+    sub_option = st.sidebar.selectbox(
+        "選擇觀察市場 (Market):",
+        ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
+        key="fixed_sub_exec_market_key"
+    )
+    render_exec_db(sub_option, selected_lang)
 
-elif "財務/會計部" in dept_menu:
-    sub_option = st.sidebar.selectbox("財務子功能：", ["🌐 全球稅務 AI 中文問答", "📊 跨境扣繳稅 (WHT/FCT) 試算器", "📖 各國核心稅法憑證檢核庫"])
-    if finance_tax:
-        finance_tax.show(sub_option)
-    else:
-        st.error("❌ 找不到 finance_tax 模組。")
+elif "💼 業務/行銷" in selected_dept:
+    sub_option = st.sidebar.selectbox(
+        "業務項目 (Sales Items):",
+        ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
+        key="fixed_sub_sales_option_key"
+    )
+    render_sales(sub_option)
 
-elif "董事長" in dept_menu:
-    st.title("🏢 董事長 / 總經理室 (Executive Management)")
-    st.subheader("📊 企業經營 KPIs 與營運決策看板")
-    st.info("💡 即時串接各部門數據：總接單金額、生產稼動率、跨國稅務合規風險與預估毛利。")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("本月營收目標", "$1,250,000 USD", "+12.5%")
-    col2.metric("工廠整體稼動率", "88.5%", "+3.2%")
-    col3.metric("待處理報價單", "14 件", "-2")
+elif "🛠️ 研發/技術" in selected_dept:
+    sub_option = st.sidebar.selectbox(
+        "技術項目 (Engineering Items):",
+        ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
+        key="fixed_sub_rd_option_key"
+    )
+    render_asset()
 
-elif "研發與工程部" in dept_menu:
-    st.title("🔬 研發與工程部 (R&D & Engineering)")
-    st.subheader("📐 3D 模具開發與產品 DFM 分析")
-    st.write("• **CAD/CAM 圖資管理**：DWG, STEP, STL 檔案版本控管")
-    st.write("• **模流分析 (Moldflow)**：射出壓力、保壓與冷卻時間預測")
+elif "🏭 廠務/設備" in selected_dept:  # <-- 新增廠務/設備部門
+    sub_option = st.sidebar.selectbox(
+        "廠務項目 (Plant & IoT Items):",
+        ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
+        key="fixed_sub_plant_iot_option_key"
+    )
+    render_erp_db()
 
-elif "採購與資材部" in dept_menu:
-    st.title("📦 採購與資材部 (Procurement & Materials)")
-    st.subheader("🛒 物料需求規劃 (MRP) 與庫存控管")
-    st.write("• **塑膠粒/橡膠原物料庫存**：PP, ABS, PC, SBR 庫存水位警示")
-    st.write("• **供應商評鑑**：交期達成率與不良退貨率追蹤")
+elif "🧾 財務" in selected_dept:
+    sub_option = st.sidebar.selectbox(
+        "財務項目 (Finance Items):",
+        ["📧 通用信箱電子發票讀取 (IMAP)", "🇻🇳 越南 XML 電子發票解析"],
+        key="fixed_sub_finance_option_key"
+    )
+    render_invoice(sub_option)
 
-elif "生產與製造部" in dept_menu:
-    st.title("🏭 生產與製造部 (Manufacturing & MES)")
-    st.subheader("⚙️ 廠區機台排程與製造執行系統")
-    st.write("• **射出機/熱壓機連線**：鎖模力噸數、模溫與週期時間監控")
-    st.write("• **派工單管理**：現場工單進度即時回報")
+elif "👥 人事/行政" in selected_dept:
+    sub_option = st.sidebar.selectbox(
+        "人事項目 (HR Items):",
+        ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
+        key="fixed_sub_hr_option_key"
+    )
+    render_payroll(sub_option)
 
-elif "品質保證部" in dept_menu:
-    st.title("🔍 品質保證部 (Quality Assurance)")
-    st.subheader("🛡️ IPQC 巡檢與全檢品質報告")
-    st.write("• **尺寸量測報告**：2D/3D 投影儀與三次元量測數據登錄")
-    st.write("• **客訴與 CAPA 改善**：8D 改善報告流程管制")
-
-elif "智慧發票" in dept_menu:
-    sub_option = st.sidebar.selectbox("發票子功能：", ["📄 電子發票開立與辨識", "🔍 稅務抵扣憑證檢核"])
-    if invoice_mod:
-        if hasattr(invoice_mod, "render_invoice"):
-            try:
-                invoice_mod.render_invoice(sub_option)
-            except TypeError:
-                invoice_mod.render_invoice()
-        elif hasattr(invoice_mod, "show"):
-            invoice_mod.show(sub_option)
-    else:
-        st.info("🧾 智慧發票管理模组運作中（支援越南 Hóa đơn điện tử 與台灣電子發票）。")
-
-elif "系統設定" in dept_menu:
-    st.title("⚙️ 系統設定與權限管理")
-    st.success("🟢 系統連線狀態：正常 (Connected)")
-    api_key_input = st.text_input("Gemini API Key 設定：", value=os.getenv("GEMINI_API_KEY", ""), type="password")
-    if st.button("💾 儲存設定"):
-        os.environ["GEMINI_API_KEY"] = api_key_input
-        st.success("✅ 已成功儲存 API 金鑰！")
+elif "💻 資訊/IT" in selected_dept:
+    sub_option = st.sidebar.selectbox(
+        "管理項目 (IT Items):",
+        ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"],
+        key="fixed_sub_it_option_key"
+    )
+    render_user_mgmt(sub_option)
