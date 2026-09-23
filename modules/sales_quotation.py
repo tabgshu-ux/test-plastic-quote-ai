@@ -2,21 +2,17 @@ import re
 import math
 import io
 import streamlit as st
-import google.generativeai as genai
 
-# 匯入 ReportLab 產生標準商務 PDF
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
 def parse_dimensions_and_type(prompt_text):
-    """精準動態解析尺寸與產品類型"""
     nums = re.findall(r'\d+(?:\.\d+)?', prompt_text)
-    
     length = 40.0
     width = 25.0
-    height = 3.0 # 單位: cm
+    height = 3.0
     
     if len(nums) >= 3:
         length = float(nums[0])
@@ -48,14 +44,12 @@ def parse_dimensions_and_type(prompt_text):
     }
 
 def clean_non_ascii(text):
-    """防止中文字元造成 PDF 黑塊亂碼"""
     clean_text = re.sub(r'[^\x00-\x7F]+', '', text)
     if not clean_text.strip():
         return "Custom Rubber Outsole Design (Jordan 10 Tread)"
     return clean_text.strip()
 
 def generate_pdf_quotation(user_prompt, spec):
-    """使用 ReportLab 動態繪製商務 PDF 報價單"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     story = []
@@ -161,7 +155,6 @@ def generate_pdf_quotation(user_prompt, spec):
     return buffer.getvalue()
 
 def draw_2d_outsole_cad(length, width, height):
-    """繪製 2D 平面 CAD 圖"""
     return f"""
     <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
@@ -186,7 +179,6 @@ def draw_2d_outsole_cad(length, width, height):
     """
 
 def draw_3d_outsole_render(length, width, height):
-    """繪製 3D 立體渲染視角 SVG"""
     return f"""
     <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
         <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
@@ -211,7 +203,6 @@ def draw_3d_outsole_render(length, width, height):
     """
 
 def generate_mock_stl_content(spec):
-    """產生 3D 列印 STL 檔案內容"""
     return f"""solid Outsole_Jordan10
   facet normal 0 0 1
     outer loop
@@ -273,7 +264,6 @@ def render_sales_frontend():
 
     st.divider()
 
-    # 3D 列印機串接
     st.markdown("### 🖨️ 階段三：樣品快速打樣 — 3D 列印機即時串接")
     col_print1, col_print2 = st.columns([1, 1])
     
@@ -298,7 +288,6 @@ def render_sales_frontend():
 
     st.divider()
 
-    # 📄 階段四：PDF 正式報價單生成與下載
     st.markdown("### 📄 階段四：產出正式 PDF 業務預估報價單")
     
     if st.button("🚀 生成正式 PDF 業務預估報價單", type="primary", key="btn_gen_quote_doc"):
@@ -316,11 +305,7 @@ def render_sales_frontend():
                 key="btn_download_pdf_file"
             )
 
-# ====================================================
-# 頁面主進入點 (供 app.py 呼叫)
-# ====================================================
 def render_sales_quotation_page():
-    """業務報價模組主渲染進入點"""
     st.title("💼 業務報價 & CAD/3D/PDF Pipeline 系統")
     
     tab1, tab2 = st.tabs(["📝 即時 AI 報價與 CAD/3D 設計", "📊 歷史報價單據與資料庫"])
@@ -330,3 +315,9 @@ def render_sales_quotation_page():
         
     with tab2:
         render_sales_overview()
+
+def show():
+    render_sales_quotation_page()
+
+def main():
+    render_sales_quotation_page()
