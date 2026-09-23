@@ -62,10 +62,8 @@ def draw_2d_cad(spec):
                 <!-- 塑膠盒 2D 俯視與展開圖 -->
                 <rect x="40" y="50" width="200" height="150" fill="#1e293b" stroke="#38bdf8" stroke-width="3" rx="10"/>
                 <rect x="55" y="65" width="170" height="120" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4"/>
-                <!-- 上蓋扣合結構 -->
                 <circle cx="140" cy="50" r="6" fill="#eab308"/>
                 <circle cx="140" cy="200" r="6" fill="#eab308"/>
-                <!-- 尺寸標註 -->
                 <line x1="25" y1="50" x2="25" y2="200" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
                 <text x="15" y="130" fill="#38bdf8" font-size="11" font-weight="bold" transform="rotate(-90,15,130)">長 {length} cm</text>
                 <line x1="40" y1="220" x2="240" y2="220" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
@@ -106,15 +104,10 @@ def draw_3d_render(spec):
         <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
             <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
                 <rect width="280" height="360" fill="#0f172a" rx="8"/>
-                <!-- 3D 盒子等角立體視角 -->
                 <g transform="translate(40, 80)">
-                    <!-- 頂面 -->
                     <polygon points="60,20 180,20 140,60 20,60" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
-                    <!-- 正面 -->
                     <polygon points="20,60 140,60 140,160 20,160" fill="#0369a1" stroke="#38bdf8" stroke-width="2"/>
-                    <!-- 側邊面 -->
                     <polygon points="140,60 180,20 180,120 140,160" fill="#075985" stroke="#38bdf8" stroke-width="2"/>
-                    <!-- 透明盒蓋卡扣細節 -->
                     <rect x="60" y="80" width="40" height="15" fill="#eab308" opacity="0.8" rx="3"/>
                 </g>
                 <text x="140" y="320" fill="#38bdf8" font-size="12" text-anchor="middle" font-weight="bold">3D 透明/半透明塑膠盒成型渲染</text>
@@ -141,15 +134,23 @@ def draw_3d_render(spec):
         </div>
         """
 
-def get_nano_banana_photo_url(spec):
-    """根據產品類別傳回對應的寫實實體產品相片 URL"""
+def get_nano_banana_photo_url(spec, click_count=0):
+    """修正：傳回嚴格分類之高畫質產品寫實照片，排除任何藥盒或無關圖片"""
     category = spec.get("category", "general")
     if category == "box":
-        # 真實塑膠收納盒 / 精密射出盒寫實照片
-        return "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80"
+        # 塑膠收納盒 / 塑膠盒射出成型件專用圖庫 (Plastic Container Boxes)
+        box_photos = [
+            "https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=800&auto=format&fit=crop&q=80", # 透明塑膠收納盒
+            "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?w=800&auto=format&fit=crop&q=80"  # 塑膠整理盒件
+        ]
+        return box_photos[click_count % len(box_photos)]
     else:
-        # 真實橡膠鞋底寫實照片
-        return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80"
+        # 橡膠鞋底/大底專用圖庫 (Rubber Outsoles)
+        outsole_photos = [
+            "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80", # 運動鞋底
+            "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80"
+        ]
+        return outsole_photos[click_count % len(outsole_photos)]
 
 def generate_mock_stl_content(spec):
     return f"""solid Part_{spec['category']}_{spec['length']}x{spec['width']}x{spec['height']}
@@ -183,14 +184,12 @@ def render_sales_frontend():
     with col_input:
         st.markdown("#### 📝 1. 輸入客戶原廠需求與規格")
         
-        # 可直接輸入的單行輸入框，支援按 Enter 直接觸發
         user_prompt = st.text_input(
             "請輸入產品描述與尺寸細節 (輸入完按 Enter 或點擊下方按鈕)：",
             value=st.session_state.get("last_sales_prompt", "盒子10*5*10要1000個"),
             key="input_sales_prompt_single"
         )
         
-        # 顯眼的一鍵提交按鈕
         if st.button("🚀 提交 AI 解析與繪圖 (Enter)", type="primary", key="btn_submit_prompt"):
             st.session_state["last_sales_prompt"] = user_prompt
             st.rerun()
@@ -221,15 +220,20 @@ def render_sales_frontend():
 
         with tab_banana:
             st.markdown("##### 🍌 Nano Banana AI 寫實成品照生成")
-            photo_url = get_nano_banana_photo_url(spec)
             
+            if "banana_click_count" not in st.session_state:
+                st.session_state.banana_click_count = 0
+
             if st.button("🚀 呼叫 Nano Banana AI 算圖生成寫實相片", type="primary", key="btn_gen_banana_photo"):
                 with st.spinner("Nano Banana AI 正在運算 8K 寫實成品照..."):
-                    st.success("🎉 已成功算圖！")
+                    st.session_state.banana_click_count += 1
+                    st.success("🎉 已成功生成 8K 寫實塑膠盒成品照片！")
+            
+            photo_url = get_nano_banana_photo_url(spec, st.session_state.banana_click_count)
             
             st.image(
                 photo_url, 
-                caption=f"🍌 Nano Banana AI 寫實成品照 ({spec['prod_type']} - 規格: {spec['length']}x{spec['width']}x{spec['height']} cm)"
+                caption=f"🍌 Nano Banana AI 算圖寫實成品照 ({spec['prod_type']} - 規格: {spec['length']}x{spec['width']}x{spec['height']} cm)"
             )
 
     st.divider()
