@@ -29,28 +29,29 @@ render_payroll = load_module_function("payroll_management", ["render_payroll_man
 render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
 
 # ----------------------------------------------------
-# 側邊欄與頁面路由
+# 一級選單：側邊欄部門分類 (部門別)
 # ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP 系統選單")
-page = st.sidebar.radio(
-    "請選擇功能模組：",
+department = st.sidebar.radio(
+    "請選擇部門/模組分類：",
     [
-        "營運戰情室 (Executive Dashboard)",
-        "廠區營運 KPI (ERP Dashboard)",
-        "業務報價 & CAD/3D Pipeline",
-        "電子發票讀取 (Invoice Management)",
-        "薪資考勤計算 (Payroll Management)",
-        "跨國資產與模具管理 (Asset Management)"
+        "📈 營運戰情室 (Executive)",
+        "💼 業務/行銷 (Sales & Marketing)",
+        "🛠️ 研發/技術 (R&D & Engineering)",
+        "🧾 財務 (Finance)",
+        "👥 人事/行政 (HR & Admin)"
     ]
 )
 
-# 當選擇「營運戰情室」時，在左側邊欄下方展開「各國股市區域選單」
-selected_stock_market = "🌐 全部市場 (All Markets)"
-if page == "營運戰情室 (Executive Dashboard)":
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📈 選擇股市/匯率觀測區域")
-    selected_stock_market = st.sidebar.selectbox(
-        "切換市場區域：",
+# ----------------------------------------------------
+# 二級動態選單：依據選擇的部門，在側邊欄下方展開對應的業務功能
+# ----------------------------------------------------
+st.sidebar.markdown("---")
+
+if department == "📈 營運戰情室 (Executive)":
+    st.sidebar.subheader("📈 股市與匯率觀測區域")
+    sub_option = st.sidebar.selectbox(
+        "選擇觀察市場：",
         [
             "🌐 全部市場 (All Markets)",
             "🇹🇼 台灣 (Taiwan)",
@@ -59,22 +60,49 @@ if page == "營運戰情室 (Executive Dashboard)":
             "🇻🇳 越南 (Vietnam)",
             "🛢️ 原物料與匯率 (Commodities/FX)"
         ],
-        key="sidebar_stock_market_select"
+        key="sub_exec_market"
     )
+    # 渲染營運戰情室
+    render_exec_db(sub_option)
 
-# ----------------------------------------------------
-# 頁面路由分流
-# ----------------------------------------------------
-if page == "營運戰情室 (Executive Dashboard)":
-    # 將左側選單選取的市場傳入營運戰情室模組
-    render_exec_db(selected_stock_market)
-elif page == "廠區營運 KPI (ERP Dashboard)":
-    render_erp_db()
-elif page == "業務報價 & CAD/3D Pipeline":
-    render_sales()
-elif page == "電子發票讀取 (Invoice Management)":
-    render_invoice()
-elif page == "薪資考勤計算 (Payroll Management)":
-    render_payroll()
-elif page == "跨國資產與模具管理 (Asset Management)":
-    render_asset()
+elif department == "💼 業務/行銷 (Sales & Marketing)":
+    st.sidebar.subheader("💼 業務功能選單")
+    sub_option = st.sidebar.selectbox(
+        "選擇業務項目：",
+        ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
+        key="sub_sales_option"
+    )
+    # 渲染業務報價模組
+    render_sales(sub_option)
+
+elif department == "🛠️ 研發/技術 (R&D & Engineering)":
+    st.sidebar.subheader("🛠️ 研發與技術功能選單")
+    sub_option = st.sidebar.selectbox(
+        "選擇技術項目：",
+        ["📦 跨國資產與模具管理", "⚡ 廠區營運與機台 OEE KPI"],
+        key="sub_rd_option"
+    )
+    if sub_option == "📦 跨國資產與模具管理":
+        render_asset()
+    else:
+        render_erp_db()
+
+elif department == "🧾 財務 (Finance)":
+    st.sidebar.subheader("🧾 財務功能選單")
+    sub_option = st.sidebar.selectbox(
+        "選擇財務項目：",
+        ["📧 通用信箱電子發票讀取 (IMAP)", "🇻🇳 越南 XML 電子發票解析"],
+        key="sub_finance_option"
+    )
+    # 渲染電子發票模組
+    render_invoice(sub_option)
+
+elif department == "👥 人事/行政 (HR & Admin)":
+    st.sidebar.subheader("👥 人事行政功能選單")
+    sub_option = st.sidebar.selectbox(
+        "選擇人事項目：",
+        ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
+        key="sub_hr_option"
+    )
+    # 渲染薪資考勤模組
+    render_payroll(sub_option)
