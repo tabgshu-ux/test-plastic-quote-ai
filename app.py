@@ -7,9 +7,8 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------
-# 安全動態載入模組 (具備 Try-Except 容錯保護)
+# 安全動態載入模組 (具備自動相容與容錯保護)
 # ----------------------------------------------------
-
 def load_module_function(module_name, func_names):
     """安全載入模組並自動尋找對應的渲染函式"""
     try:
@@ -22,12 +21,12 @@ def load_module_function(module_name, func_names):
         return lambda: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
 # 載入 6 大核心模組
-render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
-render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
+render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main", "run"])
+render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main", "run"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "render_sales_frontend", "show", "main"])
-render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
-render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
-render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
+render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main", "run"])
+render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main", "run"])
+render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main", "run"])
 
 # ----------------------------------------------------
 # 側邊欄與頁面路由
