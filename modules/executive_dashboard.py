@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import math
 import google.generativeai as genai
 
 try:
@@ -10,7 +11,7 @@ except ImportError:
     HAS_YFINANCE = False
 
 # ----------------------------------------------------
-# 預設股市觀察清單主資料 (完全保留您的原始資料)
+# 預設股市觀察清單主資料
 # ----------------------------------------------------
 NEW_STOCK_WATCHLIST_DATA = [
     {"market": "🇹🇼 台灣 (Taiwan)", "ticker": "2330.TW", "symbol": "TSMC (2330.TW)", "name": "台積電", "price": 2480.0, "change": "+35.0 (+1.44%)", "signal": "🟢 偏多（適合逢低定額）", "note": "AI 晶片先進封裝獨占，長線穩定成長"},
@@ -27,25 +28,38 @@ NEW_STOCK_WATCHLIST_DATA = [
 ]
 
 def fetch_realtime_stock_data(ticker_symbol, default_price, default_change):
-    """即時抓取 Yahoo Finance 股票資料 (保留原版完整邏輯)"""
+    """即時抓取 Yahoo Finance 股票資料（具備美股 NaN 自動清洗與 Fallback 保護）"""
     if not HAS_YFINANCE:
         return default_price, default_change, [default_price * (1 + i * 0.002) for i in range(-3, 4)]
     try:
         ticker = yf.Ticker(ticker_symbol)
         hist = ticker.history(period="7d")
-        if not hist.empty and len(hist) >= 2:
-            latest_price = float(hist["Close"].iloc[-1])
-            prev_price = float(hist["Close"].iloc[-2])
-            change_val = latest_price - prev_price
-            change_pct = (change_val / prev_price) * 100
-            change_str = f"{'+' if change_val >= 0 else ''}{change_val:.1f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-            return round(latest_price, 2), change_str, hist["Close"].tolist()
+        
+        # 清除歷史數據中的 NaN 空值
+        if not hist.empty:
+            close_series = hist["Close"].dropna()
+            if len(close_series) >= 2:
+                latest_price = float(close_series.iloc[-1])
+                prev_price = float(close_series.iloc[-2])
+                
+                # 檢查數值是否有效（非 nan）
+                if not math.isnan(latest_price) and not math.isnan(prev_price) and prev_price > 0:
+                    change_val = latest_price - prev_price
+                    change_pct = (change_val / prev_price) * 100
+                    change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
+                    return round(latest_price, 2), change_str, close_series.tolist()
+            elif len(close_series) == 1:
+                latest_price = float(close_series.iloc[-1])
+                if not math.isnan(latest_price):
+                    return round(latest_price, 2), default_change, [latest_price] * 7
+
+        # 若抓取失敗或數值為 NaN，自動退回預設備援數據
         return default_price, default_change, [default_price] * 7
     except Exception:
         return default_price, default_change, [default_price] * 7
 
 def render_stock_module():
-    """原本完整的股票管理與 AI 解讀模組"""
+    """完整的股票管理與 AI 解讀模組"""
     if "stock_watchlist" not in st.session_state or ("stock_watchlist" in st.session_state and "market" not in st.session_state.stock_watchlist[0]):
         st.session_state.stock_watchlist = NEW_STOCK_WATCHLIST_DATA
 
@@ -118,24 +132,26 @@ def render_stock_module():
                         ticker = yf.Ticker(symbol)
                         hist = ticker.history(period="5d")
                     if not hist.empty:
-                        latest_price = float(hist["Close"].iloc[-1])
-                        prev_price = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else latest_price
-                        change_val = latest_price - prev_price
-                        change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
-                        change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
-                        try:
-                            info = ticker.info
-                            short_name = info.get("shortName") or info.get("longName") or symbol
-                        except Exception:
-                            short_name = symbol
+                        close_series = hist["Close"].dropna()
+                        if not close_series.empty:
+                            latest_price = float(close_series.iloc[-1])
+                            prev_price = float(close_series.iloc[-2]) if len(close_series) >= 2 else latest_price
+                            change_val = latest_price - prev_price
+                            change_pct = (change_val / prev_price * 100) if prev_price > 0 else 0.0
+                            change_str = f"{'+' if change_val >= 0 else ''}{change_val:.2f} ({'+' if change_pct >= 0 else ''}{change_pct:.2f}%)"
+                            try:
+                                info = ticker.info
+                                short_name = info.get("shortName") or info.get("longName") or symbol
+                            except Exception:
+                                short_name = symbol
 
-                        st.session_state["val_stock_name"] = short_name
-                        st.session_state["val_stock_price"] = float(round(latest_price, 2))
-                        st.session_state["val_stock_change"] = change_str
-                        st.session_state["input_stock_name"] = short_name
-                        st.session_state["input_stock_price"] = float(round(latest_price, 2))
-                        st.session_state["input_stock_change"] = change_str
-                        st.toast(f"✅ 已成功抓取 {short_name} ({symbol})！", icon="📈")
+                            st.session_state["val_stock_name"] = short_name
+                            st.session_state["val_stock_price"] = float(round(latest_price, 2))
+                            st.session_state["val_stock_change"] = change_str
+                            st.session_state["input_stock_name"] = short_name
+                            st.session_state["input_stock_price"] = float(round(latest_price, 2))
+                            st.session_state["input_stock_change"] = change_str
+                            st.toast(f"✅ 已成功抓取 {short_name} ({symbol})！", icon="📈")
                 except Exception as e:
                     st.toast(f"❌ 抓取失敗: {e}", icon="❌")
 
@@ -166,7 +182,7 @@ def render_stock_module():
                         st.rerun()
 
 def render_kpi_module():
-    """營運 KPI 與 AR 預警"""
+    """營運 KPI 與 AR 預警模組"""
     st.subheader("📊 跨國三廠營運 KPI 總覽")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -194,7 +210,7 @@ def render_kpi_module():
         st.success("✅ **Shopee Seller A**: 帳款已全數結清")
 
 def render_executive_dashboard_page():
-    """主進入點：透過 Tab 分頁融合股市與營運 KPI"""
+    """主進入點：雙分頁架構"""
     st.title("📈 董事長/總經理 跨國營運戰情室")
     
     tab1, tab2 = st.tabs(["📈 董事長/總經理 股市與匯率戰情中心", "📊 集團三廠營運 KPI 與 AR 預警"])
@@ -205,7 +221,7 @@ def render_executive_dashboard_page():
     with tab2:
         render_kpi_module()
 
-# 兼容 app.py 的動態載入
+# 相容 app.py 的動態載入
 def show():
     render_executive_dashboard_page()
 
