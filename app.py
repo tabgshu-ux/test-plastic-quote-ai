@@ -38,6 +38,15 @@ I18N = {
             "🧾 財務 (Finance)",
             "👥 人事/行政 (HR & Admin)",
             "💻 資訊/IT (IT & System Admin)"
+        ],
+        "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
+        "sub_finance": [
+            "🛒 採購與應付帳款系統 (Procurement & AP)", 
+            "📦 訂單與應收帳款系統 (Sales Orders & AR)", 
+            "📄 越南電子發票 XML 解析與登錄",
+            "📧 通用信箱電子發票讀取 (IMAP)",
+            "📊 電子發票張數監控與加購預警",
+            "🌐 全球跨國稅務 AI 智慧問答"
         ]
     },
     "Tiếng Việt": {
@@ -52,6 +61,15 @@ I18N = {
             "🧾 Tài Chính / Kế Toán",
             "👥 Nhân Sự / Hành Chính",
             "💻 Công Nghệ Thông Tin (IT)"
+        ],
+        "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
+        "sub_finance": [
+            "🛒 Quản lý Mua hàng & Phải trả (AP)", 
+            "📦 Đơn bán hàng & Phải thu (AR)", 
+            "📄 Phân tích Hóa đơn điện tử XML",
+            "📧 Đọc Hóa đơn qua Email (IMAP)",
+            "📊 Giám sát & Báo động số lượng HĐ",
+            "🌐 Tư vấn AI Thuế quốc tế"
         ]
     },
     "简体中文": {
@@ -66,6 +84,15 @@ I18N = {
             "🧾 财务 (Finance)",
             "👥 人事/行政 (HR & Admin)",
             "💻 信息/IT (IT & System Admin)"
+        ],
+        "sub_sales": ["📝 AI 实时报价 & CAD/3D Pipeline", "📊 历史报价单据与数据库"],
+        "sub_finance": [
+            "🛒 采购与应付账款系统 (Procurement & AP)", 
+            "📦 订单与应收账款系统 (Sales Orders & AR)", 
+            "📄 越南电子发票 XML 解析与登录",
+            "📧 通用邮箱电子发票读取 (IMAP)",
+            "📊 电子发票张数监控与加购预警",
+            "🌐 全球跨国税务 AI 智慧问答"
         ]
     },
     "English": {
@@ -80,6 +107,15 @@ I18N = {
             "🧾 Finance",
             "👥 HR & Administration",
             "💻 IT & System Admin"
+        ],
+        "sub_sales": ["📝 AI Quotation & CAD/3D Pipeline", "📊 Quotation History & DB"],
+        "sub_finance": [
+            "🛒 Procurement & Accounts Payable (AP)", 
+            "📦 Sales Orders & Accounts Receivable (AR)", 
+            "📄 Vietnam E-Invoice XML Parser",
+            "📧 Fetch Invoices via Email (IMAP)",
+            "📊 E-Invoice Quota Alert & Top-up",
+            "🌐 Global Tax AI Assistant"
         ]
     },
     "Bahasa Indonesia": {
@@ -94,12 +130,21 @@ I18N = {
             "🧾 Keuangan",
             "👥 SDM & Administrasi",
             "💻 IT & Admin Sistem"
+        ],
+        "sub_sales": ["📝 Kutipan AI & Saluran CAD/3D", "📊 Riwayat Kutipan & Basis Data"],
+        "sub_finance": [
+            "🛒 Pengadaan & Hutang Dagang (AP)", 
+            "📦 Pesanan Penjualan & Piutang (AR)", 
+            "📄 Parser XML Faktur Elektronik",
+            "📧 Ambil Faktur via Email (IMAP)",
+            "📊 Peringatan Kuota Faktur & Top-up",
+            "🌐 Asisten AI Pajak Global"
         ]
     }
 }
 
 # ----------------------------------------------------
-# 安全動態載入模組 (具備自動相容與容錯保護)
+# 安全動態載入模組
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -165,7 +210,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ----------------------------------------------------
-# 側邊欄 2：固定 key 值的語系切換器與部門選單
+# 側邊欄 2：語系切換器與動態語系部門選單
 # ----------------------------------------------------
 selected_lang = st.sidebar.selectbox(
     "🌐 系統語系 (Language):",
@@ -176,86 +221,83 @@ st.session_state.lang = selected_lang
 lang_dict = I18N[selected_lang]
 st.sidebar.markdown("---")
 
+# 動態選單：根據當前 selected_lang 載入對應語言列表
+dept_options = lang_dict["depts"]
 selected_dept = st.sidebar.radio(
     lang_dict["dept_select"],
-    options=I18N["繁體中文"]["depts"],
-    key="fixed_sidebar_dept_radio_key"
+    options=dept_options,
+    key=f"sidebar_dept_radio_{selected_lang}"
 )
 st.sidebar.markdown("---")
 
+# 獲取選中的部門索引 (0 到 6)，確保模組判斷不受語系切換影響
+dept_idx = dept_options.index(selected_dept)
+
 # ----------------------------------------------------
-# 頁面路由與直觀展開的子選單
+# 頁面路由與動態語系子選單
 # ----------------------------------------------------
-if "📈 營運戰情室" in selected_dept:
+if dept_idx == 0:  # 營運戰情室
     sub_option = st.sidebar.radio(
-        "選擇觀察市場 (Market):",
-        ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
-        key="fixed_sub_exec_market_key"
+        "Market:",
+        ["🌐 All Markets", "🇹🇼 Taiwan", "🇨🇳 China/HK", "🇺🇸 USA", "🇻🇳 Vietnam", "🛢️ Commodities/FX"],
+        key=f"sub_exec_{selected_lang}"
     )
     render_exec_db(sub_option, selected_lang)
 
-elif "💼 業務/行銷" in selected_dept:
+elif dept_idx == 1:  # 業務/行銷
     sub_option = st.sidebar.radio(
-        "業務功能清單：",
-        ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
-        key="fixed_sub_sales_option_key"
+        "Sales:",
+        lang_dict["sub_sales"],
+        key=f"sub_sales_{selected_lang}"
     )
     render_sales(sub_option)
 
-elif "🛠️ 研發/技術" in selected_dept:
+elif dept_idx == 2:  # 研發/技術
     sub_option = st.sidebar.radio(
-        "研發技術清單：",
-        ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
-        key="fixed_sub_rd_option_key"
+        "Engineering:",
+        ["📦 Assets & Mold Mgmt", "🛠️ Mold Trial & DFM"],
+        key=f"sub_rd_{selected_lang}"
     )
     render_asset(sub_option)
 
-elif "🏭 廠務/設備" in selected_dept:
+elif dept_idx == 3:  # 廠務/設備
     sub_option = st.sidebar.radio(
-        "廠務設備清單：",
-        ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
-        key="fixed_sub_plant_iot_option_key"
+        "Plant & IoT:",
+        ["📡 IoT Machine Monitor", "⚡ Plant OEE KPI", "🔧 Maintenance & Alerts"],
+        key=f"sub_plant_{selected_lang}"
     )
     render_erp_db(sub_option)
 
-elif "🧾 財務" in selected_dept:
+elif dept_idx == 4:  # 財務
     sub_option = st.sidebar.radio(
-        "財務功能清單：",
-        [
-            "🛒 採購與應付帳款系統 (Procurement & AP)", 
-            "📦 訂單與應收帳款系統 (Sales Orders & AR)", 
-            "📄 越南電子發票 XML 解析與登錄",
-            "📧 通用信箱電子發票讀取 (IMAP)",
-            "📊 電子發票張數監控與加購預警",
-            "🌐 全球跨國稅務 AI 智慧問答"
-        ],
-        key="fixed_sub_finance_option_key"
+        "Finance:",
+        lang_dict["sub_finance"],
+        key=f"sub_finance_{selected_lang}"
     )
     
-    # 新增的路由分發
-    if "全球跨國稅務" in sub_option:
+    if "Tax" in sub_option or "Thuế" in sub_option or "税务" in sub_option or "Pajak" in sub_option:
         render_tax_ai(sub_option)
-    elif "採購與應付帳款" in sub_option:
-        st.title("🛒 採購與應付帳款系統 (Procurement & AP)")
-        st.info("此模組正在建置中，未來將整合：供應商詢價 (RFQ)、採購單 (PO) 開立、進貨驗收 (GRN) 及應付帳款拋轉功能。")
-    elif "訂單與應收帳款" in sub_option:
-        st.title("📦 訂單與應收帳款系統 (Sales Orders & AR)")
-        st.info("此模組正在建置中，未來將整合：客戶銷售訂單 (SO) 建立、出貨單 (DO) 開立及應收帳款沖銷功能。")
+    elif "Procurement" in sub_option or "Mua hàng" in sub_option or "采购" in sub_option or "Pengadaan" in sub_option:
+        st.title("🛒 Procurement & AP System")
+        st.info("Phân hệ Quản lý Mua hàng & Phải trả (AP) đang được khởi tạo...")
+    elif "Sales Orders" in sub_option or "Đơn bán hàng" in sub_option or "订单" in sub_option or "Pesanan" in sub_option:
+        st.title("📦 Sales Orders & AR System")
+        st.info("Phân hệ Đơn bán hàng & Phải thu (AR) đang được khởi tạo...")
     else:
         render_invoice(sub_option)
 
-elif "👥 人事/行政" in selected_dept:
+elif dept_idx == 5:  # 人事/行政
     sub_option = st.sidebar.radio(
-        "人事行政清單：",
-        ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
-        key="fixed_sub_hr_option_key"
+        "HR:",
+        ["💰 Payroll & Attendance", "⏰ Clock-in Integration"],
+        key=f"sub_hr_{selected_lang}"
     )
     render_payroll(sub_option)
 
-elif "💻 資訊/IT" in selected_dept:
+elif dept_idx == 6:  # 資訊/IT
     sub_option = st.sidebar.radio(
-        "資訊管理清單：",
-        ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"],
-        key="fixed_sub_it_option_key"
+        "IT Admin:",
+        ["🏢 Multi-site Mgmt", "👥 User Auth", "🔒 RBAC Matrix"],
+        key=f"sub_it_{selected_lang}"
     )
     render_user_mgmt(sub_option)
