@@ -7,6 +7,22 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------
+# 1. 使用者 Session State 初始化與登入驗證機制
+# ----------------------------------------------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = True  # 預設維持登入狀態以利測試
+
+if "user_info" not in st.session_state:
+    st.session_state.user_info = {
+        "username": "admin",
+        "name": "Alex Chen (系統管理者)",
+        "role": "Super Admin"
+    }
+
+if "lang" not in st.session_state:
+    st.session_state.lang = "繁體中文"
+
+# ----------------------------------------------------
 # 🌐 跨國多語系字典定義 (i18n Dictionary)
 # ----------------------------------------------------
 I18N = {
@@ -82,9 +98,6 @@ I18N = {
     }
 }
 
-if "lang" not in st.session_state:
-    st.session_state.lang = "繁體中文"
-
 # ----------------------------------------------------
 # 安全動態載入模組 (具備自動相容與容錯保護)
 # ----------------------------------------------------
@@ -118,10 +131,44 @@ render_asset = load_module_function("asset_management", ["render_asset_managemen
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
 # ----------------------------------------------------
-# 側邊欄：固定 key 值的語系切換器與部門選單
+# 側邊欄 1：使用者帳號登入/登出狀態區塊
 # ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP")
 
+st.sidebar.markdown("### 👤 使用者狀態與權限")
+
+if st.session_state.logged_in:
+    st.sidebar.success(f"🟢 **{st.session_state.user_info['name']}**")
+    st.sidebar.caption(f"🔑 帳號: `{st.session_state.user_info['username']}` | 角色: `{st.session_state.user_info['role']}`")
+    if st.sidebar.button("🔒 登出系統", key="btn_global_logout"):
+        st.session_state.logged_in = False
+        st.rerun()
+else:
+    st.sidebar.warning("🔴 未登入系統")
+    with st.sidebar.form("login_form_sidebar"):
+        username_input = st.text_input("帳號 (Username)", value="admin")
+        password_input = st.text_input("密碼 (Password)", type="password", value="123456")
+        submit_login = st.form_submit_button("🚀 登入系統")
+        if submit_login:
+            st.session_state.logged_in = True
+            st.session_state.user_info = {
+                "username": username_input,
+                "name": f"{username_input} (管理者)",
+                "role": "Super Admin"
+            }
+            st.rerun()
+
+st.sidebar.markdown("---")
+
+# 若未登入，阻擋存取系統核心頁面
+if not st.session_state.logged_in:
+    st.title("🔒 跨國塑膠/橡膠射出成型 AI ERP 系統")
+    st.warning("⚠️ 請先於左側邊欄輸入帳號密碼進行登入，以存取各部門管理模組與權限功能。")
+    st.stop()
+
+# ----------------------------------------------------
+# 側邊欄 2：固定 key 值的語系切換器與部門選單
+# ----------------------------------------------------
 selected_lang = st.sidebar.selectbox(
     "🌐 系統語系 (Language):",
     ["繁體中文", "Tiếng Việt", "简体中文", "English", "Bahasa Indonesia"],
@@ -142,7 +189,7 @@ selected_dept = st.sidebar.radio(
 st.sidebar.markdown("---")
 
 # ----------------------------------------------------
-# 頁面路由與直觀展開的子選單 (使用 radio 取代 selectbox)
+# 頁面路由與直觀展開的子選單
 # ----------------------------------------------------
 if "📈 營運戰情室" in selected_dept:
     sub_option = st.sidebar.radio(
