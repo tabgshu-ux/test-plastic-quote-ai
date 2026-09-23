@@ -11,15 +11,14 @@ def init_db():
     )
     cur = conn.cursor()
     
-    # 建立全系統 PostgreSQL 核心資料表 Schema (含跨國動態廠區擴建與 RBAC 權限管理)
     create_tables_sql = """
-    -- 1. 跨國廠區/分公司動態主檔表 (factories) - 支援動態新增新廠房/子公司
+    -- 1. 跨國廠區/分公司動態主檔表 (factories)
     CREATE TABLE IF NOT EXISTS factories (
-        factory_id VARCHAR(50) PRIMARY KEY,       -- 廠區代碼 (例: FACT-ID-01, FACT-MX-01)
-        factory_name VARCHAR(100) NOT NULL,      -- 廠區/公司名稱 (例: 印尼爪哇廠)
-        country VARCHAR(50) NOT NULL,             -- 國家 (例: 印尼, 墨西哥)
-        currency VARCHAR(10) DEFAULT 'USD',       -- 當地本位幣別 (例: IDR, MXN, USD)
-        status VARCHAR(20) DEFAULT '營運中',      -- 狀態: '營運中', '建廠中', '規劃中'
+        factory_id VARCHAR(50) PRIMARY KEY,
+        factory_name VARCHAR(100) NOT NULL,
+        country VARCHAR(50) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'USD',
+        status VARCHAR(20) DEFAULT '營運中',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -27,32 +26,44 @@ def init_db():
     CREATE TABLE IF NOT EXISTS departments (
         dept_id VARCHAR(50) PRIMARY KEY,
         dept_name VARCHAR(100) NOT NULL,
-        factory_location VARCHAR(20) NOT NULL, -- 'TW', 'DG', 'BH' 等廠區代碼
+        factory_location VARCHAR(20) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 3. 使用者帳號與權限表 (users)
+    -- 3. 使用者帳號表 (users)
     CREATE TABLE IF NOT EXISTS users (
         user_id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         full_name VARCHAR(100) NOT NULL,
         dept_id VARCHAR(50) REFERENCES departments(dept_id),
-        role VARCHAR(30) DEFAULT 'User', -- 'Admin', 'Manager', 'User'
+        role VARCHAR(30) DEFAULT 'User',
         status VARCHAR(20) DEFAULT 'Active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 4. 模組與網頁頁面開關授權表 (module_permissions)
+    -- 4. 模組與網頁權限表 (module_permissions)
     CREATE TABLE IF NOT EXISTS module_permissions (
         id SERIAL PRIMARY KEY,
         user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
-        module_name VARCHAR(100) NOT NULL, -- 如: '營運戰情室', '財務', '業務/行銷'
+        module_name VARCHAR(100) NOT NULL,
         can_access BOOLEAN DEFAULT TRUE,
         UNIQUE(user_id, module_name)
     );
 
-    -- 5. 員工基本資料表 (employees)
+    -- 5. IoT 設備即時連線 Log 表 (iot_device_logs) - 新增
+    CREATE TABLE IF NOT EXISTS iot_device_logs (
+        id SERIAL PRIMARY KEY,
+        device_id VARCHAR(50) NOT NULL,
+        factory_id VARCHAR(50),
+        barrel_temperature NUMERIC(5,2),
+        injection_pressure NUMERIC(6,2),
+        cycle_time NUMERIC(5,2),
+        status_code VARCHAR(20),
+        logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 6. 員工資料表 (employees)
     CREATE TABLE IF NOT EXISTS employees (
         employee_id VARCHAR(50) PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
@@ -63,7 +74,7 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 6. 考勤打卡紀錄表 (clock_records)
+    -- 7. 考勤打卡紀錄表 (clock_records)
     CREATE TABLE IF NOT EXISTS clock_records (
         id SERIAL PRIMARY KEY,
         employee_id VARCHAR(50) REFERENCES employees(employee_id),
@@ -72,7 +83,7 @@ def init_db():
         factory_location VARCHAR(20)
     );
 
-    -- 7. 業務報價單主檔 (quotations)
+    -- 8. 業務報價單 (quotations)
     CREATE TABLE IF NOT EXISTS quotations (
         quote_id VARCHAR(50) PRIMARY KEY,
         customer_name VARCHAR(100),
@@ -85,7 +96,7 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 8. 通用信箱與 XML 發票解析表 (invoices)
+    -- 9. 電子發票解析表 (invoices)
     CREATE TABLE IF NOT EXISTS invoices (
         invoice_id VARCHAR(50) PRIMARY KEY,
         tax_code_mst VARCHAR(50),
@@ -96,7 +107,7 @@ def init_db():
         xml_filename VARCHAR(255)
     );
 
-    -- 9. 資產與模具主檔 (assets)
+    -- 10. 資產與模具主檔 (assets)
     CREATE TABLE IF NOT EXISTS assets (
         asset_id VARCHAR(50) PRIMARY KEY,
         asset_name VARCHAR(100) NOT NULL,
@@ -110,7 +121,7 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 10. 資產與模具維修履歷 (asset_maintenance)
+    -- 11. 資產維修履歷 (asset_maintenance)
     CREATE TABLE IF NOT EXISTS asset_maintenance (
         id SERIAL PRIMARY KEY,
         asset_id VARCHAR(50) REFERENCES assets(asset_id) ON DELETE CASCADE,
@@ -127,7 +138,7 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
-    print("✅ 全套 AI ERP 資料庫（含全球動態廠區、權限管理、薪資發票、報價與資產）Schema 初始化完成！")
+    print("✅ 全套 AI ERP 資料庫（含 IoT 設備監控、動態廠區、權限管理與財務）Schema 初始化完成！")
 
 if __name__ == "__main__":
     init_db()
