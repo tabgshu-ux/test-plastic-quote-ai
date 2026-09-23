@@ -20,18 +20,26 @@ def parse_dimensions_and_type(prompt_text):
         length = float(nums[0])
         width = float(nums[1])
 
-    if "鞋" in prompt_text or "底" in prompt_text or "橡膠" in prompt_text:
+    if "盒" in prompt_text or "箱" in prompt_text or "box" in prompt_text.lower():
+        category = "box"
+        prod_type = "📦 塑膠射出收納盒 / 外殼 (Plastic Box / Case)"
+        material = "PP / ABS / PC 工程塑膠"
+        clamp_ton = math.ceil((length * width) * 0.18)
+    elif "鞋" in prompt_text or "底" in prompt_text or "橡膠" in prompt_text:
+        category = "outsole"
         prod_type = "👟 橡膠大底 / 鞋底 (Rubber Outsole Only)"
         material = "天然橡膠 (NR) / 合成橡膠 (SBR/EVA)"
         clamp_ton = math.ceil((length * width) * 0.15)
     else:
-        prod_type = "📦 射出成型件 (Injection Molded Part)"
-        material = "PP / ABS / PC 工程塑膠"
+        category = "general"
+        prod_type = "📦 精密射出成型件 (Injection Molded Part)"
+        material = "PP / ABS / PC / POM 工程塑膠"
         clamp_ton = math.ceil((length * width) * 0.2)
 
     vol_cm3 = length * width * height
 
     return {
+        "category": category,
         "length": length,
         "width": width,
         "height": height,
@@ -41,58 +49,110 @@ def parse_dimensions_and_type(prompt_text):
         "clamp_ton": max(clamp_ton, 120)
     }
 
-def draw_2d_outsole_cad(length, width, height):
-    """繪製 2D 喬丹 10 代排水溝槽與尺寸線 CAD SVG"""
-    return f"""
-    <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
-        <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
-            <rect width="280" height="360" fill="#0f172a" rx="8"/>
-            <path d="M 140,25 C 185,25 205,60 205,110 C 205,155 190,195 195,235 C 200,270 190,315 140,325 C 90,315 80,270 85,235 C 90,195 75,155 75,110 C 75,60 95,25 140,25 Z" 
-                  fill="#1e293b" stroke="#38bdf8" stroke-width="3"/>
-            <line x1="90" y1="70" x2="190" y2="70" stroke="#f43f5e" stroke-width="4"/>
-            <line x1="85" y1="100" x2="195" y2="100" stroke="#38bdf8" stroke-width="4"/>
-            <line x1="83" y1="130" x2="197" y2="130" stroke="#38bdf8" stroke-width="4"/>
-            <line x1="83" y1="160" x2="197" y2="160" stroke="#38bdf8" stroke-width="4"/>
-            <line x1="88" y1="195" x2="192" y2="195" stroke="#eab308" stroke-width="5"/>
-            <line x1="85" y1="230" x2="195" y2="230" stroke="#38bdf8" stroke-width="4"/>
-            <line x1="88" y1="265" x2="192" y2="265" stroke="#38bdf8" stroke-width="4"/>
-            <line x1="98" y1="298" x2="182" y2="298" stroke="#f43f5e" stroke-width="4"/>
-            <line x1="40" y1="25" x2="40" y2="325" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
-            <text x="25" y="180" fill="#38bdf8" font-size="11" font-weight="bold" transform="rotate(-90,25,180)">長 {length} cm</text>
-            <line x1="75" y1="342" x2="205" y2="342" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
-            <text x="100" y="355" fill="#38bdf8" font-size="11" font-weight="bold">寬 {width} cm (厚 {height} cm)</text>
-        </svg>
-        <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">📐 階段一：2D 平面 CAD 排水結構設計圖</p>
-    </div>
-    """
+def draw_2d_cad(spec):
+    """根據產品類別動態繪製 2D CAD 設計圖 (盒子 vs. 鞋底)"""
+    category = spec.get("category", "general")
+    length, width, height = spec['length'], spec['width'], spec['height']
+    
+    if category == "box":
+        return f"""
+        <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
+            <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+                <rect width="280" height="360" fill="#0f172a" rx="8"/>
+                <!-- 塑膠盒 2D 俯視與展開圖 -->
+                <rect x="40" y="50" width="200" height="150" fill="#1e293b" stroke="#38bdf8" stroke-width="3" rx="10"/>
+                <rect x="55" y="65" width="170" height="120" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="4"/>
+                <!-- 上蓋扣合結構 -->
+                <circle cx="140" cy="50" r="6" fill="#eab308"/>
+                <circle cx="140" cy="200" r="6" fill="#eab308"/>
+                <!-- 尺寸標註 -->
+                <line x1="25" y1="50" x2="25" y2="200" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
+                <text x="15" y="130" fill="#38bdf8" font-size="11" font-weight="bold" transform="rotate(-90,15,130)">長 {length} cm</text>
+                <line x1="40" y1="220" x2="240" y2="220" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3"/>
+                <text x="100" y="240" fill="#38bdf8" font-size="11" font-weight="bold">寬 {width} cm (高 {height} cm)</text>
+                <text x="140" y="320" fill="#fef08a" font-size="12" text-anchor="middle" font-weight="bold">📦 2D 塑膠射出收納盒結構圖</text>
+            </svg>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">📐 階段一：2D 平面 CAD 塑膠盒結構圖</p>
+        </div>
+        """
+    else:
+        return f"""
+        <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
+            <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+                <rect width="280" height="360" fill="#0f172a" rx="8"/>
+                <path d="M 140,25 C 185,25 205,60 205,110 C 205,155 190,195 195,235 C 200,270 190,315 140,325 C 90,315 80,270 85,235 C 90,195 75,155 75,110 C 75,60 95,25 140,25 Z" 
+                      fill="#1e293b" stroke="#38bdf8" stroke-width="3"/>
+                <line x1="90" y1="70" x2="190" y2="70" stroke="#f43f5e" stroke-width="4"/>
+                <line x1="85" y1="100" x2="195" y2="100" stroke="#38bdf8" stroke-width="4"/>
+                <line x1="83" y1="130" x2="197" y2="130" stroke="#38bdf8" stroke-width="4"/>
+                <line x1="83" y1="160" x2="197" y2="160" stroke="#38bdf8" stroke-width="4"/>
+                <line x1="88" y1="195" x2="192" y2="195" stroke="#eab308" stroke-width="5"/>
+                <line x1="85" y1="230" x2="195" y2="230" stroke="#38bdf8" stroke-width="4"/>
+                <line x1="88" y1="265" x2="192" y2="265" stroke="#38bdf8" stroke-width="4"/>
+                <line x1="98" y1="298" x2="182" y2="298" stroke="#f43f5e" stroke-width="4"/>
+                <text x="100" y="355" fill="#38bdf8" font-size="11" font-weight="bold">寬 {width} cm (厚 {height} cm)</text>
+            </svg>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">📐 階段一：2D 平面 CAD 鞋底排水結構設計圖</p>
+        </div>
+        """
 
-def draw_3d_outsole_render(length, width, height):
-    """繪製 3D 橡膠質感立體渲染視角 SVG"""
-    return f"""
-    <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
-        <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
-            <rect width="280" height="360" fill="#0f172a" rx="8"/>
-            <g transform="rotate(-15, 140, 180) skewX(10)">
-                <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
-                      fill="#0284c7" transform="translate(0, 12)"/>
-                <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
-                      fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
-                <line x1="90" y1="80" x2="190" y2="80" stroke="#f43f5e" stroke-width="5"/>
-                <line x1="85" y1="110" x2="195" y2="110" stroke="#0ea5e9" stroke-width="5"/>
-                <line x1="83" y1="140" x2="197" y2="140" stroke="#0ea5e9" stroke-width="5"/>
-                <line x1="83" y1="170" x2="197" y2="170" stroke="#0ea5e9" stroke-width="5"/>
-                <line x1="88" y1="205" x2="192" y2="205" stroke="#eab308" stroke-width="6"/>
-                <line x1="85" y1="240" x2="195" y2="240" stroke="#0ea5e9" stroke-width="5"/>
-                <line x1="88" y1="275" x2="192" y2="275" stroke="#0ea5e9" stroke-width="5"/>
-            </g>
-            <text x="140" y="350" fill="#38bdf8" font-size="12" text-anchor="middle" font-weight="bold">3D 立體高精細橡膠大底成型模擬</text>
-        </svg>
-        <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">🎨 階段二：3D 立體模具熱壓成型渲染圖</p>
-    </div>
-    """
+def draw_3d_render(spec):
+    """根據產品類別動態繪製 3D 立體渲染圖 (立體盒子 vs. 鞋底)"""
+    category = spec.get("category", "general")
+    length, width, height = spec['length'], spec['width'], spec['height']
+    
+    if category == "box":
+        return f"""
+        <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
+            <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+                <rect width="280" height="360" fill="#0f172a" rx="8"/>
+                <!-- 3D 盒子等角立體視角 -->
+                <g transform="translate(40, 80)">
+                    <!-- 頂面 -->
+                    <polygon points="60,20 180,20 140,60 20,60" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
+                    <!-- 正面 -->
+                    <polygon points="20,60 140,60 140,160 20,160" fill="#0369a1" stroke="#38bdf8" stroke-width="2"/>
+                    <!-- 側邊面 -->
+                    <polygon points="140,60 180,20 180,120 140,160" fill="#075985" stroke="#38bdf8" stroke-width="2"/>
+                    <!-- 透明盒蓋卡扣細節 -->
+                    <rect x="60" y="80" width="40" height="15" fill="#eab308" opacity="0.8" rx="3"/>
+                </g>
+                <text x="140" y="320" fill="#38bdf8" font-size="12" text-anchor="middle" font-weight="bold">3D 透明/半透明塑膠盒成型渲染</text>
+            </svg>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">🎨 階段二：3D 立體塑膠盒成型渲染圖</p>
+        </div>
+        """
+    else:
+        return f"""
+        <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
+            <svg width="280" height="360" viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+                <rect width="280" height="360" fill="#0f172a" rx="8"/>
+                <g transform="rotate(-15, 140, 180) skewX(10)">
+                    <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
+                          fill="#0284c7" transform="translate(0, 12)"/>
+                    <path d="M 140,35 C 185,35 205,70 205,120 C 205,165 190,205 195,245 C 200,280 190,325 140,335 C 90,325 80,280 85,245 C 90,205 75,165 75,120 C 75,70 95,35 140,35 Z" 
+                          fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
+                    <line x1="90" y1="80" x2="190" y2="80" stroke="#f43f5e" stroke-width="5"/>
+                    <line x1="85" y1="110" x2="195" y2="110" stroke="#0ea5e9" stroke-width="5"/>
+                </g>
+                <text x="140" y="350" fill="#38bdf8" font-size="12" text-anchor="middle" font-weight="bold">3D 立體橡膠大底成型模擬</text>
+            </svg>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">🎨 階段二：3D 立體模具熱壓成型渲染圖</p>
+        </div>
+        """
+
+def get_nano_banana_photo_url(spec):
+    """根據產品類別傳回對應的寫實實體產品相片 URL"""
+    category = spec.get("category", "general")
+    if category == "box":
+        # 真實塑膠收納盒 / 精密射出盒寫實照片
+        return "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=80"
+    else:
+        # 真實橡膠鞋底寫實照片
+        return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80"
 
 def generate_mock_stl_content(spec):
-    return f"""solid Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}
+    return f"""solid Part_{spec['category']}_{spec['length']}x{spec['width']}x{spec['height']}
   facet normal 0.000000e+00 0.000000e+00 1.000000e+00
     outer loop
       vertex 0.000000e+00 0.000000e+00 {spec['height']}
@@ -100,7 +160,7 @@ def generate_mock_stl_content(spec):
       vertex {spec['length']}00000e+01 {spec['width']}00000e+01 {spec['height']}
     endloop
   endfacet
-endsolid Outsole_Jordan10"""
+endsolid Part"""
 
 def render_sales_overview():
     st.subheader("📊 業務報價總覽與資料庫中心")
@@ -108,7 +168,7 @@ def render_sales_overview():
     if "quotation_db" not in st.session_state:
         st.session_state.quotation_db = [
             {"id": "QT-2026-001", "sales": "Alex Chen", "customer": "Nike Vietnam", "product": "鞋子橡膠大底 (長40寬25厚3)", "material": "SBR 橡膠", "price_usd": 4.85, "status": "🟢 已送出報價"},
-            {"id": "QT-2026-002", "sales": "David Wang", "customer": "Adidas Taiwan", "product": "足球鞋中底 EVA", "material": "EVA 發泡", "price_usd": 3.20, "status": "🟡 客戶比價中"}
+            {"id": "QT-2026-002", "sales": "David Wang", "customer": "Adidas Taiwan", "product": "塑膠收納盒 10*5*10", "material": "PP 塑膠", "price_usd": 1.25, "status": "🟡 客戶比價中"}
         ]
     for q in st.session_state.quotation_db:
         st.info(f"📄 **[{q['id']}] {q['customer']}** — 經辦業務: {q['sales']} | 預估單價: `${q['price_usd']} USD` ({q['status']})")
@@ -122,12 +182,18 @@ def render_sales_frontend():
 
     with col_input:
         st.markdown("#### 📝 1. 輸入客戶原廠需求與規格")
-        user_prompt = st.text_area(
-            "請輸入產品描述與尺寸細節：",
-            value="我需要鞋子橡膠大底長40寬25厚3,底部用喬丹10的排水方式",
-            height=120,
-            key="input_sales_prompt"
+        
+        # 可直接輸入的單行輸入框，支援按 Enter 直接觸發
+        user_prompt = st.text_input(
+            "請輸入產品描述與尺寸細節 (輸入完按 Enter 或點擊下方按鈕)：",
+            value=st.session_state.get("last_sales_prompt", "盒子10*5*10要1000個"),
+            key="input_sales_prompt_single"
         )
+        
+        # 顯眼的一鍵提交按鈕
+        if st.button("🚀 提交 AI 解析與繪圖 (Enter)", type="primary", key="btn_submit_prompt"):
+            st.session_state["last_sales_prompt"] = user_prompt
+            st.rerun()
 
         spec = parse_dimensions_and_type(user_prompt)
 
@@ -148,34 +214,22 @@ def render_sales_frontend():
         ])
         
         with tab_2d:
-            st.components.v1.html(draw_2d_outsole_cad(spec['length'], spec['width'], spec['height']), height=400)
+            st.components.v1.html(draw_2d_cad(spec), height=400)
             
         with tab_3d:
-            st.components.v1.html(draw_3d_outsole_render(spec['length'], spec['width'], spec['height']), height=400)
+            st.components.v1.html(draw_3d_render(spec), height=400)
 
         with tab_banana:
             st.markdown("##### 🍌 Nano Banana AI 寫實成品照生成")
+            photo_url = get_nano_banana_photo_url(spec)
             
-            # 高畫質寫實橡膠產品相片網址庫 (100% 安全連結)
-            sample_photos = [
-                "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=80",
-                "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=800&auto=format&fit=crop&q=80"
-            ]
-            
-            if "banana_photo_idx" not in st.session_state:
-                st.session_state.banana_photo_idx = 0
-
             if st.button("🚀 呼叫 Nano Banana AI 算圖生成寫實相片", type="primary", key="btn_gen_banana_photo"):
-                with st.spinner("Nano Banana AI 正在運算 8K 寫實攝影渲染..."):
-                    st.session_state.banana_photo_idx = (st.session_state.banana_photo_idx + 1) % len(sample_photos)
-                    st.success(f"🎉 已成功生成寫實照片（解析度：8K，長 {spec['length']}cm × 寬 {spec['width']}cm）")
+                with st.spinner("Nano Banana AI 正在運算 8K 寫實成品照..."):
+                    st.success("🎉 已成功算圖！")
             
-            cur_url = sample_photos[st.session_state.banana_photo_idx]
-            
-            # 修正處：移除包含過期參數 use_column_width 的呼叫，直接使用 Streamlit 標準寫法
             st.image(
-                cur_url, 
-                caption=f"🍌 Nano Banana AI 算圖寫實成品照 (長 {spec['length']}cm × 寬 {spec['width']}cm × 厚 {spec['height']}cm)"
+                photo_url, 
+                caption=f"🍌 Nano Banana AI 寫實成品照 ({spec['prod_type']} - 規格: {spec['length']}x{spec['width']}x{spec['height']} cm)"
             )
 
     st.divider()
@@ -192,7 +246,7 @@ def render_sales_frontend():
         st.download_button(
             label="📥 下載 3D 列印模型檔 (.STL)",
             data=stl_data,
-            file_name=f"Outsole_Jordan10_{spec['length']}x{spec['width']}x{spec['height']}.stl",
+            file_name=f"Part_{spec['category']}_{spec['length']}x{spec['width']}x{spec['height']}.stl",
             mime="model/stl",
             type="primary",
             key="btn_download_stl"
@@ -200,9 +254,9 @@ def render_sales_frontend():
 
     with col_print2:
         st.markdown("#### 🖨️ 2. 網路連線廠區 3D 列印機")
-        printer_site = st.selectbox("選擇列印打樣廠區", ["🇻🇳 越南平陽廠樣品室 (TPU 85A 軟膠機)", "🇹🇼 台灣總部研發中心 (光固化/TPU)", "🇨🇳 中國東莞廠工程部"], key="select_3d_printer")
+        printer_site = st.selectbox("選擇列印打樣廠區", ["🇻🇳 越南平陽廠樣品室 (TPU/PP 機台)", "🇹🇼 台灣總部研發中心 (光固化/ABS)", "🇨🇳 中國東莞廠工程部"], key="select_3d_printer")
         if st.button("🚀 即時發送 G-Code 至 3D 列印機啟動打樣", key="btn_send_3d_printer"):
-            st.success(f"✅ 已將【喬丹10代鞋底樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
+            st.success(f"✅ 已將【{spec['prod_type']} 樣品 ({spec['length']}x{spec['width']}x{spec['height']}cm)】傳送至 [{printer_site}]！")
 
     st.divider()
 
@@ -222,16 +276,16 @@ def render_sales_frontend():
 產品類型：{spec['prod_type']}
 精算規格：長 {spec['length']} cm × 寬 {spec['width']} cm × 厚 {spec['height']} cm
 建議材質：{spec['material']}
-建議設備：{spec['clamp_ton']} 噸 橡膠熱壓/射出成型機
+建議設備：{spec['clamp_ton']} 噸 射出成型機
 實品模擬：已透過 Nano Banana AI 完成產品寫實照片繪製
-打樣測試：已同步匯出 3D 列印打樣檔 (.STL) 進行 TPU 軟膠快速驗證
+打樣測試：已同步匯出 3D 列印打樣檔 (.STL) 進行快速打樣驗證
 
 --------------------------------------------------
 💰 費用與成本精算明細：
 --------------------------------------------------
-1. 鋼模開發費用：$7,200.00 USD (1模2穴，鋼材 NAK80)
-2. 產品量產單價：$4.85 USD / 雙 (MOQ 3,000 雙)
-3. 開模週期：25 天
+1. 鋼模開發費用：$5,800.00 USD (1模4穴，鋼材 NAK80)
+2. 產品量產單價：$1.25 USD / 個 (MOQ 1,000 個)
+3. 開模週期：20 天
 =================================================="""
 
         st.code(quote_content, language="markdown")
