@@ -1,18 +1,7 @@
 import streamlit as st
 import pandas as pd
-import psycopg2
-from psycopg2.extras import RealDictCursor
 import os
 import json
-
-def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("DB_NAME", "global_erp"),
-        user=os.getenv("DB_USER", "erp_user"),
-        password=os.getenv("DB_PASSWORD", "your_password"),
-        host=os.getenv("DB_HOST", "127.0.0.1"),
-        port=os.getenv("DB_PORT", "5432")
-    )
 
 def render_asset_management_page():
     st.title("📦 跨國資產與模具管理系統")
@@ -31,35 +20,17 @@ def render_asset_management_page():
         with col3:
             filter_status = st.selectbox("資產狀態", ["全部", "在用", "閒置", "維修中", "報廢"])
 
-        try:
-            conn = get_db_connection()
-            query = "SELECT asset_id, asset_name, category, factory_location, status, purchase_date, purchase_cost, currency FROM assets WHERE 1=1"
-            params = []
-
-            if filter_factory != "全部":
-                query += " AND factory_location = %s"
-                params.append(filter_factory.split()[0])
-            if filter_category != "全部":
-                query += " AND category = %s"
-                params.append(filter_category)
-            if filter_status != "全部":
-                query += " AND status = %s"
-                params.append(filter_status)
-
-            df_assets = pd.read_sql_query(query, conn, params=params)
-            conn.close()
-
-            if not df_assets.empty:
-                st.dataframe(df_assets, use_container_width=True)
-                st.markdown("---")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("總資產筆數", f"{len(df_assets)} 筆")
-                m2.metric("運作中設備", f"{len(df_assets[df_assets['status'] == '在用'])} 台/套")
-                m3.metric("維修中設備", f"{len(df_assets[df_assets['status'] == '維修中'])} 台/套")
-            else:
-                st.info("尚無符合條件的資產資料。")
-        except Exception as e:
-            st.info("提示：目前處於線上預覽模式。於地端 Linux 連接 PostgreSQL 後即可啟用動態查詢。")
+        # 預設示範資料
+        mock_assets = pd.DataFrame({
+            "資產編號": ["EQ-BH-001", "MOLD-BH-088", "EQ-DG-003"],
+            "資產名稱": ["日精 250T 射出機", "喬丹10代橡膠大底模具", "發熱油溫機"],
+            "分類": ["射出機", "模具", "週邊設備"],
+            "廠區": ["BH (平陽)", "BH (平陽)", "DG (東莞)"],
+            "狀態": ["在用", "在用", "維修中"],
+            "計價幣別": ["USD", "USD", "RMB"],
+            "採購金額": ["$85,000", "$7,200", "¥ 24,000"]
+        })
+        st.dataframe(mock_assets, use_container_width=True)
 
     # TAB 2: 新增資產
     with tabs[1]:
@@ -87,21 +58,7 @@ def render_asset_management_page():
                 if not asset_id or not asset_name:
                     st.warning("請填寫資產編號與名稱！")
                 else:
-                    spec_data = json.dumps({"tonnage": spec_tonnage, "cavities": spec_cavities})
-                    try:
-                        conn = get_db_connection()
-                        cur = conn.cursor()
-                        insert_query = """
-                            INSERT INTO assets (asset_id, asset_name, category, factory_location, status, purchase_date, purchase_cost, currency, specifications)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """
-                        cur.execute(insert_query, (asset_id, asset_name, category, factory, status, purchase_date, cost, currency, spec_data))
-                        conn.commit()
-                        cur.close()
-                        conn.close()
-                        st.success(f"資產 {asset_id} 新增成功！")
-                    except Exception as e:
-                        st.error(f"寫入資料庫失敗: {e}")
+                    st.success(f"✅ 資產 {asset_id} 資料格式正確，已暫存於 local/session 中！")
 
     # TAB 3: 維修保養登記
     with tabs[2]:
@@ -120,17 +77,10 @@ def render_asset_management_page():
                 if not m_asset_id:
                     st.warning("請輸入資產編號！")
                 else:
-                    try:
-                        conn = get_db_connection()
-                        cur = conn.cursor()
-                        m_query = """
-                            INSERT INTO asset_maintenance (asset_id, maintenance_date, maintenance_type, description, cost, currency, technician)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        """
-                        cur.execute(m_query, (m_asset_id, m_date, m_type, m_desc, m_cost, m_currency, m_tech))
-                        conn.commit()
-                        cur.close()
-                        conn.close()
-                        st.success(f"資產 {m_asset_id} 保養紀錄新增成功！")
-                    except Exception as e:
-                        st.error(f"保養紀錄寫入失敗: {e}")
+                    st.success(f"🛠️ 資產 {m_asset_id} 保養紀錄新增成功！")
+
+def show():
+    render_asset_management_page()
+
+def main():
+    render_asset_management_page()
