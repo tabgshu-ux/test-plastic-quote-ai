@@ -16,17 +16,17 @@ def load_module_function(module_name, func_names):
         for fname in func_names:
             if hasattr(mod, fname):
                 return getattr(mod, fname)
-        return lambda: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到以下任何入口函式: {func_names}")
+        return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到以下任何入口函式: {func_names}")
     except Exception as e:
-        return lambda: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
+        return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
 # 載入 6 大核心模組
-render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main", "run"])
-render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main", "run"])
+render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "render_dashboard", "show", "main"])
+render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "render_sales_frontend", "show", "main"])
-render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main", "run"])
-render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main", "run"])
-render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main", "run"])
+render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
+render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
+render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
 
 # ----------------------------------------------------
 # 側邊欄與頁面路由
@@ -44,8 +44,30 @@ page = st.sidebar.radio(
     ]
 )
 
+# 當選擇「營運戰情室」時，在左側邊欄下方展開「各國股市區域選單」
+selected_stock_market = "🌐 全部市場 (All Markets)"
 if page == "營運戰情室 (Executive Dashboard)":
-    render_exec_db()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📈 選擇股市/匯率觀測區域")
+    selected_stock_market = st.sidebar.selectbox(
+        "切換市場區域：",
+        [
+            "🌐 全部市場 (All Markets)",
+            "🇹🇼 台灣 (Taiwan)",
+            "🇨🇳 中國/香港 (China/HK)",
+            "🇺🇸 美國 (USA)",
+            "🇻🇳 越南 (Vietnam)",
+            "🛢️ 原物料與匯率 (Commodities/FX)"
+        ],
+        key="sidebar_stock_market_select"
+    )
+
+# ----------------------------------------------------
+# 頁面路由分流
+# ----------------------------------------------------
+if page == "營運戰情室 (Executive Dashboard)":
+    # 將左側選單選取的市場傳入營運戰情室模組
+    render_exec_db(selected_stock_market)
 elif page == "廠區營運 KPI (ERP Dashboard)":
     render_erp_db()
 elif page == "業務報價 & CAD/3D Pipeline":
