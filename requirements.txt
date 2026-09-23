@@ -5,3 +5,10 @@ pandas
 openpyxl
 reportlab
 yfinance
+psycopg2-binary
+requests
+trimesh
+numpy
+qrcode
+Pillow
+python-dotenv
