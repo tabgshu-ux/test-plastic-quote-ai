@@ -134,7 +134,6 @@ render_user_mgmt = load_module_function("user_management", ["render_user_managem
 # 側邊欄 1：使用者帳號登入/登出狀態區塊
 # ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP")
-
 st.sidebar.markdown("### 👤 使用者狀態與權限")
 
 if st.session_state.logged_in:
@@ -160,7 +159,6 @@ else:
 
 st.sidebar.markdown("---")
 
-# 若未登入，阻擋存取系統核心頁面
 if not st.session_state.logged_in:
     st.title("🔒 跨國塑膠/橡膠射出成型 AI ERP 系統")
     st.warning("⚠️ 請先於左側邊欄輸入帳號密碼進行登入，以存取各部門管理模組與權限功能。")
@@ -176,16 +174,13 @@ selected_lang = st.sidebar.selectbox(
 )
 st.session_state.lang = selected_lang
 lang_dict = I18N[selected_lang]
-
 st.sidebar.markdown("---")
 
-# 主部門單選鈕
 selected_dept = st.sidebar.radio(
     lang_dict["dept_select"],
     options=I18N["繁體中文"]["depts"],
     key="fixed_sidebar_dept_radio_key"
 )
-
 st.sidebar.markdown("---")
 
 # ----------------------------------------------------
@@ -227,6 +222,8 @@ elif "🧾 財務" in selected_dept:
     sub_option = st.sidebar.radio(
         "財務功能清單：",
         [
+            "🛒 採購與應付帳款系統 (Procurement & AP)", 
+            "📦 訂單與應收帳款系統 (Sales Orders & AR)", 
             "📄 越南電子發票 XML 解析與登錄",
             "📧 通用信箱電子發票讀取 (IMAP)",
             "📊 電子發票張數監控與加購預警",
@@ -234,8 +231,16 @@ elif "🧾 財務" in selected_dept:
         ],
         key="fixed_sub_finance_option_key"
     )
+    
+    # 新增的路由分發
     if "全球跨國稅務" in sub_option:
         render_tax_ai(sub_option)
+    elif "採購與應付帳款" in sub_option:
+        st.title("🛒 採購與應付帳款系統 (Procurement & AP)")
+        st.info("此模組正在建置中，未來將整合：供應商詢價 (RFQ)、採購單 (PO) 開立、進貨驗收 (GRN) 及應付帳款拋轉功能。")
+    elif "訂單與應收帳款" in sub_option:
+        st.title("📦 訂單與應收帳款系統 (Sales Orders & AR)")
+        st.info("此模組正在建置中，未來將整合：客戶銷售訂單 (SO) 建立、出貨單 (DO) 開立及應收帳款沖銷功能。")
     else:
         render_invoice(sub_option)
 
