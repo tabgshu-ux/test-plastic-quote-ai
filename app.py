@@ -6,6 +6,9 @@ st.set_page_config(
     layout="wide"
 )
 
+# ----------------------------------------------------
+# 🔐 系統登入與權限狀態 Session State 初始化
+# ----------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = True
 
@@ -103,6 +106,9 @@ I18N = {
     }
 }
 
+# ----------------------------------------------------
+# 🛡️ 安全靜態與動態模組載入器
+# ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
         mod = __import__(f"modules.{module_name}", fromlist=["*"])
@@ -118,21 +124,24 @@ def load_module_function(module_name, func_names):
                         except TypeError:
                             return func()
                 return safe_wrapper
-        return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到以下任何入口函式: {func_names}")
+        return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到入口函式: {func_names}")
     except Exception as e:
         return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-# 載入模組
+# 載入所有功能模組
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
 render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
-render_ap = load_module_function("procurement_ap", ["render_procurement_ap_page", "show", "main"]) # 新載入 AP 模組
+render_ap = load_module_function("procurement_ap", ["render_procurement_ap_page", "show", "main"])
 render_tax_ai = load_module_function("finance_tax", ["render_finance_tax_page", "show", "main"])
 render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
 render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
 render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
+# ----------------------------------------------------
+# 側邊欄 (Sidebar) 選單渲染
+# ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP")
 st.sidebar.markdown("### 👤 User Status")
 
@@ -172,6 +181,7 @@ st.sidebar.markdown("---")
 
 dept_idx = dept_options.index(selected_dept)
 
+# 路由分流
 if dept_idx == 0:
     sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key=f"sub_exec_{selected_lang}")
     render_exec_db(sub_option, selected_lang)
@@ -192,14 +202,14 @@ elif dept_idx == 4:
     sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
     sub_idx = lang_dict["sub_finance"].index(sub_option)
     
-    if sub_idx == 0: # 採購與應付帳款 (AP)
+    if sub_idx == 0: # 正確呼叫採購與應付帳款 (Procurement & AP ERP)
         render_ap(sub_option, selected_lang)
     elif sub_idx == 1: # 訂單與應收帳款 (AR)
         st.title("📦 Sales Orders & Accounts Receivable (AR)")
         st.info("此模組正在建置中...")
     elif sub_idx == 5: # 全球稅務 AI
         render_tax_ai(sub_option, selected_lang)
-    else: # 發票管理
+    else: # 電子發票管理
         render_invoice(sub_option, selected_lang)
 
 elif dept_idx == 5:
