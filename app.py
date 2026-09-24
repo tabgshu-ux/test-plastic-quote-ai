@@ -7,20 +7,60 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------
-# 🔐 系統登入與權限狀態 Session State 初始化
+# 🔐 1. 初始化使用者帳號資料庫與登入驗證狀態
 # ----------------------------------------------------
+if "user_database" not in st.session_state:
+    st.session_state.user_database = {
+        "admin": {"password": "admin123", "name": "Alex Chen (System Admin)", "role": "Super Admin"},
+        "boss": {"password": "boss123", "name": "陳董事長 (Chairman)", "role": "Executive"},
+        "gm": {"password": "gm123", "name": "林總經理 (General Manager)", "role": "Executive"},
+        "hr_manager": {"password": "hr123", "name": "張人事主管 (HR Manager)", "role": "HR & Admin"},
+        "accountant": {"password": "fin123", "name": "王財務會計 (Accountant)", "role": "Finance"},
+        "alex": {"password": "alex123", "name": "Alex Chen (Sales)", "role": "Sales"},
+    }
+
+# 預設為未登入（畫面重整即自動要求重新登入）
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = True
+    st.session_state.logged_in = False
 
 if "user_info" not in st.session_state:
-    st.session_state.user_info = {
-        "username": "admin",
-        "name": "Alex Chen (System Admin)",
-        "role": "Super Admin"
-    }
+    st.session_state.user_info = None
 
 if "lang" not in st.session_state:
     st.session_state.lang = "繁體中文"
+
+# ----------------------------------------------------
+# 🔓 2. 未登入身分驗證攔截區（未登入前完全中斷，防止洩漏介面）
+# ----------------------------------------------------
+if not st.session_state.logged_in:
+    st.title("🏭 跨國塑膠/橡膠射出成型 — 企業級 AI ERP 系統")
+    st.caption("請輸入您的企業帳號與密碼進行身分驗證（畫面重整將自動要求重新登入）")
+
+    col_login, _ = st.columns([1, 1])
+    with col_login:
+        with st.form("login_form_main"):
+            username_input = st.text_input("帳號 / Username", value="admin").strip().lower()
+            password_input = st.text_input("密碼 / Password", type="password", value="admin123").strip()
+            submit_button = st.form_submit_button("🔑 登入系統", type="primary")
+
+            if submit_button:
+                db = st.session_state.user_database
+                if username_input in db and db[username_input]["password"] == password_input:
+                    st.session_state.logged_in = True
+                    st.session_state.user_info = db[username_input]
+                    st.success(f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}")
+                    st.rerun()
+                else:
+                    st.error("❌ 帳號或密碼錯誤，請重新輸入！")
+
+        st.info("""
+            💡 **測試帳號清單：**
+            - **最高主管**：`admin` / `admin123` 或 `boss` / `boss123`
+            - **財務會計**：`accountant` / `fin123`
+            - **人事主管**：`hr_manager` / `hr123`
+            - **業務專員**：`alex` / `alex123`
+            """)
+    st.stop()  # ⛔ 強制中斷！未登入者完全無法載入與執行下方任何選單與模組程式碼
 
 # ----------------------------------------------------
 # 🌐 全球多語系完整字典 (i18n)
@@ -107,7 +147,7 @@ I18N = {
 }
 
 # ----------------------------------------------------
-# 🛡️ 安全靜態與動態模組載入器
+# 🛡️ 安全靜態與動態模組載入器 (您原本的寫法，完全保留)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -140,24 +180,16 @@ render_payroll = load_module_function("payroll_management", ["render_payroll_man
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
 # ----------------------------------------------------
-# 側邊欄 (Sidebar) 選單渲染
+# 側邊欄 (Sidebar) 選單渲染 (登入成功後才會看到此區)
 # ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP")
 st.sidebar.markdown("### 👤 User Status")
 
-if st.session_state.logged_in:
-    st.sidebar.success(f"🟢 **{st.session_state.user_info['name']}**")
-    if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
-        st.session_state.logged_in = False
-        st.rerun()
-else:
-    st.sidebar.warning("🔴 Not Logged In")
-    with st.sidebar.form("login_form_sidebar"):
-        username_input = st.text_input("Username", value="admin")
-        password_input = st.text_input("Password", type="password", value="123456")
-        if st.form_submit_button("🚀 Login"):
-            st.session_state.logged_in = True
-            st.rerun()
+st.sidebar.success(f"🟢 **{st.session_state.user_info['name']}**")
+if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
+    st.session_state.logged_in = False
+    st.session_state.user_info = None
+    st.rerun()
 
 st.sidebar.markdown("---")
 
@@ -202,7 +234,7 @@ elif dept_idx == 4:
     sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
     sub_idx = lang_dict["sub_finance"].index(sub_option)
     
-    if sub_idx == 0: # 正確呼叫採購與應付帳款 (Procurement & AP ERP)
+    if sub_idx == 0: # 採購與應付帳款 (Procurement & AP ERP)
         render_ap(sub_option, selected_lang)
     elif sub_idx == 1: # 訂單與應收帳款 (AR)
         st.title("📦 Sales Orders & Accounts Receivable (AR)")
