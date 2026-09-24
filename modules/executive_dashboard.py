@@ -15,7 +15,7 @@ EXEC_I18N = {
         "tab_fin_stat": "📊 全球廠區 AR/AP 財務統計",
         "tab_plant_kpi": "⚡ 全球廠區營運 KPI 與機台稼動 (OEE)",
         "stock_section_title": "📊 市場即時行情與關注個股看板",
-        "news_section_title": "📰 近 7 天動態財經新聞與市場大事件",
+        "news_section_title": "📰 近 7 天動態財經新聞與市場大事件 (點擊標題開啟新聞原文)",
         "btn_fetch_news": "🔄 重新整理 / 抓取最新財經新聞",
         "ai_summary_title": "🤖 Gemini AI 跨國白話財經摘要",
         "btn_gen_ai_summary": "🚀 生成該區域白話重點與決策報告",
@@ -33,7 +33,7 @@ EXEC_I18N = {
         "tab_fin_stat": "📊 Thống kê tài chính AR/AP các nhà máy",
         "tab_plant_kpi": "⚡ KPI vận hành & Hiệu suất máy (OEE)",
         "stock_section_title": "📊 Bảng Giá Chứng Khoán & Chỉ Số Thị Trường Thời Gian Thực",
-        "news_section_title": "📰 Tin Tức Tài Chính & Sự Kiện Thị Trường Trong 7 Ngày Qua",
+        "news_section_title": "📰 Tin Tức Tài Chính Trong 7 Ngày Qua (Nhấp vào tiêu đề để đọc chi tiết)",
         "btn_fetch_news": "🔄 Cập nhật / Tải tin tức tài chính mới nhất",
         "ai_summary_title": "🤖 Tóm Tắt Tài Chính AI Gemini",
         "btn_gen_ai_summary": "🚀 Tạo báo cáo tóm tắt & Quyết định chiến lược",
@@ -51,7 +51,7 @@ EXEC_I18N = {
         "tab_fin_stat": "📊 Global Sites AR/AP Financial Stats",
         "tab_plant_kpi": "⚡ Global Sites Operational KPIs & OEE",
         "stock_section_title": "📊 Live Stock Tickers & Market Indices",
-        "news_section_title": "📰 Recent 7-Day Financial News & Market Events",
+        "news_section_title": "📰 Recent 7-Day Financial News (Click title to view full article)",
         "btn_fetch_news": "🔄 Refresh / Fetch Latest Financial News",
         "ai_summary_title": "🤖 Gemini AI Financial Summary",
         "btn_gen_ai_summary": "🚀 Generate Strategic Brief & Executive Report",
@@ -69,7 +69,7 @@ EXEC_I18N = {
         "tab_fin_stat": "📊 全球厂区 AR/AP 财务统计",
         "tab_plant_kpi": "⚡ 全球厂区营运 KPI 与机台稼动 (OEE)",
         "stock_section_title": "📊 市场实时行情与关注个股看板",
-        "news_section_title": "📰 近 7 天动态财经新闻与市场大事",
+        "news_section_title": "📰 近 7 天动态财经新闻与市场大事 (点击标题查看新闻原文)",
         "btn_fetch_news": "🔄 刷新 / 抓取最新财经新闻",
         "ai_summary_title": "🤖 Gemini AI 跨国白话财经摘要",
         "btn_gen_ai_summary": "🚀 生成该区域白话重点与决策报告",
@@ -87,7 +87,7 @@ EXEC_I18N = {
         "tab_fin_stat": "📊 Statistik Keuangan AR/AP Pabrik Global",
         "tab_plant_kpi": "⚡ KPI Operasional Pabrik & OEE Mesin",
         "stock_section_title": "📊 Harga Saham Langsung & Indeks Pasar",
-        "news_section_title": "📰 Berita Keuangan 7 Hari Terakhir & Acara Pasar",
+        "news_section_title": "📰 Berita Keuangan 7 Hari Terakhir (Klik judul untuk membaca selengkapnya)",
         "btn_fetch_news": "🔄 Perbarui / Ambil Berita Keuangan Terbaru",
         "ai_summary_title": "🤖 Ringkasan Keuangan AI Gemini",
         "btn_gen_ai_summary": "🚀 Hasilkan Laporan Ringkas & Keputusan Strategis",
@@ -104,7 +104,7 @@ def get_exec_lang_dict(lang_param=None):
     return EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
 
 # ----------------------------------------------------
-# 📊 1. 動態各國股票價格看板 (Metric Cards)
+# 📊 1. 根據國家/區域切換的即時股票看板 (Metric Cards)
 # ----------------------------------------------------
 def render_market_stock_metrics(market_key):
     if "Taiwan" in market_key or "台灣" in market_key or "Đài Loan" in market_key:
@@ -150,22 +150,75 @@ def render_market_stock_metrics(market_key):
         col4.metric("美金/越南盾 (USD/VND)", "25,420 VND", "-15.0 (-0.06%)")
 
 # ----------------------------------------------------
-# 📰 2. 近 7 天動態新聞
+# 📰 2. 近 7 天動態新聞資料庫 (含超連結 url)
 # ----------------------------------------------------
 def get_mock_7day_news(market):
     if "Taiwan" in market or "台灣" in market or "Đài Loan" in market:
         return [
-            {"date": "2026-03-24", "title": "TSMC 晶圓代工產能持續滿載，先進封裝產能預計擴增 20%", "source": "財經日報 / Economic Daily", "sentiment": "🟢 看多 / Bullish", "summary": "受益於全球 AI 晶片需求，3nm 產能供不應求，帶動整體供應鏈動能。"},
-            {"date": "2026-03-22", "title": "央行利率政策維持穩定，新台幣對美元匯率於 31.5 區間震盪", "source": "中央社 / CNA", "sentiment": "🟡 中立 / Neutral", "summary": "外資小幅淨流入，出口製造業利潤率受匯率變動影響有限。"}
+            {
+                "date": "2026-03-24",
+                "title": "TSMC 晶圓代工產能持續滿載，先進封裝產能預計擴增 20%",
+                "url": "https://tw.stock.yahoo.com/news/tsmc-advanced-packaging-expansion",
+                "source": "財經日報 / Economic Daily",
+                "sentiment": "🟢 看多 / Bullish",
+                "summary": "受益於全球 AI 晶片需求強勁，台積電 3nm 產能供不應求，帶動整體 CoWoS 先進封裝供應鏈動能上升。"
+            },
+            {
+                "date": "2026-03-22",
+                "title": "央行利率政策維持穩定，新台幣對美元匯率於 31.5 區間震盪",
+                "url": "https://tw.stock.yahoo.com/news/cbdc-taiwan-dollar-rate-stable",
+                "source": "中央社 / CNA",
+                "sentiment": "🟡 中立 / Neutral",
+                "summary": "外資小幅淨流入，出口製造業利潤率受匯率變動影響有限，整體外貿環境維持溫和成長。"
+            },
+            {
+                "date": "2026-03-20",
+                "title": "塑膠與橡膠原物料價格小幅回升，加工廠預備提早鎖定 Q2 報價",
+                "url": "https://tw.stock.yahoo.com/news/plastic-raw-material-price-increase",
+                "source": "工商時報 / CTEE",
+                "sentiment": "🟡 關注 / Caution",
+                "summary": "塑膠粒 (PP/ABS) 進口成本略增 2.5%，建議業務部門報價時適當反映原料成本加價。"
+            }
         ]
     elif "Vietnam" in market or "越南" in market or "Việt Nam" in market:
         return [
-            {"date": "2026-03-24", "title": "Việt Nam FDI thu hút 6.2 tỷ USD trong Q1, Bình Dương dẫn đầu về sản xuất xuất khẩu", "source": "VnExpress / Vietnam News", "sentiment": "🟢 看多 / Bullish", "summary": "外資持續挹注平陽省與同奈省工業區，製造業外設廠動能強勁。"},
-            {"date": "2026-03-21", "title": "Cục Thuế ban hành công văn mới về kiểm tra Hóa đơn điện tử và Thuế nhà thầu (FCT)", "source": "Báo Đầu Tư", "sentiment": "🔴 警戒 / Alert", "summary": "越南稅務局加強查核企業電子發票開立與外國承包商稅抵扣憑證，提醒財務人員備妥合約。"}
+            {
+                "date": "2026-03-24",
+                "title": "Việt Nam FDI thu hút 6.2 tỷ USD trong Q1, Bình Dương dẫn đầu về sản xuất xuất khẩu",
+                "url": "https://vnexpress.net/fdi-vao-viet-nam-tang-truong-manh",
+                "source": "VnExpress / Vietnam News",
+                "sentiment": "🟢 看多 / Bullish",
+                "summary": "外資持續挹注平陽省與同奈省工業區，製造業擴廠動能強勁，帶動當地射出成型與周邊設備需求。"
+            },
+            {
+                "date": "2026-03-21",
+                "title": "Cục Thuế ban hành công văn mới về kiểm tra Hóa đơn điện tử và Thuế nhà thầu (FCT)", "url": "https://baodautu.vn/kiem-tra-hoa-don-dien-tu-moi-nhat",
+                "source": "Báo Đầu Tư",
+                "sentiment": "🔴 警戒 / Alert",
+                "summary": "越南稅務局加強查核企業電子發票開立與外國承包商稅抵扣憑證，提醒財務人員備妥合約與匯款水單。"
+            }
+        ]
+    elif "USA" in market or "美國" in market or "Mỹ" in market:
+        return [
+            {
+                "date": "2026-03-23",
+                "title": "Fed Signals Potential Rate Adjustments as Inflation Moderates Near 2%",
+                "url": "https://finance.yahoo.com/news/fed-rate-cuts-update",
+                "source": "Wall Street Journal / Yahoo Finance",
+                "sentiment": "🟢 看多 / Bullish",
+                "summary": "美聯儲通膨指標顯著回落，美股科技與高端製造業板塊受資金追捧溫和上揚。"
+            }
         ]
     else:
         return [
-            {"date": "2026-03-24", "title": "全球原油價格小幅波動，塑化上游烯類原料供應鏈維持平衡", "source": "Reuters Market Watch", "sentiment": "🟡 中立 / Neutral", "summary": "原物料市場短期供需平衡，射出成型加工成本保持可控範疇。"}
+            {
+                "date": "2026-03-24",
+                "title": "全球原油價格小幅波動，塑化上游烯類原料供應鏈維持平衡",
+                "url": "https://www.reuters.com/business/energy",
+                "source": "Reuters Market Watch",
+                "sentiment": "🟡 中立 / Neutral",
+                "summary": "原物料市場短期供需平衡，射出成型加工原料成本保持在可控範疇。"
+            }
         ]
 
 # ----------------------------------------------------
@@ -192,7 +245,7 @@ def ask_stock_ai_advisor(query_text, lang="繁體中文"):
         return f"❌ AI 回應異常: {str(e)}"
 
 # ----------------------------------------------------
-# 📊 4. 補回分頁一：全球廠區 AR/AP 財務統計
+# 📊 4. 分頁二：全球廠區 AR/AP 財務統計
 # ----------------------------------------------------
 def render_financial_ar_ap_stats():
     st.markdown("### 📊 跨國集團全球廠區應收/應付帳款 (AR/AP) 總覽")
@@ -200,7 +253,7 @@ def render_financial_ar_ap_stats():
     col_ar1, col_ar2, col_ar3, col_ar4 = st.columns(4)
     col_ar1.metric("全球總應收帳款 (AR)", "$2,850,000 USD", "+$120,000")
     col_ar2.metric("全球總應付帳款 (AP)", "$1,420,000 USD", "-$45,000")
-    col_ar3.metric("逾期應收帳款 (>60天)", "$185,000 USD", "⚠️ 需關注")
+    col_ar3.metric("逾期帳款 (>60天)", "$185,000 USD", "⚠️ 需關注")
     col_ar4.metric("淨營運現金流預估", "$1,430,000 USD", "🟢 健康")
 
     st.markdown("#### 🏢 各廠區 AR / AP 明細與流動性分析")
@@ -212,7 +265,7 @@ def render_financial_ar_ap_stats():
     st.dataframe(pd.DataFrame(ar_ap_data), use_container_width=True)
 
 # ----------------------------------------------------
-# ⚡ 5. 補回分頁二：全球廠區營運 KPI 與機台稼動 (OEE)
+# ⚡ 5. 分頁三：全球廠區營運 KPI 與機台稼動 (OEE)
 # ----------------------------------------------------
 def render_plant_oee_kpi():
     st.markdown("### ⚡ 全球廠區射出機台稼動率 (OEE) 與生產 KPI")
@@ -226,13 +279,13 @@ def render_plant_oee_kpi():
     st.markdown("#### 🏭 各廠區射出機台稼動明細")
     oee_data = [
         {"廠區": "🇻🇳 越南平陽廠 (Binh Duong)", "連線機台數": "18 台", "平均 OEE": "86.2%", "良率 Yield": "98.5%", "當前狀態": "🟢 滿載運轉中", "異常告警": "無"},
-        {"廠區": "🇨🇳 中國東莞廠 (Dongguan)", "連线機台數": "16 台", "平均 OEE": "81.0%", "良率 Yield": "97.8%", "當前狀態": "🟡 2台換模中", "異常告警": "M03 油溫微升"},
+        {"廠區": "🇨🇳 中國東莞廠 (Dongguan)", "連線機台數": "16 台", "平均 OEE": "81.0%", "良率 Yield": "97.8%", "當前狀態": "🟡 2台換模中", "異常告警": "M03 油溫微升"},
         {"廠區": "🇹🇼 台灣總部研發中心 (TW HQ)", "連線機台數": "8 台", "平均 OEE": "88.5%", "良率 Yield": "99.1%", "當前狀態": "🟢 試模進行中", "異常告警": "無"}
     ]
     st.dataframe(pd.DataFrame(oee_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 模組主頁面 (三大部分頁整合)
+# 模組主頁面
 # ----------------------------------------------------
 def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)", lang=None):
     L = get_exec_lang_dict(lang)
@@ -241,21 +294,21 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
     st.title(L["page_title"])
     st.caption(L["sub_title"])
 
-    # 👑 頂部：董事長/總經理 專屬觀察重點
+    # 👑 董事長/總經理 專屬觀察重點
     with st.expander(L["boss_notes_title"], expanded=True):
         st.write("• **台積電 (TSMC 2330.TW)**：🟢 **偏多 (適合逢低定額)** — AI 晶片先進封裝獨占，長線穩定成長")
         st.write("• **富邦金 (Fubon 2881.TW)**：🟢 **防禦 (高股息避風港)** — 配息能力強，提供穩健現金流保護")
 
     st.divider()
 
-    # 包含您原本所有功能的三大部分頁
+    # 3 大跨國戰情室分頁
     tab1, tab2, tab3 = st.tabs([
         L["tab_market"],
         L["tab_fin_stat"],
         L["tab_plant_kpi"]
     ])
 
-    # 分頁一：全球股市即時看盤、新聞、AI 摘要與底部對話框
+    # 分頁 1：全球股市即時看盤、帶有超連結的新聞、AI 摘要與底部對話框
     with tab1:
         st.markdown(f"### {L['stock_section_title']} [{sub_option}]")
         render_market_stock_metrics(sub_option)
@@ -268,10 +321,12 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
             if st.button(L["btn_fetch_news"], type="primary", key=f"btn_refresh_news_{current_lang}"):
                 st.toast("✅ 已成功擷取最新 7 天財經新聞資料庫！")
 
+        # 渲染帶有【新聞超連結】的新聞卡片
         news_list = get_mock_7day_news(sub_option)
         for item in news_list:
             with st.container():
-                st.markdown(f"##### 📅 **【{item['date']}】{item['title']}**")
+                # 標題做成可點擊的藍色 Markdown 外部連結 [標題](URL)
+                st.markdown(f"##### 📅 **【{item['date']}】[{item['title']}]({item['url']})** 🔗")
                 st.caption(f"來源: `{item['source']}` | 評估: **{item['sentiment']}**")
                 st.write(f"💡 {item['summary']}")
                 st.markdown("---")
@@ -306,11 +361,11 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
                 st.markdown("#### 📝 AI 財經顧問解析報告：")
                 st.markdown(answer)
 
-    # 分頁二：全球廠區 AR/AP 財務統計 (完整重現)
+    # 分頁 2：全球廠區 AR/AP 財務統計
     with tab2:
         render_financial_ar_ap_stats()
 
-    # 分頁三：全球廠區營運 KPI 與機台稼動 OEE (完整重現)
+    # 分頁 3：全球廠區營運 KPI 與機台稼動 OEE
     with tab3:
         render_plant_oee_kpi()
 
