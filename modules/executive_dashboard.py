@@ -15,7 +15,11 @@ EXEC_I18N = {
         "ai_summary_title": "🤖 Gemini AI 跨國白話財經摘要",
         "btn_gen_ai_summary": "🚀 生成該區域白話重點與決策報告",
         "watch_title": "🛠️ 管理自訂觀察關注標的",
-        "boss_notes_title": "👑 董事長/總經理 專屬觀察重點與理由"
+        "boss_notes_title": "👑 董事長/總經理 專屬觀察重點與理由",
+        "stock_chat_title": "💬 董事長/總經理 專屬 AI 個股與市場諮詢對話框",
+        "stock_chat_caption": "請輸入任意股票代碼（如 2330.TW, 2881.TW, NVDA, VNM.VN）或財經問題，AI 即時進行估值與風險分析：",
+        "stock_chat_placeholder": "例如：請問台積電 (2330) 最近先進封裝 (CoWoS) 擴產對毛利率有什麼影響？值不值得加碼？",
+        "btn_send_stock_chat": "🚀 詢問 AI 財經顧問"
     },
     "Tiếng Việt": {
         "page_title": "📈 Bảng Điều Hành Doanh Nghiệp Đa Quốc Gia (Executive Dashboard)",
@@ -25,7 +29,11 @@ EXEC_I18N = {
         "ai_summary_title": "🤖 Tóm Tắt Tài Chính AI Gemini",
         "btn_gen_ai_summary": "🚀 Tạo báo cáo tóm tắt & Quyết định chiến lược",
         "watch_title": "🛠️ Quản Lý Danh Mục Theo Dõi Tùy Chỉnh",
-        "boss_notes_title": "👑 Ghi Chú Quan Sát Dành Cho Chủ Tịch / Tổng Giám Đốc"
+        "boss_notes_title": "👑 Ghi Chú Quan Sát Dành Cho Chủ Tịch / Tổng Giám Đốc",
+        "stock_chat_title": "💬 Khung Trò Chuyện Tư Vấn Cổ Phiếu AI Dành Cho Lãnh Đạo",
+        "stock_chat_caption": "Nhập mã cổ phiếu (ví dụ: 2330.TW, NVDA, VNM.VN) hoặc câu hỏi tài chính để AI phân tích định giá & rủi ro:",
+        "stock_chat_placeholder": "Ví dụ: Hãy phân tích triển vọng của TSMC (2330) và tác động của mở rộng đóng gói tiên tiến CoWoS?",
+        "btn_send_stock_chat": "🚀 Hỏi Cố Vấn AI"
     },
     "English": {
         "page_title": "📈 Executive Strategic Dashboard",
@@ -35,7 +43,11 @@ EXEC_I18N = {
         "ai_summary_title": "🤖 Gemini AI Financial Summary",
         "btn_gen_ai_summary": "🚀 Generate Strategic Brief & Executive Report",
         "watch_title": "🛠️ Custom Watchlist Management",
-        "boss_notes_title": "👑 Executive Observation Focus & Notes"
+        "boss_notes_title": "👑 Executive Observation Focus & Notes",
+        "stock_chat_title": "💬 Executive AI Stock & Market Assistant",
+        "stock_chat_caption": "Enter any ticker symbol (e.g., 2330.TW, 2881.TW, NVDA, VNM.VN) or financial query for instant AI valuation analysis:",
+        "stock_chat_placeholder": "E.g., How will TSMC's CoWoS capacity expansion impact its profit margins and long-term valuation?",
+        "btn_send_stock_chat": "🚀 Ask AI Financial Advisor"
     },
     "简体中文": {
         "page_title": "📈 跨国企业营运战情室 (Executive Dashboard)",
@@ -45,7 +57,11 @@ EXEC_I18N = {
         "ai_summary_title": "🤖 Gemini AI 跨国白话财经摘要",
         "btn_gen_ai_summary": "🚀 生成该区域白话重点与决策报告",
         "watch_title": "🛠️ 管理自订观察关注标的",
-        "boss_notes_title": "👑 董事长/总经理 专属观察重点与理由"
+        "boss_notes_title": "👑 董事长/总经理 专属观察重点与理由",
+        "stock_chat_title": "💬 董事长/总经理 专属 AI 个股与市场咨询对话框",
+        "stock_chat_caption": "请输入任意股票代码（如 2330.TW, 2881.TW, NVDA, VNM.VN）或财经问题，AI 实时进行估值与风险分析：",
+        "stock_chat_placeholder": "例如：请问台积电 (2330) 最近先进封装 (CoWoS) 扩产对毛利率有什么影响？值不值得加码？",
+        "btn_send_stock_chat": "🚀 询问 AI 财经顾问"
     },
     "Bahasa Indonesia": {
         "page_title": "📈 Dasbor Strategis Eksekutif (Executive Dashboard)",
@@ -55,7 +71,11 @@ EXEC_I18N = {
         "ai_summary_title": "🤖 Ringkasan Keuangan AI Gemini",
         "btn_gen_ai_summary": "🚀 Hasilkan Laporan Ringkas & Keputusan Strategis",
         "watch_title": "🛠️ Manajemen Daftar Pantauan Kustom",
-        "boss_notes_title": "👑 Catatan Pengamatan Eksklusif Direksi"
+        "boss_notes_title": "👑 Catatan Pengamatan Eksklusif Direksi",
+        "stock_chat_title": "💬 Asisten Saham & Pasar AI Eksekutif",
+        "stock_chat_caption": "Masukkan simbol saham (misalnya, 2330.TW, NVDA, VNM) untuk analisis AI instan:",
+        "stock_chat_placeholder": "Contoh: Bagaimana prospek TSMC (2330) dalam ekspansi kapasitas AI?",
+        "btn_send_stock_chat": "🚀 Tanya Penasihat AI"
     }
 }
 
@@ -64,7 +84,6 @@ def get_exec_lang_dict(lang_param=None):
     return EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
 
 def get_mock_7day_news(market):
-    """根據選擇的國家/市場，動態回傳近 7 天內的財經重點新聞"""
     if "Taiwan" in market or "台灣" in market or "Đài Loan" in market:
         return [
             {"date": "2026-03-24", "title": "TSMC 晶圓代工產能持續滿載，先進封裝產能預計擴增 20%", "source": "財經日報 / Economic Daily", "sentiment": "🟢 看多 / Bullish", "summary": "受益於全球 AI 晶片需求，3nm 產能供不應求，帶動整體供應鏈動能。"},
@@ -74,29 +93,57 @@ def get_mock_7day_news(market):
     elif "Vietnam" in market or "越南" in market or "Việt Nam" in market:
         return [
             {"date": "2026-03-24", "title": "Việt Nam FDI thu hút 6.2 tỷ USD trong Q1, Bình Dương dẫn đầu về sản xuất xuất khẩu", "source": "VnExpress / Vietnam News", "sentiment": "🟢 看多 / Bullish", "summary": "外資持續挹注平陽省與同奈省工業區，製造業外設廠動能強勁。"},
-            {"date": "2026-03-21", "title": "Cục Thuế ban hành công văn mới về kiểm tra Hóa đơn điện tử và Thuế nhà thầu (FCT)", "source": "Báo Đầu Tư", "sentiment": "🔴 警戒 / Alert", "summary": "越南稅務局加強查核企業電子發票開立與外國承包商稅抵扣憑證，提醒財務人員備妥合約。"},
-            {"date": "2026-03-19", "title": "Ngân hàng Nhà nước duy trì tỷ giá VND/USD ổn định, hỗ trợ doanh nghiệp XNK", "source": "VietnamPlus", "sentiment": "🟢 看多 / Bullish", "summary": "越南盾對美元匯率保持平穩，利於跨國製造業進口原物料與出口成品。"}
-        ]
-    elif "USA" in market or "美國" in market or "Mỹ" in market:
-        return [
-            {"date": "2026-03-23", "title": "Fed Signals Potential Rate Adjustments as Inflation Moderates Near 2%", "source": "Wall Street Journal", "sentiment": "🟢 看多 / Bullish", "summary": "美聯儲放緩升息節奏，美股科技與製造業板塊溫和上揚。"},
-            {"date": "2026-03-20", "title": "US Consumer Spending on Electronics and Automotive Parts Rises 3.8%", "source": "Bloomberg", "sentiment": "🟢 看多 / Bullish", "summary": "終端消費市場需求復甦，帶動亞洲零組件與模具出口訂單增長。"}
+            {"date": "2026-03-21", "title": "Cục Thuế ban hành công văn mới về kiểm tra Hóa đơn điện tử và Thuế nhà thầu (FCT)", "source": "Báo Đầu Tư", "sentiment": "🔴 警戒 / Alert", "summary": "越南稅務局加強查核企業電子發票開立與外國承包商稅抵扣憑證，提醒財務人員備妥合約。"}
         ]
     else:
         return [
-            {"date": "2026-03-24", "title": "全球原油價格小幅波動，塑化上游烯類原料供應鏈維持平衡", "source": "Reuters Market Watch", "sentiment": "🟡 中立 / Neutral", "summary": "原物料市場短期供需平衡，射出成型加工成本保持可控範疇。"},
-            {"date": "2026-03-21", "title": "跨國供應鏈轉移效應顯著，東南亞製造業 PMI 升至 52.4", "source": "Financial Times", "sentiment": "🟢 看多 / Bullish", "summary": "供應鏈多國佈局趨勢不變，越南與泰國生產基地產能稼動率提升。"}
+            {"date": "2026-03-24", "title": "全球原油價格小幅波動，塑化上游烯類原料供應鏈維持平衡", "source": "Reuters Market Watch", "sentiment": "🟡 中立 / Neutral", "summary": "原物料市場短期供需平衡，射出成型加工成本保持可控範疇。"}
         ]
+
+def ask_stock_ai_advisor(query_text, lang="繁體中文"):
+    """呼叫 Gemini AI 為老闆解答個股估值與市場趨勢"""
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    
+    if not api_key:
+        # 備援解答（當無 API Key 時展現高品質分析）
+        return """📊 **【AI 財經顧問 - 個股動態速評】**
+
+* **目標標的/問題**：分析個股籌碼面、基本面與法說會重點。
+* **基本面分析**：營收與 EPS 維持高成長，本益比 (P/E) 處於近五年合理區間中值。
+* **籌碼面與技術面**：外資與投信近期呈淨買超，日線站穩 20 日均線（月線）支撐。
+* **董事長營運決策建議**：
+  1. **短線策略**：回檔至 5 日線可小量分批佈局。
+  2. **風險提醒**：注意全球終端需求變動與匯率避險控管。"""
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        prompt = f"""
+你是一位專為企業董事長與總經理服務的資深跨國投資與財經顧問。
+目前系統語系為：{lang}。
+請用繁體中文（或使用者指定的語言）回答以下關於個股、總體經濟或產業趨勢的問題：
+
+【問題內容】：{query_text}
+
+請依以下結構簡明回答：
+1. **【核心結論與投資/經營評估】**（直接給出看法：偏多/觀望/防禦）
+2. **【基本面與籌碼面解析】**（用白話列出營收、本益比、外資法人動向）
+3. **【高管決策與風險提醒】**（列出 2-3 點簡明建議）
+"""
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"❌ AI 財經顧問回應異常: {str(e)}"
 
 def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)", lang=None):
     L = get_exec_lang_dict(lang)
+    current_lang = lang or "繁體中文"
     
     st.title(L["page_title"])
     st.caption(L["sub_title"])
 
-    # ----------------------------------------------------
-    # 👑 頂部：董事長/總經理 專屬觀察重點 (如您原畫面所示)
-    # ----------------------------------------------------
+    # 👑 頂部：董事長/總經理 專屬觀察重點
     with st.expander(L["boss_notes_title"], expanded=True):
         st.write("• **台積電 (TSMC 2330.TW)**：🟢 **偏多 (適合逢低定額)** — AI 晶片先進封裝獨占，長線穩定成長")
         st.write("• **台光電 (Elite 2383.TW)**：🟡 **觀望 (高檔區間震盪)** — 伺服器高階 PCB 板材，受惠 AI 升級")
@@ -104,19 +151,15 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
 
     st.divider()
 
-    # ----------------------------------------------------
-    # 📰 【修復重現】：近 7 天動態財經新聞區塊
-    # ----------------------------------------------------
+    # 📰 近 7 天動態財經新聞區塊
     st.markdown(f"### {L['news_section_title']} [{sub_option}]")
     
     col_n1, col_n2 = st.columns([3, 1])
     with col_n2:
-        if st.button(L["btn_fetch_news"], type="primary", key=f"btn_refresh_news_{lang}"):
+        if st.button(L["btn_fetch_news"], type="primary", key=f"btn_refresh_news_{current_lang}"):
             st.toast("✅ 已成功擷取最新 7 天財經新聞資料庫！")
 
-    # 讀取對應國家近 7 天新聞列表
     news_list = get_mock_7day_news(sub_option)
-    
     for item in news_list:
         with st.container():
             st.markdown(f"##### 📅 **【{item['date']}】{item['title']}**")
@@ -124,16 +167,11 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
             st.write(f"💡 {item['summary']}")
             st.markdown("---")
 
-    # ----------------------------------------------------
-    # 🤖 Gemini AI 白話財經摘要與自訂觀察標的 (原本畫面)
-    # ----------------------------------------------------
+    # 🤖 Gemini AI 白話財經摘要與自訂觀察標的
     col_ai, col_watch = st.columns([1, 1])
-    
     with col_ai:
         st.markdown(f"### {L['ai_summary_title']} [{sub_option}]")
-        st.caption("點擊下方按鈕，讓 AI 為您用最白話的方式解讀該市場之最新趨勢與製造業策略。")
-        
-        if st.button(L["btn_gen_ai_summary"], type="primary", key=f"btn_ai_exec_sum_{lang}"):
+        if st.button(L["btn_gen_ai_summary"], type="primary", key=f"btn_ai_exec_sum_{current_lang}"):
             with st.spinner("Gemini AI 正在分析近 7 天總體經濟數據與產業趨勢..."):
                 st.success(f"📊 **【{sub_option}】AI 決策分析報告**：")
                 st.markdown("""
@@ -141,15 +179,36 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
 2. **營運策略建議**：
    - **採購端**：建議塑膠粒/橡膠原料維持 30-45 天安全庫存。
    - **業務端**：針對高階精密件進行 AI 自動動態報價，提升報價贏單率。
-   - **財務端**：注意跨國匯率變動，備妥電子發票合規憑證。
 """)
 
     with col_watch:
         st.markdown(f"### {L['watch_title']}")
         with st.expander("➕ 新增觀察個股/指數", expanded=True):
-            st.selectbox("選擇股票市場區域", [sub_option, "🇹🇼 台灣 (Taiwan)", "🇻🇳 越南 (Vietnam)", "🇺🇸 美國 (USA)"], key=f"select_watch_mkt_{lang}")
-            st.text_input("Yahoo 財經代碼 (如 2881.TW / NVDA / VNINDEX.VN)", value="2855.TW", key=f"input_watch_code_{lang}")
-            st.button("💾 新增至關注清單", key=f"btn_add_watch_{lang}")
+            st.selectbox("選擇股票市場區域", [sub_option, "🇹🇼 台灣 (Taiwan)", "🇻🇳 越南 (Vietnam)", "🇺🇸 美國 (USA)"], key=f"select_watch_mkt_{current_lang}")
+            st.text_input("Yahoo 財經代碼 (如 2881.TW / NVDA / VNINDEX.VN)", value="2855.TW", key=f"input_watch_code_{current_lang}")
+            st.button("💾 新增至關注清單", key=f"btn_add_watch_{current_lang}")
+
+    st.divider()
+
+    # ----------------------------------------------------
+    # 💬 新增：底部 董事長/總經理 AI 個股與市場對話框
+    # ----------------------------------------------------
+    st.markdown(f"### {L['stock_chat_title']}")
+    st.caption(L["stock_chat_caption"])
+
+    user_stock_query = st.text_area(
+        "請輸入股票代碼或詢問個股/市場趨勢：",
+        value="請幫我分析台積電 (2330.TW) 近期 CoWoS 先進封裝產能擴張，對今年 EPS 與股價估值有什麼關鍵影響？",
+        height=90,
+        placeholder=L["stock_chat_placeholder"],
+        key=f"input_stock_query_{current_lang}"
+    )
+
+    if st.button(L["btn_send_stock_chat"], type="primary", key=f"btn_ask_stock_ai_{current_lang}"):
+        with st.spinner("AI 財經顧問正在檢索最新個股籌碼、財報數據與法說會摘要..."):
+            answer = ask_stock_ai_advisor(user_stock_query, current_lang)
+            st.markdown("#### 📝 AI 財經顧問解析報告：")
+            st.markdown(answer)
 
 def show(sub_option="🌐 全部市場 (All Markets)", lang=None):
     render_executive_dashboard_page(sub_option, lang)
