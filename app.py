@@ -19,6 +19,7 @@ if "user_database" not in st.session_state:
         "alex": {"password": "alex123", "name": "Alex Chen (Sales)", "role": "Sales"},
     }
 
+# 預設為未登入（畫面重整即自動要求重新登入）
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -29,7 +30,7 @@ if "lang" not in st.session_state:
     st.session_state.lang = "繁體中文"
 
 # ----------------------------------------------------
-# 🔓 2. 未登入身分驗證攔截區
+# 🔓 2. 未登入身分驗證攔截區（未登入前完全中斷，防止洩漏介面）
 # ----------------------------------------------------
 if not st.session_state.logged_in:
     st.title("🏭 跨國塑膠/橡膠射出成型 — 企業級 AI ERP 系統")
@@ -62,10 +63,10 @@ if not st.session_state.logged_in:
             - **人事主管**：`hr_manager` / `hr123`
             - **業務專員**：`alex` / `alex123`
             """)
-    st.stop()
+    st.stop()  # ⛔ 強制中斷！未登入者完全無法載入與執行下方任何選單與模組程式碼
 
 # ----------------------------------------------------
-# 🌐 全球多語系完整字典 (i18n)
+# 🌐 全球多語系完整字典 (i18n) — 部門順序依企業認知重要度排列
 # ----------------------------------------------------
 I18N = {
     "繁體中文": {
@@ -170,12 +171,12 @@ def load_module_function(module_name, func_names):
     except Exception as e:
         return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-# 載入所有功能模組（包含全新加入的 sales_order_ar）
+# 載入所有功能模組（包含採購 AP 與訂單 AR）
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
 render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
 render_ap = load_module_function("procurement_ap", ["render_procurement_ap_page", "show", "main"])
-render_ar = load_module_function("sales_order_ar", ["render_sales_order_ar_page", "show", "main"])  # 👈 第一個放的地方
+render_ar = load_module_function("sales_order_ar", ["render_sales_order_ar_page", "show", "main"])
 render_tax_ai = load_module_function("finance_tax", ["render_finance_tax_page", "show", "main"])
 render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
 render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
@@ -220,41 +221,41 @@ st.sidebar.markdown("---")
 dept_idx = dept_options.index(selected_dept)
 
 # ----------------------------------------------------
-# 🔀 路由分流
+# 🔀 路由分流 (確保以 if 開頭，縮排完全對齊)
 # ----------------------------------------------------
-if dept_idx == 0:  # 📈 營運戰情室
+if dept_idx == 0:  # 📈 營運戰情室 (Executive)
     sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key=f"sub_exec_{selected_lang}")
     render_exec_db(sub_option, selected_lang)
 
-elif dept_idx == 1:  # 🧾 財務
+elif dept_idx == 1:  # 🧾 財務 (Finance)
     sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
     sub_idx = lang_dict["sub_finance"].index(sub_option)
     
     if sub_idx == 0:  # 🛒 採購與應付帳款 (Procurement & AP)
         render_ap(sub_option, selected_lang)
     elif sub_idx == 1:  # 📦 訂單與應收帳款 (Sales Orders & AR)
-        render_ar(sub_option, selected_lang)  # 👈 第二個放的地方
+        render_ar(sub_option, selected_lang)
     elif sub_idx == 5:  # 全球稅務 AI
         render_tax_ai(sub_option, selected_lang)
     else:  # 電子發票管理
         render_invoice(sub_option, selected_lang)
 
-elif dept_idx == 2:  # 👥 人事/行政
+elif dept_idx == 2:  # 👥 人事/行政 (HR & Admin)
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
     render_payroll(sub_option, selected_lang)
 
-elif dept_idx == 3:  # 💼 業務/行銷
+elif dept_idx == 3:  # 💼 業務/行銷 (Sales & Marketing)
     sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key=f"sub_sales_{selected_lang}")
     render_sales(sub_option, selected_lang)
 
-elif dept_idx == 4:  # 🛠️ 研發/技術
+elif dept_idx == 4:  # 🛠️ 研發/技術 (R&D & Engineering)
     sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key=f"sub_rd_{selected_lang}")
     render_asset(sub_option, selected_lang)
 
-elif dept_idx == 5:  # 🏭 廠務/設備
+elif dept_idx == 5:  # 🏭 廠務/設備 (Plant & IoT)
     sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key=f"sub_plant_{selected_lang}")
     render_erp_db(sub_option, selected_lang)
 
-elif dept_idx == 6:  # 💻 資訊/IT
+elif dept_idx == 6:  # 💻 資訊/IT (IT & System Admin)
     sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key=f"sub_it_{selected_lang}")
     render_user_mgmt(sub_option, selected_lang)
