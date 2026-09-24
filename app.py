@@ -259,3 +259,20 @@ elif dept_idx == 5:  # 🏭 廠務/設備 (Plant & IoT)
 elif dept_idx == 6:  # 💻 資訊/IT (IT & System Admin)
     sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key=f"sub_it_{selected_lang}")
     render_user_mgmt(sub_option, selected_lang)
+
+# 1. 動態載入器引入 (新增 render_ar)
+render_ar = load_module_function("sales_order_ar", ["render_sales_order_ar_page", "show", "main"])
+
+# 2. 路由分流處 (當使用者點擊「財務 (Finance)」選單中的第 2 個子選項時調用)
+elif dept_idx == 1:  # 🧾 財務 (Finance)
+    sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
+    sub_idx = lang_dict["sub_finance"].index(sub_option)
+    
+    if sub_idx == 0:  # 🛒 採購與應付帳款 (Procurement & AP)
+        render_ap(sub_option, selected_lang)
+    elif sub_idx == 1:  # 📦 訂單與應收帳款 (Sales Orders & AR)
+        render_ar(sub_option, selected_lang)  # ✅ 接通全新模組！
+    elif sub_idx == 5:  # 全球稅務 AI
+        render_tax_ai(sub_option, selected_lang)
+    else:  # 電子發票管理
+        render_invoice(sub_option, selected_lang)
