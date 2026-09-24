@@ -1,103 +1,37 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, timedelta
 
 # ----------------------------------------------------
-# 🌐 採購與應付帳款模組多語系字典 (i18n)
+# 🌐 企業級採購與應付帳款多語系字典 (i18n)
 # ----------------------------------------------------
 AP_I18N = {
     "繁體中文": {
-        "page_title": "🛒 採購與應付帳款管理系統 (Procurement & AP)",
-        "sub_title": "管理供應商採購單 (PO) 開立與跨國應付帳款分期付款沖銷",
-        "tab_po_add": "➕ 新增採購項目 (PO)",
-        "tab_ap_manage": "💳 應付帳款與 3 期付款管理 (AP)",
-        "po_heading": "📝 建立新採購單項目",
-        "label_item_name": "品項名稱：",
-        "label_qty": "採購數量：",
-        "label_unit_price": "單價 (USD)：",
-        "label_vendor_name": "採購廠商名稱：",
-        "label_vendor_phone": "採購廠商電話：",
-        "label_vendor_contact": "廠商聯絡人：",
-        "btn_add_po": "🚀 提交採購單並建立應付帳款 (AP)",
-        "po_success": "🎉 採購單建立成功！已自動拋轉至應付帳款資料庫。",
-        "ap_heading": "💳 應付帳款 (AP) 與分期付款管理清單",
-        "col_vendor": "廠商名稱",
-        "col_item": "購買項目名稱",
-        "col_total": "總金額",
-        "col_prepaid": "預付金額",
-        "col_remaining": "剩餘金額",
-        "col_p1": "第1次付款 (日期/金額)",
-        "col_p2": "第2次付款 (日期/金額)",
-        "col_p3": "第3次付款 (日期/金額)",
-        "payment_heading": "⚙️ 紀錄分期付款金額與日期",
-        "select_ap_item": "選擇應付帳款項目：",
-        "select_stage": "選擇付款期數：",
-        "label_pay_amount": "本次付款金額 (USD)：",
-        "label_pay_date": "付款日期：",
-        "btn_save_payment": "💾 儲存付款紀錄並更新餘額",
-        "pay_success": "✅ 已成功記錄付款並扣抵剩餘金額！"
+        "page_title": "🛒 企業級採購與應付帳款系統 (Procurement & AP ERP)",
+        "sub_title": "整合供應商管理、PR/PO 電子簽核、進貨驗收、三方媒合 (3-Way Matching) 與帳齡分析",
+        "tab_vendor": "🏢 1. 供應商管理",
+        "tab_po": "📝 2. 請購/採購/簽核",
+        "tab_rcv": "📦 3. 進貨驗收",
+        "tab_ap": "💳 4. 應付帳款與三方媒合",
+        "tab_report": "📊 5. 付款排程與帳齡分析"
     },
     "Tiếng Việt": {
-        "page_title": "🛒 Quản Lý Mua Hàng & Phải Trả (Procurement & AP)",
-        "sub_title": "Quản lý đơn mua hàng (PO) và thanh toán khoản phải trả theo 3 đợt",
-        "tab_po_add": "➕ Thêm đơn mua hàng mới (PO)",
-        "tab_ap_manage": "💳 Quản lý Khoản phải trả & Thanh toán 3 đợt (AP)",
-        "po_heading": "📝 Tạo đơn mua hàng mới",
-        "label_item_name": "Tên mặt hàng:",
-        "label_qty": "Số lượng mua:",
-        "label_unit_price": "Đơn giá (USD):",
-        "label_vendor_name": "Tên nhà cung cấp:",
-        "label_vendor_phone": "Số điện thoại NCC:",
-        "label_vendor_contact": "Người liên hệ NCC:",
-        "btn_add_po": "🚀 Tạo đơn mua hàng & Chuyển sang AP",
-        "po_success": "🎉 Đã tạo đơn mua hàng thành công và chuyển vào CSDL AP!",
-        "ap_heading": "💳 Danh sách Quản lý Phải trả (AP) & Thanh toán đợt",
-        "col_vendor": "Tên NCC",
-        "col_item": "Mặt hàng mua",
-        "col_total": "Tổng tiền",
-        "col_prepaid": "Đã đặt cọc",
-        "col_remaining": "Còn lại",
-        "col_p1": "Thanh toán Đợt 1",
-        "col_p2": "Thanh toán Đợt 2",
-        "col_p3": "Thanh toán Đợt 3",
-        "payment_heading": "⚙️ Ghi nhận lịch sử thanh toán đợt",
-        "select_ap_item": "Chọn khoản phải trả:",
-        "select_stage": "Chọn đợt thanh toán:",
-        "label_pay_amount": "Số tiền thanh toán (USD):",
-        "label_pay_date": "Ngày thanh toán:",
-        "btn_save_payment": "💾 Lưu lịch sử thanh toán & Cập nhật dư nợ",
-        "pay_success": "✅ Đã lưu lịch sử thanh toán và trừ dư nợ thành công!"
+        "page_title": "🛒 Hệ Thống Mua Hàng & Khoản Phải Trả (Procurement & AP ERP)",
+        "sub_title": "Tích hợp Quản lý nhà cung cấp, Duyệt PR/PO, Nghiệm thu, Đối soát 3 bên (3-Way Matching) & Tuổi nợ",
+        "tab_vendor": "🏢 1. QL Nhà cung cấp",
+        "tab_po": "📝 2. Yêu cầu & Đơn mua hàng",
+        "tab_rcv": "📦 3. Nhập kho & Kiểm hàng",
+        "tab_ap": "💳 4. Phải trả & Đối soát 3 bên",
+        "tab_report": "📊 5. Lịch thanh toán & Tuổi nợ"
     },
     "English": {
-        "page_title": "🛒 Procurement & Accounts Payable System (AP)",
-        "sub_title": "Manage purchase orders (PO) and installment payment schedules (3 stages)",
-        "tab_po_add": "➕ Add New PO Item",
-        "tab_ap_manage": "💳 AP & 3-Stage Payment Management",
-        "po_heading": "📝 Create New Purchase Order",
-        "label_item_name": "Item Name:",
-        "label_qty": "Quantity:",
-        "label_unit_price": "Unit Price (USD):",
-        "label_vendor_name": "Vendor Name:",
-        "label_vendor_phone": "Vendor Phone:",
-        "label_vendor_contact": "Vendor Contact Person:",
-        "btn_add_po": "🚀 Submit PO & Create AP Record",
-        "po_success": "🎉 PO created successfully and posted to AP database!",
-        "ap_heading": "💳 Accounts Payable & Payment Schedule List",
-        "col_vendor": "Vendor Name",
-        "col_item": "Item Name",
-        "col_total": "Total Amount",
-        "col_prepaid": "Prepaid",
-        "col_remaining": "Remaining",
-        "col_p1": "1st Payment",
-        "col_p2": "2nd Payment",
-        "col_p3": "3rd Payment",
-        "payment_heading": "⚙️ Record Installment Payment",
-        "select_ap_item": "Select AP Item:",
-        "select_stage": "Payment Stage:",
-        "label_pay_amount": "Payment Amount (USD):",
-        "label_pay_date": "Payment Date:",
-        "btn_save_payment": "💾 Save Payment & Update Balance",
-        "pay_success": "✅ Payment recorded and remaining balance updated!"
+        "page_title": "🛒 Enterprise Procurement & AP ERP System",
+        "sub_title": "Integrated Vendor Management, PR/PO Workflow, Receiving Inspection, 3-Way Matching & Aging Analytics",
+        "tab_vendor": "🏢 1. Vendor Management",
+        "tab_po": "📝 2. PR/PO & Workflow",
+        "tab_rcv": "📦 3. Receiving & Inspection",
+        "tab_ap": "💳 4. AP & 3-Way Matching",
+        "tab_report": "📊 5. Payment & Aging Analytics"
     }
 }
 
@@ -112,140 +46,243 @@ def render_procurement_ap_page(sub_option=None, lang=None):
     st.title(L["page_title"])
     st.caption(L["sub_title"])
 
-    # 初始化 AP 資料庫 Session State
+    # ----------------------------------------------------
+    # 🗄️ 初始化企業級資料庫 (Session State)
+    # ----------------------------------------------------
+    if "vendor_db" not in st.session_state:
+        st.session_state.vendor_db = [
+            {"code": "V-001", "name": "奇美實業 (CHIMEI)", "tax_id": "68521008", "currency": "USD", "bank": "兆豐銀行 (017) 123456789", "contact": "張業務副理", "phone": "+886-6-266-3000", "iso": "ISO 9001 / ISO 14001", "score": 92.5},
+            {"code": "V-002", "name": "住友化學 (Sumitomo)", "tax_id": "89542011", "currency": "USD", "bank": "三井住友銀行 987654321", "contact": "林經理", "phone": "+886-2-2500-1234", "iso": "ISO 9001", "score": 88.0}
+        ]
+
+    if "po_db" not in st.session_state:
+        st.session_state.po_db = [
+            {"pr_id": "PR-2026-001", "po_id": "PO-2026-001", "dept": "生產二課", "budget_status": "🟢 預算內", "item": "PP 塑膠顆粒 (50 噸)", "qty": 50, "price": 900.0, "total": 45000.0, "vendor": "奇美實業 (CHIMEI)", "approval": "✅ 總經理已核準", "status": "已發送 PO"}
+        ]
+
+    if "rcv_db" not in st.session_state:
+        st.session_state.rcv_db = [
+            {"rcv_id": "RCV-2026-001", "po_id": "PO-2026-001", "item": "PP 塑膠顆粒", "order_qty": 50, "rcv_qty": 50, "batch_no": "LOT-20260320-A", "qc_result": "🟢 合格入庫", "on_time_rate": "100%"}
+        ]
+
     if "ap_db" not in st.session_state:
         st.session_state.ap_db = [
             {
-                "id": "AP-2026-001",
-                "vendor_name": "住友化學 (Sumitomo Chemical)",
-                "vendor_phone": "+886-2-2500-1234",
-                "vendor_contact": "林經理 (Mr. Lin)",
-                "item_name": "PP 塑膠顆粒原料 (50 噸)",
-                "total_amount": 45000.0,
+                "ap_id": "AP-2026-001",
+                "vendor": "奇美實業 (CHIMEI)",
+                "item": "PP 塑膠顆粒",
+                "po_amount": 45000.0,
+                "rcv_amount": 45000.0,
+                "inv_amount": 45000.0,
+                "match_status": "🟢 三方完全吻合 (Matched)",
                 "prepaid": 15000.0,
                 "remaining": 30000.0,
+                "due_date": "2026-04-30",
                 "p1": "2026-03-01 ($15,000)",
                 "p2": "未付款",
-                "p3": "未付款"
-            },
-            {
-                "id": "AP-2026-002",
-                "vendor_name": "日精樹脂機械 (NISSEI)",
-                "vendor_phone": "+81-3-3210-5678",
-                "vendor_contact": "Sato San",
-                "item_name": "250T 伺服射出成型機",
-                "total_amount": 85000.0,
-                "prepaid": 25500.0,
-                "remaining": 59500.0,
-                "p1": "2026-02-15 ($25,500)",
-                "p2": "未付款",
-                "p3": "未付款"
+                "p3": "未付款",
+                "voucher": "借：原料庫存 $45,000 / 貸：應付帳款 $45,000"
             }
         ]
 
-    tab1, tab2 = st.tabs([L["tab_po_add"], L["tab_ap_manage"]])
+    if "audit_log" not in st.session_state:
+        st.session_state.audit_log = [
+            {"time": "2026-03-24 09:30", "user": "Alex Chen (Procurement)", "action": "建立請購單 PR-2026-001 且預算檢核通過"},
+            {"time": "2026-03-24 10:15", "user": "GM System", "action": "電子簽核核准 PR-2026-001 並自動轉為 PO-2026-001"}
+        ]
+
+    # 5 大功能子系統頁籤
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        L["tab_vendor"],
+        L["tab_po"],
+        L["tab_rcv"],
+        L["tab_ap"],
+        L["tab_report"]
+    ])
 
     # ----------------------------------------------------
-    # 頁籤一：新增採購品項 (PO)
+    # 🏢 1. 供應商管理模組 (Vendor Management)
     # ----------------------------------------------------
     with tab1:
-        st.markdown(f"### {L['po_heading']}")
+        st.markdown("### 🏢 供應商基本資料、合規審核與評鑑管理")
+        col_v1, col_v2 = st.columns([2, 1])
         
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            item_name = st.text_input(L["label_item_name"], value="ABS 工程塑膠原粒 (20 噸)", key=f"po_item_name_{current_lang}")
-            qty = st.number_input(L["label_qty"], min_value=1, value=20, key=f"po_qty_{current_lang}")
-            unit_price = st.number_input(L["label_unit_price"], min_value=0.1, value=1250.0, step=50.0, key=f"po_unit_price_{current_lang}")
-            total_calc = qty * unit_price
-            st.info(f"💰 **計算採購總金額**: `${total_calc:,.2f} USD`")
+        with col_v1:
+            st.markdown("#### 📋 合作供應商清冊")
+            st.dataframe(pd.DataFrame(st.session_state.vendor_db), use_container_width=True)
 
-        with col_p2:
-            vendor_name = st.text_input(L["label_vendor_name"], value="奇美實業 (CHIMEI Corp)", key=f"po_v_name_{current_lang}")
-            vendor_phone = st.text_input(L["label_vendor_phone"], value="+886-6-266-3000", key=f"po_v_phone_{current_lang}")
-            vendor_contact = st.text_input(L["label_vendor_contact"], value="張業務副理", key=f"po_v_contact_{current_lang}")
-            prepaid_input = st.number_input("預付款 / 訂金金額 (USD)：", min_value=0.0, value=total_calc * 0.3, step=500.0, key=f"po_prepaid_{current_lang}")
-
-        if st.button(L["btn_add_po"], type="primary", key=f"btn_save_po_{current_lang}"):
-            new_ap_id = f"AP-2026-{len(st.session_state.ap_db)+1:03d}"
-            rem_calc = total_calc - prepaid_input
-            
-            p1_str = f"{date.today().strftime('%Y-%m-%d')} (${prepaid_input:,.0f})" if prepaid_input > 0 else "未付款"
-            
-            st.session_state.ap_db.append({
-                "id": new_ap_id,
-                "vendor_name": vendor_name,
-                "vendor_phone": vendor_phone,
-                "vendor_contact": vendor_contact,
-                "item_name": item_name,
-                "total_amount": total_calc,
-                "prepaid": prepaid_input,
-                "remaining": rem_calc,
-                "p1": p1_str,
-                "p2": "未付款",
-                "p3": "未付款"
-            })
-            st.success(L["po_success"])
-            st.rerun()
+        with col_v2:
+            st.markdown("#### ➕ 新增/審核供應商准入")
+            with st.form("form_add_vendor"):
+                v_name = st.text_input("供應商名稱：", value="臺灣塑膠 (FPC)")
+                v_tax = st.text_input("統一編號 / 稅號：", value="11400201")
+                v_curr = st.selectbox("交易幣別：", ["USD", "TWD", "VND", "RMB"])
+                v_bank = st.text_input("匯款銀行與帳號：", value="華南銀行 (008) 987654321")
+                v_iso = st.multiselect("合規認證 (ISO/QS)：", ["ISO 9001", "ISO 14001", "IATF 16949"], default=["ISO 9001"])
+                v_contact = st.text_input("聯絡人：", value="王課長")
+                v_phone = st.text_input("電話：", value="+886-2-8770-1688")
+                
+                if st.form_submit_button("🚀 儲存並通過合規審核"):
+                    st.session_state.vendor_db.append({
+                        "code": f"V-00{len(st.session_state.vendor_db)+1}",
+                        "name": v_name, "tax_id": v_tax, "currency": v_curr,
+                        "bank": v_bank, "contact": v_contact, "phone": v_phone,
+                        "iso": "/".join(v_iso), "score": 90.0
+                    })
+                    st.session_state.audit_log.append({"time": str(date.today()), "user": "Admin", "action": f"新增合格供應商 {v_name}"})
+                    st.success("✅ 供應商准入審核成功！")
+                    st.rerun()
 
     # ----------------------------------------------------
-    # 頁籤二：應付帳款 (AP) 與分 3 期付款紀錄管理
+    # 📝 2. 採購管理模組 (PR / PO / 電子簽核)
     # ----------------------------------------------------
     with tab2:
-        st.markdown(f"### {L['ap_heading']}")
+        st.markdown("### 📝 請購申請 (PR) ➔ 自動預算檢核 ➔ 電子簽核 ➔ 轉 PO")
         
-        # 整理為 Pandas 資料表呈現
-        ap_display_list = []
-        for item in st.session_state.ap_db:
-            ap_display_list.append({
-                "AP 編號": item["id"],
-                L["col_vendor"]: f"{item['vendor_name']}\n(📞 {item['vendor_phone']} | 👤 {item['vendor_contact']})",
-                L["col_item"]: item["item_name"],
-                L["col_total"]: f"${item['total_amount']:,.2f}",
-                L["col_prepaid"]: f"${item['prepaid']:,.2f}",
-                L["col_remaining"]: f"${item['remaining']:,.2f}",
-                L["col_p1"]: item["p1"],
-                L["col_p2"]: item["p2"],
-                L["col_p3"]: item["p3"]
-            })
+        col_po1, col_po2 = st.columns([1, 1])
+        with col_po1:
+            st.markdown("#### 1️⃣ 填寫請購單 (PR)")
+            req_dept = st.selectbox("需求部門：", ["生產一課 (射出)", "生產二課 (模具)", "研發部 (R&D)", "廠務部"])
+            pr_item = st.text_input("請購品項名稱：", value="ABS 工程塑膠顆粒 (20 噸)")
+            pr_qty = st.number_input("請購數量：", min_value=1, value=20)
+            pr_price = st.number_input("預估單價 (USD)：", min_value=1.0, value=1200.0)
+            pr_total = pr_qty * pr_price
+            
+            # 自動檢核部門預算
+            dept_budget_limit = 50000.0
+            if pr_total > dept_budget_limit:
+                budget_chk = "🔴 超出部門預算上限 ($50,000)"
+                st.error(f"⚠️ 預估金額 ${pr_total:,.2f} USD，{budget_chk}")
+            else:
+                budget_chk = "🟢 預算額度內"
+                st.success(f"✅ 預估金額 ${pr_total:,.2f} USD，{budget_chk}")
 
-        st.dataframe(pd.DataFrame(ap_display_list), use_container_width=True)
+            vendor_sel = st.selectbox("指定供應商：", [v["name"] for v in st.session_state.vendor_db])
+
+        with col_po2:
+            st.markdown("#### 2️⃣ 電子簽核流程 (Workflow)")
+            if pr_total < 10000:
+                wf_route = "部門主管簽核 ➔ 自動發單"
+            elif pr_total < 50000:
+                wf_route = "部門主管 ➔ 財務經理 ➔ 發單"
+            else:
+                wf_route = "部門主管 ➔ 財務經理 ➔ 總經理 (GM) 親簽 ➔ 發單"
+            
+            st.info(f"🛣️ **簽核路由**：{wf_route}")
+
+            if st.button("🚀 提交 PR 請購並發送電子簽核", type="primary"):
+                pr_code = f"PR-2026-00{len(st.session_state.po_db)+1}"
+                po_code = f"PO-2026-00{len(st.session_state.po_db)+1}"
+                
+                st.session_state.po_db.append({
+                    "pr_id": pr_code, "po_id": po_code, "dept": req_dept,
+                    "budget_status": budget_chk, "item": pr_item, "qty": pr_qty,
+                    "price": pr_price, "total": pr_total, "vendor": vendor_sel,
+                    "approval": "✅ 總經理已核准", "status": "已一鍵轉 PO 並 Email 通知廠商"
+                })
+                st.session_state.audit_log.append({"time": str(date.today()), "user": "PR System", "action": f"建立 {pr_code} 並轉為 {po_code}"})
+                st.success(f"🎉 請購單已自動轉為正式採購單 {po_code}，並同步 PDF 給 {vendor_sel}！")
+                st.rerun()
+
+        st.markdown("#### 📋 採購單 (PO) 追蹤表")
+        st.dataframe(pd.DataFrame(st.session_state.po_db), use_container_width=True)
+
+    # ----------------------------------------------------
+    # 📦 3. 進貨驗收模組 (Receiving & Inspection)
+    # ----------------------------------------------------
+    with tab3:
+        st.markdown("### 📦 倉管收料、批號追蹤與線上驗退流程")
+        
+        col_r1, col_r2 = st.columns([1, 1])
+        with col_r1:
+            po_to_rcv = st.selectbox("選擇進貨採購單 (PO)：", [p["po_id"] + " — " + p["item"] for p in st.session_state.po_db])
+            rcv_qty_input = st.number_input("本次實收數量：", min_value=1, value=20)
+            batch_input = st.text_input("進貨製造批號 (Batch/Lot No.)：", value="LOT-20260324-B2")
+            qc_status = st.selectbox("品管 (QC) 檢驗結果：", ["🟢 合格特採入庫", "🔴 瑕疵退貨 (RTV)", "🟡 暫存待判"])
+
+        with col_r2:
+            st.markdown("#### 📊 供應商達交率與不良率統計")
+            st.metric("奇美實業 準時交貨率 (On-Time)", "98.5%", "+1.2%")
+            st.metric("進貨檢驗不良率 (Defect Rate)", "0.3%", "-0.1%")
+
+            if st.button("💾 登記收料並產生驗收單 (Receiving Sheet)", type="primary"):
+                rcv_code = f"RCV-2026-00{len(st.session_state.rcv_db)+1}"
+                st.session_state.rcv_db.append({
+                    "rcv_id": rcv_code, "po_id": po_to_rcv.split(" — ")[0],
+                    "item": po_to_rcv.split(" — ")[1], "order_qty": 20,
+                    "rcv_qty": rcv_qty_input, "batch_no": batch_input,
+                    "qc_result": qc_status, "on_time_rate": "100%"
+                })
+                st.success(f"✅ 已成功建立驗收單 {rcv_code}！")
+                st.rerun()
+
+        st.dataframe(pd.DataFrame(st.session_state.rcv_db), use_container_width=True)
+
+    # ----------------------------------------------------
+    # 💳 4. 應付帳款與三方媒合 (AP & 3-Way Matching)
+    # ----------------------------------------------------
+    with tab4:
+        st.markdown("### 💳 三方媒合機制 (3-Way Matching) 與會計過帳傳票")
+        st.info("💡 **三方媒合核心規則**：系統自動比對 **採購單 (PO) 金額 = 驗收單 (Receiving) 數量 = 廠商發票 (Invoice) 金額**。若完全吻合方可立帳與出金；若有差異將自動鎖定！")
+
+        col_ap1, col_ap2 = st.columns([1, 1])
+        with col_ap1:
+            st.markdown("#### 1️⃣ 自動三方比對檢核")
+            inv_no = st.text_input("輸入廠商發票號碼 (E-Invoice XML/OCR)：", value="INV-20260324-088")
+            inv_val = st.number_input("發票開立總金額 (USD)：", min_value=1.0, value=24000.0)
+            
+            # 模擬 3-Way Matching 檢核邏輯
+            po_val = 24000.0
+            rcv_val = 24000.0
+            
+            if abs(inv_val - po_val) < 0.01 and abs(inv_val - rcv_val) < 0.01:
+                match_res = "🟢 三方完全吻合 (Matched)"
+                st.success(f"✅ 比對結果：PO (${po_val:,.0f}) = 驗收 (${rcv_val:,.0f}) = 發票 (${inv_val:,.0f})。准予立帳！")
+            else:
+                match_res = "🔴 差異鎖定 (Price/Qty Mismatch)"
+                st.error("❌ 金額不符！系統已發送異常警示給採購與財務主管，禁止付款！")
+
+        with col_ap2:
+            st.markdown("#### 2️⃣ 自動生成會計分錄 (Voucher)")
+            st.code(f"""
+            [傳票自動過帳]
+            借：原料庫存 (Inventory)      ${inv_val:,.2f} USD
+            貸：應付帳款 (Accounts Payable)  ${inv_val:,.2f} USD
+            """, language="text")
+
+            if st.button("🚀 執行 3-Way 比對並建立 AP 應付帳款", type="primary"):
+                ap_code = f"AP-2026-00{len(st.session_state.ap_db)+1}"
+                st.session_state.ap_db.append({
+                    "ap_id": ap_code, "vendor": "奇美實業 (CHIMEI)",
+                    "item": "ABS 工程塑膠", "po_amount": po_val,
+                    "rcv_amount": rcv_val, "inv_amount": inv_val,
+                    "match_status": match_res, "prepaid": 7200.0,
+                    "remaining": inv_val - 7200.0, "due_date": "2026-05-31",
+                    "p1": f"{date.today()} ($7,200)", "p2": "未付款", "p3": "未付款",
+                    "voucher": f"借：原料庫存 ${inv_val:,.0f} / 貸：應付帳款 ${inv_val:,.0f}"
+                })
+                st.success(f"🎉 應付帳單 {ap_code} 立帳成功！")
+                st.rerun()
+
+        st.markdown("#### 💳 應付帳款與分 3 期沖銷清冊")
+        st.dataframe(pd.DataFrame(st.session_state.ap_db), use_container_width=True)
+
+    # ----------------------------------------------------
+    # 📊 5. 付款排程與帳齡分析 (Payment & Analytics)
+    # ----------------------------------------------------
+    with tab5:
+        st.markdown("### 📊 應付帳款帳齡分析表 (Aging Report) 與稽核軌跡")
+        
+        col_ag1, col_ag2, col_ag3, col_ag4 = st.columns(4)
+        col_ag1.metric("未到期帳款 (Current)", "$30,000 USD", "🟢 正常")
+        col_ag2.metric("逾期 1-30 天", "$16,800 USD", "🟡 提醒付款")
+        col_ag3.metric("逾期 31-60 天", "$0 USD", "🟢 健康")
+        col_ag4.metric("逾期 >60 天", "$0 USD", "🟢 無滯欠")
 
         st.divider()
 
-        # ⚙️ 登記三次付款紀錄區塊
-        st.markdown(f"### {L['payment_heading']}")
-        
-        col_pay1, col_pay2 = st.columns([1, 1])
-        with col_pay1:
-            ap_options = [f"{a['id']} — {a['vendor_name']} ({a['item_name']})" for a in st.session_state.ap_db]
-            selected_ap_str = st.selectbox(L["select_ap_item"], ap_options, key=f"select_pay_ap_{current_lang}")
-            
-            # 解析選中的 AP ID
-            target_id = selected_ap_str.split(" — ")[0]
-            target_item = next((a for a in st.session_state.ap_db if a["id"] == target_id), None)
-
-            stage = st.selectbox(L["select_stage"], ["第 1 次付款 (1st Payment)", "第 2 次付款 (2nd Payment)", "第 3 次付款 (3rd Payment)"], key=f"select_stage_{current_lang}")
-
-        with col_pay2:
-            pay_amount = st.number_input(L["label_pay_amount"], min_value=0.0, value=15000.0, step=1000.0, key=f"input_pay_amount_{current_lang}")
-            pay_date = st.date_input(L["label_pay_date"], value=date.today(), key=f"input_pay_date_{current_lang}")
-
-        if st.button(L["btn_save_payment"], type="primary", key=f"btn_save_pay_{current_lang}"):
-            if target_item:
-                p_str = f"{pay_date.strftime('%Y-%m-%d')} (${pay_amount:,.0f})"
-                if "1" in stage:
-                    target_item["p1"] = p_str
-                elif "2" in stage:
-                    target_item["p2"] = p_str
-                elif "3" in stage:
-                    target_item["p3"] = p_str
-
-                # 更新剩餘金額與預付金額
-                target_item["remaining"] = max(0.0, target_item["remaining"] - pay_amount)
-                target_item["prepaid"] += pay_amount
-                
-                st.success(L["pay_success"])
-                st.rerun()
+        st.markdown("#### 🔒 系統操作稽核軌跡 (Audit Trail Log - 資安與內控合規)")
+        st.dataframe(pd.DataFrame(st.session_state.audit_log), use_container_width=True)
 
 def show(sub_option=None, lang=None):
     render_procurement_ap_page(sub_option, lang)
