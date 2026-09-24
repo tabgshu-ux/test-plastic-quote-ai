@@ -49,7 +49,10 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.user_info = db[username_input]
                     st.success(f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}")
-                    st.rerun()
+                    try:
+                        st.rerun()
+                    except Exception:
+                        pass
                 else:
                     st.error("❌ 帳號或密碼錯誤，請重新輸入！")
 
@@ -63,24 +66,21 @@ if not st.session_state.logged_in:
     st.stop()  # ⛔ 強制中斷！未登入者完全無法載入與執行下方任何選單與模組程式碼
 
 # ----------------------------------------------------
-# 🌐 全球多語系完整字典 (i18n)
+# 🌐 全球多語系完整字典 (i18n) — 部門順序已重排
 # ----------------------------------------------------
 I18N = {
     "繁體中文": {
         "dept_select": "請選擇部門/模組分類：",
         "depts": [
             "📈 營運戰情室 (Executive)",
+            "🧾 財務 (Finance)",
+            "👥 人事/行政 (HR & Admin)",
             "💼 業務/行銷 (Sales & Marketing)",
             "🛠️ 研發/技術 (R&D & Engineering)",
             "🏭 廠務/設備 (Plant & IoT)",
-            "🧾 財務 (Finance)",
-            "👥 人事/行政 (HR & Admin)",
             "💻 資訊/IT (IT & System Admin)"
         ],
         "sub_exec": ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
-        "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
-        "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
-        "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
         "sub_finance": [
             "🛒 採購與應付帳款系統 (Procurement & AP)", 
             "📦 訂單與應收帳款系統 (Sales Orders & AR)", 
@@ -90,23 +90,23 @@ I18N = {
             "🌐 全球跨國稅務 AI 智慧問答"
         ],
         "sub_hr": ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
+        "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
+        "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
+        "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
         "sub_it": ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"]
     },
     "English": {
         "dept_select": "Select Department / Module:",
         "depts": [
             "📈 Executive Dashboard",
+            "🧾 Finance & Accounting",
+            "👥 HR & Administration",
             "💼 Sales & Marketing",
             "🛠️ R&D & Engineering",
             "🏭 Plant & IoT Engineering",
-            "🧾 Finance & Accounting",
-            "👥 HR & Administration",
             "💻 IT & System Admin"
         ],
         "sub_exec": ["🌐 All Markets", "🇹🇼 Taiwan", "🇨🇳 China/HK", "🇺🇸 USA", "🇻🇳 Vietnam", "🛢️ Commodities & FX"],
-        "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
-        "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
-        "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
         "sub_finance": [
             "🛒 Procurement & Accounts Payable (AP)", 
             "📦 Sales Orders & Accounts Receivable (AR)", 
@@ -116,23 +116,23 @@ I18N = {
             "🌐 Global Tax & Compliance AI"
         ],
         "sub_hr": ["💰 Monthly Payroll & Deductions", "⏰ Biometric Clock-in Sync"],
+        "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
+        "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
+        "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
         "sub_it": ["🏢 Global Sites & Subsidiaries", "👥 User Auth & Web Permissions", "🔒 Role-Based Access Control (RBAC)"]
     },
     "Tiếng Việt": {
         "dept_select": "Vui lòng chọn phòng ban/phân hệ:",
         "depts": [
             "📈 Phòng Điều Hành (Executive)",
+            "🧾 Tài Chính / Kế Toán",
+            "👥 Nhân Sự / Hành Chính",
             "💼 Kinh Doanh / Marketing",
             "🛠️ R&D / Kỹ Thuật",
             "🏭 Quản Lý Nhà Máy & IoT",
-            "🧾 Tài Chính / Kế Toán",
-            "👥 Nhân Sự / Hành Chính",
             "💻 Công Nghệ Thông Tin (IT)"
         ],
         "sub_exec": ["🌐 Tất cả thị trường", "🇹🇼 Đài Loan", "🇨🇳 Trung Quốc/HK", "🇺🇸 Mỹ", "🇻🇳 Việt Nam", "🛢️ Nguyên liệu & Tỷ giá"],
-        "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
-        "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
-        "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
         "sub_finance": [
             "🛒 Quản lý Mua hàng & Phải trả (AP)", 
             "📦 Đơn bán hàng & Phải thu (AR)", 
@@ -142,12 +142,15 @@ I18N = {
             "🌐 Tư vấn AI Thuế Quốc Tế"
         ],
         "sub_hr": ["💰 Lương hàng tháng & Chấm công", "⏰ Kết nối máy chấm công"],
+        "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
+        "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
+        "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
         "sub_it": ["🏢 Quản lý Chi nhánh & Công ty con", "👥 Phân quyền người dùng", "🔒 Ma trận quyền (RBAC)"]
     }
 }
 
 # ----------------------------------------------------
-# 🛡️ 安全靜態與動態模組載入器 (您原本的寫法，完全保留)
+# 🛡️ 安全靜態與動態模組載入器 (完全保留)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -189,7 +192,10 @@ st.sidebar.success(f"🟢 **{st.session_state.user_info['name']}**")
 if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
     st.session_state.logged_in = False
     st.session_state.user_info = None
-    st.rerun()
+    try:
+        st.rerun()
+    except Exception:
+        pass
 
 st.sidebar.markdown("---")
 
@@ -213,41 +219,43 @@ st.sidebar.markdown("---")
 
 dept_idx = dept_options.index(selected_dept)
 
-# 路由分流
-if dept_idx == 0:
+# ----------------------------------------------------
+# 🔀 路由分流（對應全新部門排列順序）
+# ----------------------------------------------------
+if dept_idx == 0:  # 📈 營運戰情室 (Executive)
     sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key=f"sub_exec_{selected_lang}")
     render_exec_db(sub_option, selected_lang)
 
-elif dept_idx == 1:
-    sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key=f"sub_sales_{selected_lang}")
-    render_sales(sub_option, selected_lang)
-
-elif dept_idx == 2:
-    sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key=f"sub_rd_{selected_lang}")
-    render_asset(sub_option, selected_lang)
-
-elif dept_idx == 3:
-    sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key=f"sub_plant_{selected_lang}")
-    render_erp_db(sub_option, selected_lang)
-
-elif dept_idx == 4:
+elif dept_idx == 1:  # 🧾 財務 (Finance)
     sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
     sub_idx = lang_dict["sub_finance"].index(sub_option)
     
-    if sub_idx == 0: # 採購與應付帳款 (Procurement & AP ERP)
+    if sub_idx == 0:  # 採購與應付帳款 (Procurement & AP ERP)
         render_ap(sub_option, selected_lang)
-    elif sub_idx == 1: # 訂單與應收帳款 (AR)
+    elif sub_idx == 1:  # 訂單與應收帳款 (AR)
         st.title("📦 Sales Orders & Accounts Receivable (AR)")
         st.info("此模組正在建置中...")
-    elif sub_idx == 5: # 全球稅務 AI
+    elif sub_idx == 5:  # 全球稅務 AI
         render_tax_ai(sub_option, selected_lang)
-    else: # 電子發票管理
+    else:  # 電子發票管理
         render_invoice(sub_option, selected_lang)
 
-elif dept_idx == 5:
+elif dept_idx == 2:  # 👥 人事/行政 (HR & Admin)
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
     render_payroll(sub_option, selected_lang)
 
-elif dept_idx == 6:
+elif dept_idx == 3:  # 💼 業務/行銷 (Sales & Marketing)
+    sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key=f"sub_sales_{selected_lang}")
+    render_sales(sub_option, selected_lang)
+
+elif dept_idx == 4:  # 🛠️ 研發/技術 (R&D & Engineering)
+    sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key=f"sub_rd_{selected_lang}")
+    render_asset(sub_option, selected_lang)
+
+elif dept_idx == 5:  # 🏭 廠務/設備 (Plant & IoT)
+    sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key=f"sub_plant_{selected_lang}")
+    render_erp_db(sub_option, selected_lang)
+
+elif dept_idx == 6:  # 💻 資訊/IT (IT & System Admin)
     sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key=f"sub_it_{selected_lang}")
     render_user_mgmt(sub_option, selected_lang)
