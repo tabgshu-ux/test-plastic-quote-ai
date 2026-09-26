@@ -255,7 +255,7 @@ def render_vpsh_core_reports():
         c_p1, c_p2, c_p3 = st.columns(3)
         sales_units = c_p1.number_input("總銷售套數 (VIP套裝)", min_value=1000, value=22320, step=1000)
         unit_price = c_p2.number_input("VIP套裝銷售單價 ($ USD)", min_value=100.0, value=345.0, step=5.0)
-        shoe_cost_per_set = c_p3.number_input("鞋款生產成本/套 ($ USD)", min_value=10.0, value=42.0, step=1.0)
+        shoe_cost_per_set = c_p3.number_input("鞋款生產成本/套 ($ USD)", min_value=0.0, value=42.0, step=1.0)
 
     # ----------------------------------------------------
     # 動態算式計算 logic
