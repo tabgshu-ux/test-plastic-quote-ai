@@ -15,7 +15,7 @@ if "user_database" not in st.session_state:
             "password": "admin123", 
             "name": "Alex Chen (System Admin)", 
             "role": "Super Admin",
-            "allowed_depts": "ALL"  # 擁有全系統所有模組存取權
+            "allowed_depts": "ALL"
         },
         "boss": {
             "password": "boss123", 
@@ -39,13 +39,7 @@ if "user_database" not in st.session_state:
             "password": "ga123", 
             "name": "李總務專員 (GA Specialist)", 
             "role": "General Affairs",
-            "allowed_depts": ["🏢 總務部 (General Affairs)"],  # 僅限總務部相關模組
-            "allowed_subs": [
-                "📦 總務用品採購與庫存 (GA Procurement & Supplies)",
-                "🏢 公司固定資產與設備管理 (Company Assets)",
-                "💵 零用金與行政費用申請 (Petty Cash & Expenses)",
-                "📄 行政公文與合同管理 (Admin Documents & Contracts)"
-            ]
+            "allowed_depts": ["🏢 總務部 (General Affairs)"]
         },
         "hr_manager": {
             "password": "hr123", 
@@ -61,7 +55,6 @@ if "user_database" not in st.session_state:
         },
     }
 
-# 預設為未登入
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -102,14 +95,14 @@ if not st.session_state.logged_in:
             💡 **測試帳號清單：**
             - **最高主管/系統管理員**：`admin` / `admin123` 或 `boss` / `boss123`
             - **財務會計**：`accountant` / `fin123`
-            - **總務專員 (細部權限限制)**：`ga_user` / `ga123`
+            - **總務專員 (權限限制只看總務部)**：`ga_user` / `ga123`
             - **人事主管**：`hr_manager` / `hr123`
             - **業務專員**：`alex` / `alex123`
             """)
-    st.stop()  # 未登入完全阻斷
+    st.stop()
 
 # ----------------------------------------------------
-# 🌐 全球多語系字典 (i18n) — 包含新增的財務部下總務部及子功能
+# 🌐 全球多語系完整字典 (i18n)
 # ----------------------------------------------------
 I18N = {
     "繁體中文": {
@@ -117,9 +110,9 @@ I18N = {
         "depts": [
             "📈 營運戰情室 (Executive)",
             "🧾 財務 (Finance)",
-            "🏢 總務部 (General Affairs)",  # 新增總務部獨立入口
+            "🏢 總務部 (General Affairs)",
             "👥 人事/行政 (HR & Admin)",
-            "💼 業務/行销 (Sales & Marketing)",
+            "💼 業務/行銷 (Sales & Marketing)",
             "🛠️ 研發/技術 (R&D & Engineering)",
             "🏭 廠務/設備 (Plant & IoT)",
             "💻 資訊/IT (IT & System Admin)"
@@ -137,7 +130,8 @@ I18N = {
             "📦 總務用品採購與庫存 (GA Procurement & Supplies)",
             "🏢 公司固定資產與設備管理 (Company Assets)",
             "💵 零用金與行政費用申請 (Petty Cash & Expenses)",
-            "📄 行政公文與合同管理 (Admin Documents & Contracts)"
+            "📄 行政公文與合同管理 (Admin Documents & Contracts)",
+            "📑 總務與簽核審核中心 (Approval Center)"
         ],
         "sub_hr": ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
         "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
@@ -170,7 +164,8 @@ I18N = {
             "📦 GA Procurement & Supplies",
             "🏢 Company Asset Management",
             "💵 Petty Cash & Expense Claim",
-            "📄 Admin Documents & Contracts"
+            "📄 Admin Documents & Contracts",
+            "📑 Approval & Workflow Center"
         ],
         "sub_hr": ["💰 Monthly Payroll & Deductions", "⏰ Biometric Clock-in Sync"],
         "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
@@ -203,7 +198,8 @@ I18N = {
             "📦 Mua sắm & Vật tư Tổng vụ",
             "🏢 Quản lý Tài sản cố định",
             "💵 Quyết toán Tiền mặt & Chi phí",
-            "📄 Quản lý Công văn & Hợp đồng"
+            "📄 Quản lý Công văn & Hợp đồng",
+            "📑 Trung tâm Phê duyệt & Ký duyệt"
         ],
         "sub_hr": ["💰 Lương hàng tháng & Chấm công", "⏰ Kết nối máy chấm công"],
         "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
@@ -214,7 +210,7 @@ I18N = {
 }
 
 # ----------------------------------------------------
-# 🛡️ 模組動態載入器 (加強容錯)
+# 🛡️ 安全動態模組載入器
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -235,7 +231,7 @@ def load_module_function(module_name, func_names):
     except Exception as e:
         return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-# 載入所有功能模組（包含新增的總務部模組）
+# 載入所有功能模組
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
 render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
@@ -249,18 +245,15 @@ render_user_mgmt = load_module_function("user_management", ["render_user_managem
 render_ga = load_module_function("general_affairs", ["render_general_affairs_page", "show", "main"])
 
 # ----------------------------------------------------
-# 🔒 3. 細部 RBAC 權限過濾器
+# 🔒 RBAC 權限過濾與側邊欄選單
 # ----------------------------------------------------
 user_info = st.session_state.user_info
 allowed_depts = user_info.get("allowed_depts", "ALL")
 
-# ----------------------------------------------------
-# 側邊欄 (Sidebar) 選單渲染
-# ----------------------------------------------------
 st.sidebar.title("🏭 AI ERP")
 st.sidebar.markdown("### 👤 User Status")
-
 st.sidebar.success(f"🟢 **{user_info['name']}** ({user_info['role']})")
+
 if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
     st.session_state.logged_in = False
     st.session_state.user_info = None
@@ -283,11 +276,11 @@ st.sidebar.markdown("---")
 
 all_depts = lang_dict["depts"]
 
-# **權限限制處理**：如果使用者有特定部門存取限制，則只顯示該使用者有權限點選的部門
+# 權限過濾
 if allowed_depts != "ALL":
     available_depts = [d for d in all_depts if any(a in d for a in allowed_depts)]
     if not available_depts:
-        available_depts = [all_depts[2]] # 預設 fallback 到總務部
+        available_depts = [all_depts[2]]
 else:
     available_depts = all_depts
 
@@ -298,11 +291,10 @@ selected_dept = st.sidebar.radio(
 )
 st.sidebar.markdown("---")
 
-# 找到當前選取部門的全域索引值
 dept_idx = all_depts.index(selected_dept)
 
 # ----------------------------------------------------
-# 🔀 路由分流与權限控管
+# 🔀 路由分流
 # ----------------------------------------------------
 if dept_idx == 0:  # 📈 營運戰情室
     sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key=f"sub_exec_{selected_lang}")
@@ -311,7 +303,6 @@ if dept_idx == 0:  # 📈 營運戰情室
 elif dept_idx == 1:  # 🧾 財務
     sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
     sub_idx = lang_dict["sub_finance"].index(sub_option)
-    
     if sub_idx == 0:
         render_ap(sub_option, selected_lang)
     elif sub_idx == 1:
@@ -321,18 +312,8 @@ elif dept_idx == 1:  # 🧾 財務
     else:
         render_invoice(sub_option, selected_lang)
 
-elif dept_idx == 2:  # 🏢 總務部 (General Affairs)
-    # 若有子功能權限限制，過濾子選單
-    user_allowed_subs = user_info.get("allowed_subs", "ALL")
-    ga_subs = lang_dict["sub_ga"]
-    if user_allowed_subs != "ALL":
-        filtered_ga_subs = [s for s in ga_subs if any(uas in s for uas in user_allowed_subs)]
-        if not filtered_ga_subs:
-            filtered_ga_subs = ga_subs
-    else:
-        filtered_ga_subs = ga_subs
-
-    sub_option = st.sidebar.radio("General Affairs:", filtered_ga_subs, key=f"sub_ga_{selected_lang}")
+elif dept_idx == 2:  # 🏢 總務部
+    sub_option = st.sidebar.radio("General Affairs:", lang_dict["sub_ga"], key=f"sub_ga_{selected_lang}")
     render_ga(sub_option, selected_lang)
 
 elif dept_idx == 3:  # 👥 人事/行政
