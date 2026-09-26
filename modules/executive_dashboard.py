@@ -111,6 +111,17 @@ def get_exec_lang_dict(lang_param=None):
     return EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
 
 # ----------------------------------------------------
+# 💱 跨國匯率參照字典 (以 USD 為基準換算)
+# ----------------------------------------------------
+EXCHANGE_RATES = {
+    "USD (美金)": {"symbol": "$", "rate": 1.0},
+    "VND (越南盾)": {"symbol": "₫", "rate": 25420.0},
+    "TWD (新台幣)": {"symbol": "NT$", "rate": 31.8},
+    "RMB (人民幣)": {"symbol": "¥", "rate": 7.15},
+    "EUR (歐元)": {"symbol": "€", "rate": 0.92}
+}
+
+# ----------------------------------------------------
 # 📊 1. 股票與市場看板 (Metric Cards)
 # ----------------------------------------------------
 def render_market_stock_metrics(market_key):
@@ -142,7 +153,7 @@ def render_market_stock_metrics(market_key):
         col3.metric("上證指數 (SSEC)", "2,860 點", "+5.2 (+0.18%)")
         col4.metric("恆生指數 (HSI)", "17,650 點", "+110.0 (+0.63%)")
 
-    elif "Commodities" in market_key or "原物料" in market_key or "Nguyên liệu" in market_key:
+    elif "Commodities" in market_key or "原物料" in market_key or "Nguyên料" in market_key:
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("美金/越南盾 (USD/VND)", "25,420 VND", "-15.0 (-0.06%)")
         col2.metric("WTI 原油 (Crude Oil)", "$78.5 USD", "+0.45 (+0.58%)")
@@ -246,21 +257,47 @@ def render_financial_ar_ap_stats():
     st.dataframe(pd.DataFrame(ar_ap_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 🧮 5. 通用型企業綜合損益表 (自動連動全系統 Session State)
+# 🧮 5. 通用型企業綜合損益表 (支援多幣別動態切換與連動)
 # ----------------------------------------------------
-def render_consolidated_income_statement():
-    st.markdown("### 📊 企業綜合損益表 (Income Statement / P&L) (USD)")
+def render_consolidated_income_statement(sub_option="🌐 全部市場 (All Markets)"):
+    st.markdown("### 📊 企業綜合損益表 (Income Statement / P&L)")
     st.caption("數據由全系統各模組（業務訂單、總務採購、零用金報銷、設備維修）即時自動勾稽與動態計算")
 
-    # 1. 營業收入：從業務報價/訂單勾稽 (若尚無資料，提供預設標準營運數字)
+    # 💱 幣別顯示控制列
+    col_curr_sel, col_rate_info = st.columns([2, 3])
+    with col_curr_sel:
+        # 根據選擇的市場自動設定預設幣別
+        default_idx = 0
+        if "Vietnam" in sub_option or "越南" in sub_option:
+            default_idx = 1
+        elif "Taiwan" in sub_option or "台灣" in sub_option:
+            default_idx = 2
+        elif "China" in sub_option or "中國" in sub_option:
+            default_idx = 3
+
+        selected_curr_key = st.selectbox("💱 選擇檢視幣別 (Currency View)", list(EXCHANGE_RATES.keys()), index=default_idx)
+    
+    curr_info = EXCHANGE_RATES[selected_curr_key]
+    curr_code = selected_curr_key.split()[0]
+    curr_symbol = curr_info["symbol"]
+    rate = curr_info["rate"]
+
+    with col_rate_info:
+        st.info(f"💡 目前檢視幣別：**{selected_curr_key}** (目前基準匯率 1 USD = **{rate:,.2f} {curr_code}**)")
+
+    st.markdown("---")
+
+    # 1. 營業收入：從業務報價/訂單勾稽 (基礎以 USD 運算，再乘上記帳匯率)
     quotes = st.session_state.get("quotations_data", [])
-    sys_revenue = sum(q.get("金額 (USD)", 0.0) for q in quotes if "成交" in q.get("狀態", "") or "已核准" in q.get("狀態", ""))
-    total_revenue = sys_revenue if sys_revenue > 0 else 250000.0
+    sys_revenue_usd = sum(q.get("金額 (USD)", 0.0) for q in quotes if "成交" in q.get("狀態", "") or "已核准" in q.get("狀態", ""))
+    base_revenue_usd = sys_revenue_usd if sys_revenue_usd > 0 else 250000.0
+    total_revenue = base_revenue_usd * rate
 
     # 2. 營業成本：從總務與生產採購單勾稽
     purchases = st.session_state.get("ga_purchase_data", [])
-    sys_cogs = sum(p.get("預估金額 (USD)", 0.0) for p in purchases if "已核准" in p.get("狀態", "") or "簽核中" in p.get("狀態", ""))
-    total_cogs = sys_cogs if sys_cogs > 0 else 115000.0
+    sys_cogs_usd = sum(p.get("預估金額 (USD)", 0.0) for p in purchases if "已核准" in p.get("狀態", "") or "簽核中" in p.get("狀態", ""))
+    base_cogs_usd = sys_cogs_usd if sys_cogs_usd > 0 else 115000.0
+    total_cogs = base_cogs_usd * rate
 
     # 3. 銷貨毛利
     gross_profit = total_revenue - total_cogs
@@ -268,12 +305,12 @@ def render_consolidated_income_statement():
 
     # 4. 營業費用 (OPEX)：從零用金與模具維修履歷勾稽
     petty_cash_items = st.session_state.get("ga_petty_cash_data", [])
-    sys_petty_cash = sum(pc.get("金額 (USD)", 0.0) for pc in petty_cash_items if "已核銷" in pc.get("狀態", "") or "已核准" in pc.get("狀態", ""))
+    sys_petty_usd = sum(pc.get("金額 (USD)", 0.0) for pc in petty_cash_items if "已核銷" in pc.get("狀態", "") or "已核准" in pc.get("狀態", ""))
     
-    payroll_expense = 45000.0   # 人事薪資費用
-    utilities_expense = 3500.0  # 水電與公用事業費
-    admin_expense = sys_petty_cash if sys_petty_cash > 0 else 2450.0  # 零用金與小額報銷
-    depreciation_expense = 6000.0  # 設備折舊費用
+    payroll_expense = 45000.0 * rate
+    utilities_expense = 3500.0 * rate
+    admin_expense = (sys_petty_usd if sys_petty_usd > 0 else 2450.0) * rate
+    depreciation_expense = 6000.0 * rate
 
     total_opex = payroll_expense + utilities_expense + admin_expense + depreciation_expense
 
@@ -287,33 +324,33 @@ def render_consolidated_income_statement():
     net_income = ebit - tax_expense
     net_margin = (net_income / total_revenue * 100) if total_revenue > 0 else 0.0
 
-    # 頂部 KPI 卡片
+    # 頂部 KPI 卡片 (金額單位跟隨選擇的幣別)
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("營業收入 (Revenue)", f"${total_revenue:,.2f} USD")
-    k2.metric("營業毛利 (Gross Profit)", f"${gross_profit:,.2f} USD", f"毛利率 {gross_margin:.1f}%")
-    k3.metric("營業費用 (OPEX)", f"${total_opex:,.2f} USD")
-    k4.metric("本期淨利 (Net Income)", f"${net_income:,.2f} USD", f"淨利率 {net_margin:.1f}%")
+    k1.metric(f"營業收入 ({curr_code})", f"{curr_symbol} {total_revenue:,.2f}")
+    k2.metric(f"營業毛利 ({curr_code})", f"{curr_symbol} {gross_profit:,.2f}", f"毛利率 {gross_margin:.1f}%")
+    k3.metric(f"營業費用 ({curr_code})", f"{curr_symbol} {total_opex:,.2f}")
+    k4.metric(f"本期淨利 ({curr_code})", f"{curr_symbol} {net_income:,.2f}", f"淨利率 {net_margin:.1f}%")
 
     st.markdown("---")
 
     # 損益明細表
     pl_data = [
-        {"會計科目": "一、營業收入 (Revenue)", "金額 (USD)": f"${total_revenue:,.2f}", "說明/勾稽來源": "業務模組已成交銷售訂單"},
-        {"會計科目": "二、營業成本 (COGS)", "金額 (USD)": f"(${total_cogs:,.2f})", "說明/勾稽來源": "總務與廠區進貨採購單據"},
-        {"會計科目": "💡 營業毛利 (Gross Profit)", "金額 (USD)": f"${gross_profit:,.2f}", "說明/勾稽來源": f"毛利率: {gross_margin:.1f}%"},
-        {"會計科目": "三、營業費用 (OPEX)", "金額 (USD)": f"(${total_opex:,.2f})", "說明/勾稽來源": "包含薪資、水電、行政零用金與折舊"},
-        {"會計科目": "  [-] 薪資與考勤費用", "金額 (USD)": f"(${payroll_expense:,.2f})", "說明/勾稽來源": "人事部門月度薪資清冊"},
-        {"會計科目": "  [-] 廠區水電與公用事業費", "金額 (USD)": f"(${utilities_expense:,.2f})", "說明/勾稽來源": "廠務水電與公用設施支出"},
-        {"會計科目": "  [-] 總務零用金與行政費用", "金額 (USD)": f"(${admin_expense:,.2f})", "說明/勾稽來源": "總務部已簽核核銷之零用金報銷"},
-        {"會計科目": "  [-] 固定資產折舊與攤提", "金額 (USD)": f"(${depreciation_expense:,.2f})", "說明/勾稽來源": "資產主檔月度直線折舊計算"},
-        {"會計科目": "💡 營業利益 (Operating Income)", "金額 (USD)": f"${ebit:,.2f}", "說明/勾稽來源": f"營業利益率: {ebit_margin:.1f}%"},
-        {"會計科目": "四、預估所得稅費用 (20%)", "金額 (USD)": f"(${tax_expense:,.2f})", "說明/勾稽來源": "企業所得稅提撥估算"},
-        {"會計科目": "🏆 🏆 本期淨利 (Net Income)", "金額 (USD)": f"${net_income:,.2f}", "說明/勾稽來源": f"稅後淨利率: {net_margin:.1f}%"}
+        {"會計科目": f"一、營業收入 (Revenue)", f"金額 ({curr_code})": f"{curr_symbol} {total_revenue:,.2f}", "說明/勾稽來源": "業務模組已成交銷售訂單"},
+        {"會計科目": f"二、營業成本 (COGS)", f"金額 ({curr_code})": f"({curr_symbol} {total_cogs:,.2f})", "說明/勾稽來源": "總務與廠區進貨採購單據"},
+        {"會計科目": f"💡 營業毛利 (Gross Profit)", f"金額 ({curr_code})": f"{curr_symbol} {gross_profit:,.2f}", "說明/勾稽來源": f"毛利率: {gross_margin:.1f}%"},
+        {"會計科目": f"三、營業費用 (OPEX)", f"金額 ({curr_code})": f"({curr_symbol} {total_opex:,.2f})", "說明/勾稽來源": "包含薪資、水電、行政零用金與折舊"},
+        {"會計科目": f"  [-] 薪資與考勤費用", f"金額 ({curr_code})": f"({curr_symbol} {payroll_expense:,.2f})", "說明/勾稽來源": "人事部門月度薪資清冊"},
+        {"會計科目": f"  [-] 廠區水電與公用事業費", f"金額 ({curr_code})": f"({curr_symbol} {utilities_expense:,.2f})", "說明/勾稽來源": "廠務水電與公用設施支出"},
+        {"會計科目": f"  [-] 總務零用金與行政費用", f"金額 ({curr_code})": f"({curr_symbol} {admin_expense:,.2f})", "說明/勾稽來源": "總務部已簽核核銷之零用金報銷"},
+        {"會計科目": f"  [-] 固定資產折舊與攤提", f"金額 ({curr_code})": f"({curr_symbol} {depreciation_expense:,.2f})", "說明/勾稽來源": "資產主檔月度直線折舊計算"},
+        {"會計科目": f"💡 營業利益 (Operating Income)", f"金額 ({curr_code})": f"{curr_symbol} {ebit:,.2f}", "說明/勾稽來源": f"營業利益率: {ebit_margin:.1f}%"},
+        {"會計科目": f"四、預估所得稅費用 (20%)", f"金額 ({curr_code})": f"({curr_symbol} {tax_expense:,.2f})", "說明/勾稽來源": "企業所得稅提撥估算"},
+        {"會計科目": f"🏆 🏆 本期淨利 (Net Income)", f"金額 ({curr_code})": f"{curr_symbol} {net_income:,.2f}", "說明/勾稽來源": f"稅後淨利率: {net_margin:.1f}%"}
     ]
 
     st.dataframe(pd.DataFrame(pl_data), use_container_width=True)
 
-    # 視覺化圖表
+    # 視覺化圖表 (金額單位隨選擇幣別調整)
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
         df_pie = pd.DataFrame([
@@ -322,17 +359,17 @@ def render_consolidated_income_statement():
             {"費用項目": "行政零用金", "金額": admin_expense},
             {"費用項目": "資產折舊", "金額": depreciation_expense}
         ])
-        fig_pie = px.pie(df_pie, values="金額", names="費用項目", title="營業費用結構分布 (OPEX)", hole=0.4)
+        fig_pie = px.pie(df_pie, values="金額", names="費用項目", title=f"營業費用結構分布 (OPEX in {curr_code})", hole=0.4)
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_chart2:
         df_bar = pd.DataFrame([
-            {"階段": "營業收入", "金額 (USD)": total_revenue},
-            {"階段": "營業毛利", "金額 (USD)": gross_profit},
-            {"階段": "營業利益", "金額 (USD)": ebit},
-            {"階段": "本期淨利", "金額 (USD)": net_income}
+            {"階段": "營業收入", f"金額 ({curr_code})": total_revenue},
+            {"階段": "營業毛利", f"金額 ({curr_code})": gross_profit},
+            {"階段": "營業利益", f"金額 ({curr_code})": ebit},
+            {"階段": "本期淨利", f"金額 ({curr_code})": net_income}
         ])
-        fig_bar = px.bar(df_bar, x="階段", y="金額 (USD)", color="階段", text_auto='.2s', title="獲利階層轉換 (Profit Waterfall)")
+        fig_bar = px.bar(df_bar, x="階段", y=f"金額 ({curr_code})", color="階段", text_auto='.2s', title=f"獲利階層轉換 (Profit Waterfall in {curr_code})")
         st.plotly_chart(fig_bar, use_container_width=True)
 
 # ----------------------------------------------------
@@ -434,9 +471,9 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
     with tab2:
         render_financial_ar_ap_stats()
 
-    # 分頁 3：通用型企業綜合損益表 (自動連動全系統資料庫)
+    # 分頁 3：通用型企業綜合損益表 (自動連動全系統資料庫與多幣別切換)
     with tab3:
-        render_consolidated_income_statement()
+        render_consolidated_income_statement(sub_option)
 
     # 分頁 4：機台稼動 (OEE) KPI
     with tab4:
