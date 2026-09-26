@@ -9,7 +9,45 @@ def render_general_affairs_page(sub_option, lang):
     # ----------------------------------------------------
     # 🗄️ 初始化 Session State 模擬資料庫
     # ----------------------------------------------------
-    # 1. 零用金資料庫
+    # 1. 公司固定資產資料庫 (包含購買日期與報廢日期)
+    if "ga_asset_data" not in st.session_state:
+        st.session_state.ga_asset_data = [
+            {
+                "資產編號": "FA-2026-001",
+                "資產名稱": "行政部公務車 Toyota",
+                "資產類別": "運輸設備",
+                "保管人": "總務部 李專員",
+                "放置地點": "台北總部停車場",
+                "購買日期": "2023-05-15",
+                "預計報廢日期": "2030-05-14",
+                "取得價值 (USD)": 25000.0,
+                "狀態": "🟢 使用中"
+            },
+            {
+                "資產編號": "FA-2026-002",
+                "資產名稱": "會議室高畫質投影機",
+                "資產類別": "辦公設備",
+                "保管人": "資訊部",
+                "放置地點": "大會議室",
+                "購買日期": "2024-01-10",
+                "預計報廢日期": "2027-01-09",
+                "取得價值 (USD)": 1200.0,
+                "狀態": "🟢 使用中"
+            },
+            {
+                "資產編號": "FA-2026-003",
+                "資產名稱": "廠區人臉辨識打卡機",
+                "資產類別": "資訊設備",
+                "保管人": "HR 張主管",
+                "放置地點": "越南廠大門",
+                "購買日期": "2025-08-20",
+                "預計報廢日期": "2028-08-19",
+                "取得價值 (USD)": 800.0,
+                "狀態": "🔧 維修中"
+            }
+        ]
+
+    # 2. 零用金資料庫
     if "ga_petty_cash_data" not in st.session_state:
         st.session_state.ga_petty_cash_data = [
             {"單號": "PC-20260901-01", "申請日期": "2026-09-01", "申請人": "李大同", "費用類別": "車馬費", "金額 (USD)": 45.0, "說明": "拜訪客戶計程車費", "狀態": "🟢 已核銷"},
@@ -17,7 +55,7 @@ def render_general_affairs_page(sub_option, lang):
             {"單號": "PC-20260920-03", "申請日期": "2026-09-20", "申請人": "王阿明", "費用類別": "雜項採購", "金額 (USD)": 30.0, "說明": "茶水間咖啡豆補貨", "狀態": "🟡 審核中"}
         ]
 
-    # 2. 行政公文與合同資料庫 (新增)
+    # 3. 行政公文與合同資料庫
     if "ga_contract_data" not in st.session_state:
         st.session_state.ga_contract_data = [
             {
@@ -39,16 +77,6 @@ def render_general_affairs_page(sub_option, lang):
                 "到期日期": "2026-10-15",
                 "負責人": "張主管",
                 "狀態": "⚠️ 即將到期"
-            },
-            {
-                "合同/公文編號": "DOC-2026-008",
-                "文件類別": "行政公文",
-                "標題/主題": "環保局廢料排放稽查備查函",
-                "簽約對象/單位": "市府環保局",
-                "簽署日期": "2026-08-10",
-                "到期日期": "2027-08-09",
-                "負責人": "王專員",
-                "狀態": "🟢 有效中"
             }
         ]
 
@@ -79,14 +107,91 @@ def render_general_affairs_page(sub_option, lang):
                 st.form_submit_button("送出採購申請")
 
     # ----------------------------------------------------
-    # 🏢 2. 公司固定資產與設備管理
+    # 🏢 2. 公司固定資產與設備管理 (含購買日期、報廢日期、新增/刪除)
     # ----------------------------------------------------
     elif "固定資產" in sub_option or "Asset" in sub_option or "Tài sản" in sub_option:
         st.subheader("🏢 公司固定資產與辦公設備管理")
-        st.dataframe(pd.DataFrame([
-            {"資產編號": "FA-2026-001", "資產名稱": "行政部公務車 Toyota", "保管人": "總務部 李專員", "放置地點": "台北總部停車場", "狀態": "使用中"},
-            {"資產編號": "FA-2026-002", "資產名稱": "會議室高畫質投影機", "保管人": "資訊部", "放置地點": "大會議室", "狀態": "使用中"}
-        ]), use_container_width=True)
+        st.info("💡 管理公司跨國廠區之固定資產、辦公設備、購買日期、預計報廢日期與使用狀態。")
+
+        # 📊 頂部資產 KPI 統計
+        assets = st.session_state.ga_asset_data
+        total_assets = len(assets)
+        total_val = sum(a.get("取得價值 (USD)", 0.0) for a in assets)
+        maint_cnt = sum(1 for a in assets if "維修" in a["狀態"])
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("列管固定資產總數", f"{total_assets} 件")
+        c2.metric("資產原值總計", f"${total_val:,.2f} USD")
+        c3.metric("保養維修中設備", f"{maint_cnt} 件")
+
+        # ➕ 新增固定資產登記面板 (包含購買日期與預計報廢日期)
+        with st.expander("➕ 登記新固定資產", expanded=True):
+            with st.form("form_add_asset", clear_on_submit=True):
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    asset_name = st.text_input("資產名稱", placeholder="例如：行政部公務車 / 辦公電腦")
+                    category = st.selectbox("資產類別", ["辦公設備", "運輸設備", "資訊設備", "廠務設備", "其他資產"])
+                    keeper = st.text_input("保管人 / 部門", value=st.session_state.user_info["name"])
+                
+                with col_b:
+                    location = st.text_input("放置地點 / 廠區", placeholder="例如：台北總部 4F / 越南一廠")
+                    purchase_date = st.date_input("購買日期", value=date.today())
+                    scrap_date = st.date_input("預計報廢日期", value=date(date.today().year + 5, date.today().month, date.today().day))
+                
+                with col_c:
+                    val = st.number_input("取得價值 (USD)", min_value=0.0, value=500.0, step=100.0)
+                    status = st.selectbox("初始狀態", ["🟢 使用中", "🔧 維修中", "🟡 閒置中", "🔴 已報廢"])
+                    remark = st.text_area("備註說明", placeholder="例如：保固期、發票單號或耐用年限說明...")
+
+                btn_add_asset = st.form_submit_button("📥 儲存資產資料", type="primary")
+
+                if btn_add_asset:
+                    if not asset_name:
+                        st.error("❌ 請輸入資產名稱！")
+                    else:
+                        asset_id = f"FA-{purchase_date.strftime('%Y')}-{len(assets) + 1:03d}"
+                        new_asset = {
+                            "資產編號": asset_id,
+                            "資產名稱": asset_name,
+                            "資產類別": category,
+                            "保管人": keeper,
+                            "放置地點": location,
+                            "購買日期": str(purchase_date),
+                            "預計報廢日期": str(scrap_date),
+                            "取得價值 (USD)": val,
+                            "狀態": status
+                        }
+                        st.session_state.ga_asset_data.append(new_asset)
+                        st.success(f"✅ 成功新增資產！資產編號：{asset_id}")
+                        st.rerun()
+
+        st.markdown("---")
+
+        # 📋 固定資產列管清單 (完整顯示購買日期與報廢日期)
+        st.markdown("### 📋 固定資產與設備列管清單")
+        if st.session_state.ga_asset_data:
+            df_asset = pd.DataFrame(st.session_state.ga_asset_data)
+            st.dataframe(df_asset, use_container_width=True)
+
+            # 🗑️ 單筆報廢/刪除資產管理面板
+            with st.expander("🗑️ 刪除或報廢特定固定資產"):
+                col_del_1, col_del_2 = st.columns([3, 1])
+                with col_del_1:
+                    asset_ids = [a["資產編號"] + " - " + a["資產名稱"] for a in st.session_state.ga_asset_data]
+                    selected_asset_str = st.selectbox("請選擇欲刪除的資產：", asset_ids, key="sb_del_asset")
+                    selected_asset_id = selected_asset_str.split(" - ")[0]
+                
+                with col_del_2:
+                    st.write("")
+                    st.write("")
+                    if st.button("❌ 刪除此資產", type="secondary", key="btn_del_asset"):
+                        st.session_state.ga_asset_data = [
+                            a for a in st.session_state.ga_asset_data if a["資產編號"] != selected_asset_id
+                        ]
+                        st.success(f"已成功刪除資產：{selected_asset_id}")
+                        st.rerun()
+        else:
+            st.warning("目前尚無任何固定資產紀錄，請透過上方表單新增。")
 
     # ----------------------------------------------------
     # 💵 3. 零用金與行政費用申請
@@ -95,7 +200,6 @@ def render_general_affairs_page(sub_option, lang):
         st.subheader("💵 零用金與行政費用報銷")
         st.info("💡 提供總務人員登記日常小額零用金支出、車馬費及快遞費報銷。")
 
-        # ➕ 新增申請表單區塊
         with st.expander("➕ 新增零用金/費用報銷申請", expanded=True):
             with st.form("form_add_petty_cash", clear_on_submit=True):
                 c1, c2, c3 = st.columns(3)
@@ -127,13 +231,11 @@ def render_general_affairs_page(sub_option, lang):
 
         st.markdown("---")
 
-        # 📋 資料清單與刪除操作
         st.markdown("### 📋 歷史申請紀錄")
         if st.session_state.ga_petty_cash_data:
             df_pc = pd.DataFrame(st.session_state.ga_petty_cash_data)
             st.dataframe(df_pc, use_container_width=True)
 
-            # 🗑️ 單筆刪除管理
             with st.expander("🗑️ 刪除或管理特定單據"):
                 col_del_1, col_del_2 = st.columns([3, 1])
                 with col_del_1:
@@ -153,13 +255,12 @@ def render_general_affairs_page(sub_option, lang):
             st.warning("目前尚無任何零用金申請紀錄，請透過上方表單新增。")
 
     # ----------------------------------------------------
-    # 📄 4. 行政公文與合同管理 (完整新增/清單/刪除/預警功能)
+    # 📄 4. 行政公文與合同管理
     # ----------------------------------------------------
     else:
         st.subheader("📄 行政公文與合同管理")
         st.info("💡 集中管理全公司之行政公文、租賃合約、廠商合作協議及智慧財產權文件。")
 
-        # 📊 頂部 KPI 統計指標
         c1, c2, c3 = st.columns(3)
         contracts = st.session_state.ga_contract_data
         total_cnt = len(contracts)
@@ -168,7 +269,6 @@ def render_general_affairs_page(sub_option, lang):
         c2.metric("30天內即將到期", f"{expiring_cnt} 件", delta_color="inverse")
         c3.metric("系統告警狀態", "🟢 正常" if expiring_cnt == 0 else "⚠️ 需注意到期日")
 
-        # ➕ 新增合同/公文登記面板
         with st.expander("➕ 登記新合同 / 行政公文", expanded=True):
             with st.form("form_add_contract", clear_on_submit=True):
                 col_a, col_b, col_c = st.columns(3)
@@ -192,7 +292,6 @@ def render_general_affairs_page(sub_option, lang):
                         prefix = "CTR" if "合約" in doc_type or "租約" in doc_type or "協議" in doc_type else "DOC"
                         doc_id = f"{prefix}-{sign_date.strftime('%Y')}-{len(contracts) + 1:03d}"
                         
-                        # 自動計算狀態
                         days_left = (end_date - date.today()).days
                         if days_left < 0:
                             status = "🔴 已過期"
@@ -217,13 +316,11 @@ def render_general_affairs_page(sub_option, lang):
 
         st.markdown("---")
 
-        # 📋 合同與公文列表展現
         st.markdown("### 📋 合同與行政公文列管清單")
         if st.session_state.ga_contract_data:
             df_contract = pd.DataFrame(st.session_state.ga_contract_data)
             st.dataframe(df_contract, use_container_width=True)
 
-            # 🗑️ 單筆刪除與核銷管理
             with st.expander("🗑️ 刪除或結案特定合同/公文"):
                 col_del_1, col_del_2 = st.columns([3, 1])
                 with col_del_1:
