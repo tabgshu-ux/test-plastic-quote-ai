@@ -140,33 +140,36 @@ def init_db():
     # 🏢 總務部 (GA) 與 簽核中心 (Workflow) 擴充資料表
     -- ====================================================
 
-    -- 12. 總務用品採購與請購單表 (ga_procurements) - 新增
+    -- 12. 總務用品採購與請購單表 (ga_procurements) - 升級多幣別支援
     CREATE TABLE IF NOT EXISTS ga_procurements (
         po_id VARCHAR(50) PRIMARY KEY,
         item_name VARCHAR(150) NOT NULL,
         category VARCHAR(50) NOT NULL,
         quantity INT DEFAULT 1,
-        estimated_cost NUMERIC(12,2) DEFAULT 0.00,
+        currency VARCHAR(10) DEFAULT 'VND',           -- 🟢 幣別 (VND, TWD, RMB, USD)
+        unit_price NUMERIC(15,2) DEFAULT 0.00,        -- 🟢 原幣單價
+        estimated_cost NUMERIC(15,2) DEFAULT 0.00,    -- 🟢 當地原幣預估總金額
+        estimated_cost_usd NUMERIC(15,2) DEFAULT 0.00,-- 🟢 折合美金總金額 (戰情室專用)
         dept_name VARCHAR(50),
         applicant VARCHAR(100) NOT NULL,
         status VARCHAR(30) DEFAULT '🟡 簽核中',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 13. 零用金與行政費用報銷表 (ga_petty_cash) - 新增
+    -- 13. 零用金與行政費用報銷表 (ga_petty_cash)
     CREATE TABLE IF NOT EXISTS ga_petty_cash (
         pc_id VARCHAR(50) PRIMARY KEY,
         apply_date DATE NOT NULL,
         applicant VARCHAR(100) NOT NULL,
         expense_type VARCHAR(50) NOT NULL,
         amount NUMERIC(12,2) NOT NULL,
-        currency VARCHAR(10) DEFAULT 'USD',
+        currency VARCHAR(10) DEFAULT 'VND',           -- 預設當地貨幣
         description TEXT,
         status VARCHAR(30) DEFAULT '🟡 簽核中',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 14. 行政公文與合同列管表 (ga_contracts) - 新增
+    -- 14. 行政公文與合同列管表 (ga_contracts)
     CREATE TABLE IF NOT EXISTS ga_contracts (
         contract_id VARCHAR(50) PRIMARY KEY,
         doc_type VARCHAR(50) NOT NULL,
@@ -179,7 +182,7 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 15. 電子簽核審核中心佇列主檔 (approval_queue) - 新增
+    -- 15. 電子簽核審核中心佇列主檔 (approval_queue)
     CREATE TABLE IF NOT EXISTS approval_queue (
         approval_id VARCHAR(50) PRIMARY KEY,
         source_module VARCHAR(100) NOT NULL,
@@ -191,7 +194,7 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- 16. 電子簽核歷程 Log 明細表 (approval_logs) - 新增
+    -- 16. 電子簽核歷程 Log 明細表 (approval_logs)
     CREATE TABLE IF NOT EXISTS approval_logs (
         id SERIAL PRIMARY KEY,
         approval_id VARCHAR(50) REFERENCES approval_queue(approval_id) ON DELETE CASCADE,
@@ -201,13 +204,21 @@ def init_db():
         comments TEXT,
         reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- 17. 跨國即時與歷史匯率檔 (currency_rates) - 新增
+    CREATE TABLE IF NOT EXISTS currency_rates (
+        id SERIAL PRIMARY KEY,
+        currency_code VARCHAR(10) NOT NULL UNIQUE, -- 如 VND, TWD, RMB, EUR
+        rate_to_usd NUMERIC(15, 6) NOT NULL,       -- 對美金匯率 (例如 1 USD = 25420 VND)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
     """
     
     cur.execute(create_tables_sql)
     conn.commit()
     cur.close()
     conn.close()
-    print("✅ 全套 AI ERP 資料庫（含 IoT 設備監控、總務部 GA、電子簽核 Workflow、權限管理與財務）Schema 初始化完成！")
+    print("✅ 全套 AI ERP 資料庫（含多幣別採購、IoT 設備監控、總務部 GA、電子簽核 Workflow）Schema 初始化完成！")
 
 if __name__ == "__main__":
     init_db()
