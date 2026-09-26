@@ -4,12 +4,12 @@ from datetime import datetime, date
 
 def render_general_affairs_page(sub_option, lang):
     st.title(f"🏢 總務管理系統 — {sub_option}")
-    st.caption("管理公司固定資產、總務採購、零用金支應與行政公文等作業")
+    st.caption("管理公司固定資產、總務採購、零用金支應、行政公文與線上多關卡簽核作業")
 
     # ----------------------------------------------------
-    # 🗄️ 初始化 Session State 模擬資料庫
+    # 🗄️ 1. 初始化 Session State 模擬資料庫
     # ----------------------------------------------------
-    # 1. 公司固定資產資料庫 (包含購買日期與報廢日期)
+    # (1) 固定資產資料庫
     if "ga_asset_data" not in st.session_state:
         st.session_state.ga_asset_data = [
             {
@@ -33,29 +33,17 @@ def render_general_affairs_page(sub_option, lang):
                 "預計報廢日期": "2027-01-09",
                 "取得價值 (USD)": 1200.0,
                 "狀態": "🟢 使用中"
-            },
-            {
-                "資產編號": "FA-2026-003",
-                "資產名稱": "廠區人臉辨識打卡機",
-                "資產類別": "資訊設備",
-                "保管人": "HR 張主管",
-                "放置地點": "越南廠大門",
-                "購買日期": "2025-08-20",
-                "預計報廢日期": "2028-08-19",
-                "取得價值 (USD)": 800.0,
-                "狀態": "🔧 維修中"
             }
         ]
 
-    # 2. 零用金資料庫
+    # (2) 零用金資料庫
     if "ga_petty_cash_data" not in st.session_state:
         st.session_state.ga_petty_cash_data = [
             {"單號": "PC-20260901-01", "申請日期": "2026-09-01", "申請人": "李大同", "費用類別": "車馬費", "金額 (USD)": 45.0, "說明": "拜訪客戶計程車費", "狀態": "🟢 已核銷"},
-            {"單號": "PC-20260915-02", "申請日期": "2026-09-15", "申請人": "張小美", "費用類別": "快遞費", "金額 (USD)": 18.5, "說明": "寄送樣品至海外廠區", "狀態": "🟡 審核中"},
-            {"單號": "PC-20260920-03", "申請日期": "2026-09-20", "申請人": "王阿明", "費用類別": "雜項採購", "金額 (USD)": 30.0, "說明": "茶水間咖啡豆補貨", "狀態": "🟡 審核中"}
+            {"單號": "PC-20260915-02", "申請日期": "2026-09-15", "申請人": "張小美", "費用類別": "快遞費", "金額 (USD)": 18.5, "說明": "寄送樣品至海外廠區", "狀態": "🟡 簽核中"}
         ]
 
-    # 3. 行政公文與合同資料庫
+    # (3) 行政公文與合同資料庫
     if "ga_contract_data" not in st.session_state:
         st.session_state.ga_contract_data = [
             {
@@ -67,21 +55,26 @@ def render_general_affairs_page(sub_option, lang):
                 "到期日期": "2026-12-31",
                 "負責人": "李總務",
                 "狀態": "🟢 有效中"
-            },
+            }
+        ]
+
+    # (4) 簽核中心佇列資料庫 (Workflow Queue)
+    if "approval_queue" not in st.session_state:
+        st.session_state.approval_queue = [
             {
-                "合同/公文編號": "CTR-2026-002",
-                "文件類別": "廠房租約",
-                "標題/主題": "越南二廠廠房租賃合同",
-                "簽約對象/單位": "VSIP 工業區",
-                "簽署日期": "2024-05-01",
-                "到期日期": "2026-10-15",
-                "負責人": "張主管",
-                "狀態": "⚠️ 即將到期"
+                "簽核單號": "APV-PC-20260915-02",
+                "來源模組": "💵 零用金報銷",
+                "申請人": "張小美",
+                "申請項目": "寄送樣品至海外廠區 ($18.5 USD)",
+                "申請日期": "2026-09-15",
+                "當前關卡": "關卡 1：部門主管審核",
+                "狀態": "🟡 待簽核",
+                "簽核歷程": []
             }
         ]
 
     # ----------------------------------------------------
-    # 📌 1. 總務用品採購與庫存管理
+    # 📌 2. 總務用品採購與庫存管理
     # ----------------------------------------------------
     if "總務用品" in sub_option or "Procurement" in sub_option or "Mua sắm" in sub_option:
         st.subheader("📦 總務用品採購與庫存管理")
@@ -93,38 +86,51 @@ def render_general_affairs_page(sub_option, lang):
         st.markdown("#### 📋 採購需求與庫存清單")
         df = pd.DataFrame([
             {"品項名稱": "A4 影印紙 (500張/包)", "分類": "辦公用品", "目前庫存": 15, "安全庫存": 20, "狀態": "⚠️ 需補貨", "申請人": "張小美"},
-            {"品項名稱": "廠區清潔劑", "分類": "清潔用品", "目前庫存": 40, "安全庫存": 10, "狀態": "🟢 正常", "申請人": "李大同"},
-            {"品項名稱": "辦公椅 (人體工學)", "分類": "辦公設備", "目前庫存": 2, "安全庫存": 1, "狀態": "🟢 正常", "申請人": "陳專員"}
+            {"品項名稱": "廠區清潔劑", "分類": "清潔用品", "目前庫存": 40, "安全庫存": 10, "狀態": "🟢 正常", "申請人": "李大同"}
         ])
         st.dataframe(df, use_container_width=True)
 
         with st.expander("➕ 新建總務採購請購單"):
             with st.form("ga_purchase_form"):
-                st.text_input("物品名稱 / Description")
-                st.number_input("數量 / Quantity", min_value=1, value=1)
-                st.number_input("預估金額 (USD)", min_value=0.0, value=100.0)
-                st.selectbox("費用歸屬部門", ["財務部", "總務部", "廠務部", "業務部"])
-                st.form_submit_button("送出採購申請")
+                item_name = st.text_input("物品名稱 / Description")
+                qty = st.number_input("數量 / Quantity", min_value=1, value=1)
+                amount = st.number_input("預估金額 (USD)", min_value=0.0, value=100.0)
+                dept = st.selectbox("費用歸屬部門", ["財務部", "總務部", "廠務部", "業務部"])
+                submit_po = st.form_submit_button("送出採購申請並發起簽核")
+
+                if submit_po and item_name:
+                    po_id = f"PO-{datetime.now().strftime('%Y%m%d%H%M')}"
+                    # 同步推送到簽核佇列
+                    st.session_state.approval_queue.append({
+                        "簽核單號": f"APV-{po_id}",
+                        "來源模組": "📦 總務用品採購",
+                        "申請人": st.session_state.user_info["name"],
+                        "申請項目": f"{item_name} x {qty} (${amount} USD)",
+                        "申請日期": str(date.today()),
+                        "當前關卡": "關卡 1：總務主管審核",
+                        "狀態": "🟡 待簽核",
+                        "簽核歷程": []
+                    })
+                    st.success(f"✅ 成功送出採購申請！已發起簽核單號：APV-{po_id}")
+                    st.rerun()
 
     # ----------------------------------------------------
-    # 🏢 2. 公司固定資產與設備管理 (含購買日期、報廢日期、新增/刪除)
+    # 🏢 3. 公司固定資產與設備管理 (含購買/報廢日期、新增/刪除)
     # ----------------------------------------------------
     elif "固定資產" in sub_option or "Asset" in sub_option or "Tài sản" in sub_option:
         st.subheader("🏢 公司固定資產與辦公設備管理")
-        st.info("💡 管理公司跨國廠區之固定資產、辦公設備、購買日期、預計報廢日期與使用狀態。")
+        st.info("💡 管理公司固定資產、辦公設備、購買日期、預計報廢日期與使用狀態。")
 
-        # 📊 頂部資產 KPI 統計
         assets = st.session_state.ga_asset_data
         total_assets = len(assets)
         total_val = sum(a.get("取得價值 (USD)", 0.0) for a in assets)
-        maint_cnt = sum(1 for a in assets if "維修" in a["狀態"])
 
         c1, c2, c3 = st.columns(3)
         c1.metric("列管固定資產總數", f"{total_assets} 件")
         c2.metric("資產原值總計", f"${total_val:,.2f} USD")
-        c3.metric("保養維修中設備", f"{maint_cnt} 件")
+        c3.metric("保養維修中設備", f"{sum(1 for a in assets if '維修' in a['狀態'])} 件")
 
-        # ➕ 新增固定資產登記面板 (包含購買日期與預計報廢日期)
+        # ➕ 新增固定資產
         with st.expander("➕ 登記新固定資產", expanded=True):
             with st.form("form_add_asset", clear_on_submit=True):
                 col_a, col_b, col_c = st.columns(3)
@@ -141,7 +147,6 @@ def render_general_affairs_page(sub_option, lang):
                 with col_c:
                     val = st.number_input("取得價值 (USD)", min_value=0.0, value=500.0, step=100.0)
                     status = st.selectbox("初始狀態", ["🟢 使用中", "🔧 維修中", "🟡 閒置中", "🔴 已報廢"])
-                    remark = st.text_area("備註說明", placeholder="例如：保固期、發票單號或耐用年限說明...")
 
                 btn_add_asset = st.form_submit_button("📥 儲存資產資料", type="primary")
 
@@ -167,13 +172,11 @@ def render_general_affairs_page(sub_option, lang):
 
         st.markdown("---")
 
-        # 📋 固定資產列管清單 (完整顯示購買日期與報廢日期)
+        # 📋 固定資產清單與 🗑️ 刪除面板
         st.markdown("### 📋 固定資產與設備列管清單")
         if st.session_state.ga_asset_data:
-            df_asset = pd.DataFrame(st.session_state.ga_asset_data)
-            st.dataframe(df_asset, use_container_width=True)
+            st.dataframe(pd.DataFrame(st.session_state.ga_asset_data), use_container_width=True)
 
-            # 🗑️ 單筆報廢/刪除資產管理面板
             with st.expander("🗑️ 刪除或報廢特定固定資產"):
                 col_del_1, col_del_2 = st.columns([3, 1])
                 with col_del_1:
@@ -191,15 +194,16 @@ def render_general_affairs_page(sub_option, lang):
                         st.success(f"已成功刪除資產：{selected_asset_id}")
                         st.rerun()
         else:
-            st.warning("目前尚無任何固定資產紀錄，請透過上方表單新增。")
+            st.warning("目前尚無任何固定資產紀錄。")
 
     # ----------------------------------------------------
-    # 💵 3. 零用金與行政費用申請
+    # 💵 4. 零用金與行政費用申請 (含自動觸發簽核)
     # ----------------------------------------------------
     elif "零用金" in sub_option or "Petty Cash" in sub_option or "Tiền mặt" in sub_option:
         st.subheader("💵 零用金與行政費用報銷")
-        st.info("💡 提供總務人員登記日常小額零用金支出、車馬費及快遞費報銷。")
+        st.info("💡 提供總務人員登記日常小額零用金支出，送出後會自動同步發起電子簽核。")
 
+        # ➕ 新增零用金申請
         with st.expander("➕ 新增零用金/費用報銷申請", expanded=True):
             with st.form("form_add_petty_cash", clear_on_submit=True):
                 c1, c2, c3 = st.columns(3)
@@ -212,7 +216,7 @@ def render_general_affairs_page(sub_option, lang):
                 with c3:
                     desc = st.text_area("費用用途/說明", placeholder="請填寫費用事由與發票資訊...")
 
-                submit_btn = st.form_submit_button("📤 提交報銷申請", type="primary")
+                submit_btn = st.form_submit_button("📤 提交報銷申請並發起簽核", type="primary")
 
                 if submit_btn:
                     new_id = f"PC-{exp_date.strftime('%Y%m%d')}-{len(st.session_state.ga_petty_cash_data) + 1:02d}"
@@ -223,18 +227,31 @@ def render_general_affairs_page(sub_option, lang):
                         "費用類別": exp_type,
                         "金額 (USD)": amount,
                         "說明": desc,
-                        "狀態": "🟡 審核中"
+                        "狀態": "🟡 簽核中"
                     }
                     st.session_state.ga_petty_cash_data.append(new_item)
-                    st.success(f"✅ 成功建立申請單！單號：{new_id}")
+
+                    # 發起簽核流程
+                    st.session_state.approval_queue.append({
+                        "簽核單號": f"APV-{new_id}",
+                        "來源模組": "💵 零用金報銷",
+                        "申請人": applicant,
+                        "申請項目": f"{exp_type} - {desc} (${amount} USD)",
+                        "申請日期": str(exp_date),
+                        "當前關卡": "關卡 1：主管審核",
+                        "狀態": "🟡 待簽核",
+                        "簽核歷程": []
+                    })
+
+                    st.success(f"✅ 成功建立申請單！單號：{new_id}，已發起簽核單號：APV-{new_id}")
                     st.rerun()
 
         st.markdown("---")
 
+        # 📋 零用金歷史紀錄與 🗑️ 刪除
         st.markdown("### 📋 歷史申請紀錄")
         if st.session_state.ga_petty_cash_data:
-            df_pc = pd.DataFrame(st.session_state.ga_petty_cash_data)
-            st.dataframe(df_pc, use_container_width=True)
+            st.dataframe(pd.DataFrame(st.session_state.ga_petty_cash_data), use_container_width=True)
 
             with st.expander("🗑️ 刪除或管理特定單據"):
                 col_del_1, col_del_2 = st.columns([3, 1])
@@ -252,23 +269,25 @@ def render_general_affairs_page(sub_option, lang):
                         st.success(f"已成功刪除單據：{selected_id}")
                         st.rerun()
         else:
-            st.warning("目前尚無任何零用金申請紀錄，請透過上方表單新增。")
+            st.warning("目前尚無任何零用金申請紀錄。")
 
     # ----------------------------------------------------
-    # 📄 4. 行政公文與合同管理
+    # 📄 5. 行政公文與合同管理 (新增/刪除/預警)
     # ----------------------------------------------------
-    else:
+    elif "公文" in sub_option or "合同" in sub_option or "Contracts" in sub_option:
         st.subheader("📄 行政公文與合同管理")
-        st.info("💡 集中管理全公司之行政公文、租賃合約、廠商合作協議及智慧財產權文件。")
+        st.info("💡 集中管理全公司之行政公文、租賃合約與廠商合作協議。")
 
-        c1, c2, c3 = st.columns(3)
         contracts = st.session_state.ga_contract_data
         total_cnt = len(contracts)
         expiring_cnt = sum(1 for c in contracts if "即將到期" in c["狀態"])
+
+        c1, c2, c3 = st.columns(3)
         c1.metric("總列管合同/公文數", f"{total_cnt} 件")
         c2.metric("30天內即將到期", f"{expiring_cnt} 件", delta_color="inverse")
         c3.metric("系統告警狀態", "🟢 正常" if expiring_cnt == 0 else "⚠️ 需注意到期日")
 
+        # ➕ 新增合同/公文
         with st.expander("➕ 登記新合同 / 行政公文", expanded=True):
             with st.form("form_add_contract", clear_on_submit=True):
                 col_a, col_b, col_c = st.columns(3)
@@ -281,7 +300,6 @@ def render_general_affairs_page(sub_option, lang):
                     sign_date = st.date_input("簽署/發文日期", value=date.today())
                 with col_c:
                     end_date = st.date_input("合約到期日", value=date(2027, 12, 31))
-                    uploaded_file = st.file_uploader("上傳合同掃描檔 (PDF/Word)", type=["pdf", "docx", "doc"])
 
                 btn_add_doc = st.form_submit_button("📥 儲存並建立文件檔案", type="primary")
 
@@ -316,10 +334,10 @@ def render_general_affairs_page(sub_option, lang):
 
         st.markdown("---")
 
+        # 📋 合同清單與 🗑️ 刪除
         st.markdown("### 📋 合同與行政公文列管清單")
         if st.session_state.ga_contract_data:
-            df_contract = pd.DataFrame(st.session_state.ga_contract_data)
-            st.dataframe(df_contract, use_container_width=True)
+            st.dataframe(pd.DataFrame(st.session_state.ga_contract_data), use_container_width=True)
 
             with st.expander("🗑️ 刪除或結案特定合同/公文"):
                 col_del_1, col_del_2 = st.columns([3, 1])
@@ -338,4 +356,96 @@ def render_general_affairs_page(sub_option, lang):
                         st.success(f"已成功刪除文件：{selected_doc_id}")
                         st.rerun()
         else:
-            st.warning("目前尚無任何合同或行政公文紀錄，請透過上方表單新增。")
+            st.warning("目前尚無任何合同或行政公文紀錄。")
+
+    # ----------------------------------------------------
+    # 📑 6. 總務與簽核審核中心 (電子簽核 Workflow)
+    # ----------------------------------------------------
+    else:
+        st.subheader("📑 總務與簽核審核中心")
+        st.info("💡 跨部門電子簽核關卡、待辦單據審核與簽核歷史歷程。")
+
+        queue = st.session_state.approval_queue
+        pending_items = [item for item in queue if "待簽核" in item["狀態"]]
+
+        col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+        col_kpi1.metric("⌛ 待審核單據總數", f"{len(pending_items)} 筆")
+        col_kpi2.metric("🟢 已核准單據", f"{sum(1 for i in queue if '已核准' in i['狀態'])} 筆")
+        col_kpi3.metric("🔴 已駁回單據", f"{sum(1 for i in queue if '已駁回' in i['狀態'])} 筆")
+
+        st.markdown("---")
+        st.markdown("### 📥 待審核單據列表")
+
+        if pending_items:
+            for idx, item in enumerate(pending_items):
+                with st.expander(f"📄 [{item['簽核單號']}] {item['來源模組']} — {item['申請項目']} (申請人: {item['申請人']})", expanded=(idx==0)):
+                    c_a, c_b = st.columns(2)
+                    with c_a:
+                        st.write(f"**申請日期：** {item['申請日期']}")
+                        st.write(f"**來源模組：** {item['來源模組']}")
+                        st.write(f"**當前審核關卡：** `{item['當前關卡']}`")
+                    with c_b:
+                        st.write(f"**申請人：** {item['申請人']}")
+                        st.write(f"**申請詳情：** {item['申請項目']}")
+
+                    if item["簽核歷程"]:
+                        st.markdown("**📜 歷史簽核紀錄：**")
+                        for log in item["簽核歷程"]:
+                            st.caption(f"• {log['時間']} | {log['簽核人']} : {log['動作']} — 意見: {log['意見']}")
+
+                    st.markdown("---")
+                    # ✍️ 執行簽核動作
+                    with st.form(f"form_approval_{item['簽核單號']}"):
+                        user_role = st.session_state.user_info["role"]
+                        user_name = st.session_state.user_info["name"]
+                        
+                        st.write(f"**當前簽核執行人：** {user_name} ({user_role})")
+                        comment = st.text_input("審核意見 / 備註", placeholder="請輸入同意或駁回之原因...")
+                        
+                        btn_c1, btn_c2, _ = st.columns([1, 1, 2])
+                        with btn_c1:
+                            btn_approve = st.form_submit_button("🟢 同意 (Approve)", type="primary")
+                        with btn_c2:
+                            btn_reject = st.form_submit_button("🔴 駁回 (Reject)")
+
+                        if btn_approve:
+                            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+                            item["簽核歷程"].append({
+                                "簽核人": f"{user_name} ({user_role})",
+                                "動作": "🟢 同意",
+                                "時間": now_str,
+                                "意見": comment if comment else "同意辦理"
+                            })
+                            item["狀態"] = "🟢 已核准"
+                            
+                            # 連動更新零用金狀態
+                            for pc in st.session_state.ga_petty_cash_data:
+                                if f"APV-{pc['單號']}" == item['簽核單號']:
+                                    pc['狀態'] = "🟢 已核銷"
+
+                            st.success(f"✅ 單號 {item['簽核單號']} 已順利核准！")
+                            st.rerun()
+
+                        if btn_reject:
+                            now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+                            item["簽核歷程"].append({
+                                "簽核人": f"{user_name} ({user_role})",
+                                "動作": "🔴 駁回",
+                                "時間": now_str,
+                                "意見": comment if comment else "退回重審"
+                            })
+                            item["狀態"] = "🔴 已駁回"
+
+                            for pc in st.session_state.ga_petty_cash_data:
+                                if f"APV-{pc['單號']}" == item['簽核單號']:
+                                    pc['狀態'] = "🔴 已駁回"
+
+                            st.error(f"❌ 單號 {item['簽核單號']} 已駁回！")
+                            st.rerun()
+        else:
+            st.success("🎉 目前沒有任何待您審核的單據！")
+
+        st.markdown("---")
+        st.markdown("### 📜 全系統歷史簽核總覽")
+        if st.session_state.approval_queue:
+            st.dataframe(pd.DataFrame(st.session_state.approval_queue), use_container_width=True)
