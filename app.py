@@ -3,9 +3,10 @@ import pandas as pd
 import modules.executive_dashboard as exec_dash
 
 # ----------------------------------------------------
-# 🔐 1. 企業使用者帳號資料庫 (模擬後端安全資料庫)
+# 🔐 1. 企業使用者帳號資料庫 (保留原本 Admin 與各部門帳號)
 # ----------------------------------------------------
 USER_DB = {
+    "admin": {"name": "系統管理員 (System Admin)", "pass": "admin123", "role": "ADMIN", "title": "💻 系統管理員"},
     "gm01": {"name": "張總經理", "pass": "gm123", "role": "GM", "title": "👑 董事長 / 總經理"},
     "cfo01": {"name": "陳財務長", "pass": "cfo123", "role": "CFO", "title": "💵 財務主管"},
     "acc01": {"name": "林會計", "pass": "acc123", "role": "ACCOUNTANT", "title": "🧾 財務會計"},
@@ -18,6 +19,10 @@ USER_DB = {
 # 🔐 2. 職務與授權頁面對照表 (Role-Based Access Control)
 # ----------------------------------------------------
 ROLE_PERMISSIONS = {
+    "ADMIN": {
+        "depts": ["📈 營運戰情室 (Executive)", "💵 財務 (Finance)", "👥 人事/行政 (HR & Admin)", "💼 業務/行銷 (Sales & Marketing)", "⚒️ 研發/技術 (R&D & Engineering)", "🏭 廠務/設備 (Plant & IoT)", "💻 資訊/IT (IT & System Admin)"],
+        "fin_subs": ["📈 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)", "🏢 總務管理 (GA)"]
+    },
     "GM": {
         "depts": ["📈 營運戰情室 (Executive)", "💵 財務 (Finance)", "👥 人事/行政 (HR & Admin)", "💼 業務/行銷 (Sales & Marketing)", "⚒️ 研發/技術 (R&D & Engineering)", "🏭 廠務/設備 (Plant & IoT)", "💻 資訊/IT (IT & System Admin)"],
         "fin_subs": ["📈 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)", "🏢 總務管理 (GA)"]
@@ -114,7 +119,7 @@ def main():
         
         col_login, col_tip = st.columns([1, 1])
         with col_login:
-            account = st.text_input("請輸入員工帳號 (Account)：")
+            account = st.text_input("請輸入員工/管理員帳號 (Account)：")
             password = st.text_input("請輸入登入密碼 (Password)：", type="password")
             
             if st.button("🚀 登入系統", type="primary"):
@@ -127,7 +132,8 @@ def main():
 
         with col_tip:
             st.info("""
-            💡 **測試帳號密碼指引 (測試不同職務權限)：**
+            💡 **測試帳號密碼指引：**
+            * **admin** / `admin123` ：系統管理員（完整最高存取權限）
             * **gm01** / `gm123` ：張總經理（全部部門權限）
             * **cfo01** / `cfo123` ：陳財務長（財務與總務全部權限）
             * **acc01** / `acc123` ：林會計（僅財務權限，無總務）
