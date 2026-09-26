@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import google.generativeai as genai
+from datetime import datetime, date
 
 # ----------------------------------------------------
 # 🌐 營運戰情室多語系字典 (i18n) - 完全保留
@@ -245,7 +246,7 @@ def render_financial_ar_ap_stats():
     st.dataframe(pd.DataFrame(ar_ap_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 🧮 5. 動態計算引擎：從底層營運算式自動運算匯總「綜合損益表」
+# 🧮 5. 動態計算引擎：從底層營運算式自動運算匯總「綜合損益表」 (包含連動全系統 Session State)
 # ----------------------------------------------------
 def render_vpsh_core_reports():
     st.markdown("### 📊 VPSH 高階八大財務與營運決策戰情報表 (USD)")
@@ -258,22 +259,25 @@ def render_vpsh_core_reports():
         shoe_cost_per_set = c_p3.number_input("鞋款生產成本/套 ($ USD)", min_value=0.0, value=42.0, step=1.0)
 
     # ----------------------------------------------------
-    # 動態算式計算 logic
+    # 動態算式計算 (自動勾稽連動 Session State 系統資料庫)
     # ----------------------------------------------------
-    # 1. 營業收入
-    revenue = sales_units * unit_price
+    # 1. 營業收入 (結合模擬試算與系統已核准之報價單/訂單)
+    sys_revenue = sum(q.get("金額 (USD)", 0.0) for q in st.session_state.get("quotations_data", []) if "成交" in q.get("狀態", ""))
+    revenue = (sales_units * unit_price) + sys_revenue
 
-    # 2. 營業成本
+    # 2. 營業成本 (結合 VPSH 算式與總務/生產採購單)
+    sys_po_cost = sum(p.get("預估金額 (USD)", 0.0) for p in st.session_state.get("ga_purchase_data", []) if "核准" in p.get("狀態", ""))
     cost_shoes = sales_units * shoe_cost_per_set  # $9拖鞋 + $15運動鞋 + $18休閒鞋 = $42
     cost_coffee_hub = sales_units * 0.694 * 60 * 0.25
     cost_coffee_f2b = sales_units * 0.306 * 30 * 0.50
-    total_cogs = cost_shoes + cost_coffee_hub + cost_coffee_f2b
+    total_cogs = cost_shoes + cost_coffee_hub + cost_coffee_f2b + sys_po_cost
 
     # 3. 銷貨毛利
     gross_profit = revenue - total_cogs
     gross_margin = (gross_profit / revenue * 100) if revenue > 0 else 0
 
-    # 4. 營業費用
+    # 4. 營業費用 (結合 VPSH 算式與總務零用金/維修費用)
+    sys_petty_cost = sum(pc.get("金額 (USD)", 0.0) for pc in st.session_state.get("ga_petty_cash_data", []) if "核銷" in pc.get("狀態", "") or "核准" in pc.get("狀態", ""))
     exp_salary = 20000 * 12  # 8 人團隊
     exp_rent = 36000 * 12    # 首爾門市
     exp_f2c = 11616 * 64.55
@@ -287,7 +291,7 @@ def render_vpsh_core_reports():
 
     total_opex = (exp_salary + exp_rent + exp_f2c + exp_f2b + exp_bm3 +
                   exp_recovery_fund + exp_donations + exp_utilities +
-                  exp_handling + exp_depreciation)
+                  exp_handling + exp_depreciation + sys_petty_cost)
 
     # 5. 營業利益
     ebit = gross_profit - total_opex
@@ -325,18 +329,18 @@ def render_vpsh_core_reports():
     # 一、動態計算匯總之綜合損益表 (Income Statement)
     # ----------------------------------------------------
     with r_tab1:
-        st.subheader("一、 綜合損益表 (Income Statement) - 由底層營運算式即時動態加總 (USD)")
+        st.subheader("一、 綜合損益表 (Income Statement) - 由底層營運算式與全系統動態即時加總 (USD)")
 
         dynamic_income_data = [
             {
                 "項目 (Item)": "營業收入 (Revenue)",
                 "金額 (USD)": f"${revenue:,.0f}",
-                "計算說明 / 底層營運明細": f"總銷量 {sales_units:,} 套 × ${unit_price:.2f}/套"
+                "計算說明 / 底層營運明細": f"銷量 {sales_units:,} 套 × ${unit_price:.2f}/套 + 系統成交單 ${sys_revenue:,.0f}"
             },
             {
                 "項目 (Item)": "營業成本 (Cost of Goods Sold)",
                 "金額 (USD)": f"(${total_cogs:,.0f})",
-                "計算說明 / 底層營運明細": f"以下三項鞋款與咖啡生產/補貼成本加總："
+                "計算說明 / 底層營運明細": f"包含鞋款、咖啡補貼與系統採購單 (${sys_po_cost:,.0f})"
             },
             {
                 "項目 (Item)": "  [-] VIP套裝生產成本 cost:shoes",
@@ -354,6 +358,11 @@ def render_vpsh_core_reports():
                 "計算說明 / 底層營運明細": f"{sales_units:,} 套 × 30.6% × 30杯 × $0.50/杯"
             },
             {
+                "項目 (Item)": "  [-] 全系統採購與進貨成本 (System PO)",
+                "金額 (USD)": f"(${sys_po_cost:,.0f})",
+                "計算說明 / 底層營運明細": f"總務部與廠區簽核通過之採購單據"
+            },
+            {
                 "項目 (Item)": "銷貨毛利 (Gross Profit)",
                 "金額 (USD)": f"${gross_profit:,.0f}",
                 "計算說明 / 底層營運明細": f"營業收入 ${revenue:,.0f} - 營業成本 ${total_cogs:,.0f} (毛利率: {gross_margin:.2f}%)"
@@ -361,7 +370,7 @@ def render_vpsh_core_reports():
             {
                 "項目 (Item)": "營業費用 (Operating Expenses)",
                 "金額 (USD)": f"(${total_opex:,.0f})",
-                "計算說明 / 底層營運明細": f"包含人事、租金、渠道分潤、公益基金、金流、水電與折舊"
+                "計算說明 / 底層營運明細": f"包含人事、租金、渠道分潤、公益基金、金流、零用金 (${sys_petty_cost:,.0f}) 與折舊"
             },
             {
                 "項目 (Item)": "  [-] 人事薪資費用 (Salary)",
@@ -399,6 +408,11 @@ def render_vpsh_core_reports():
                 "計算說明 / 底層營運明細": f"{sales_units:,} 套 × $5.00/套 (公益提撥)"
             },
             {
+                "項目 (Item)": "  [-] 全系統總務零用金與小額行政報銷",
+                "金額 (USD)": f"(${sys_petty_cost:,.0f})",
+                "計算說明 / 底層營運明細": "來自總務部已核銷之車馬費、快遞費與雜項"
+            },
+            {
                 "項目 (Item)": "  [-] 水電費 Water and electricity fees",
                 "金額 (USD)": f"(${exp_utilities:,.0f})",
                 "計算說明 / 底層營運明細": "$1,250/月 × 12個月"
@@ -406,7 +420,7 @@ def render_vpsh_core_reports():
             {
                 "項目 (Item)": "  [-] 支付金流手續費 handling fee",
                 "金額 (USD)": f"(${exp_handling:,.0f})",
-                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × ${unit_price:.0f} × 80% (Momo Pay) × 3% 手續費 (${(unit_price*0.8*0.03):.2f}/套)"
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × ${unit_price:.0f} × 80% (Momo Pay) × 3% 手續費"
             },
             {
                 "項目 (Item)": "  [-] 折舊與攤提費用 depreciation",
@@ -588,7 +602,7 @@ def render_plant_oee_kpi():
     st.dataframe(pd.DataFrame(oee_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 模組進入點
+# 🚀 模組入口函式
 # ----------------------------------------------------
 def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)", lang=None):
     L = get_exec_lang_dict(lang)
@@ -666,7 +680,7 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
     with tab2:
         render_financial_ar_ap_stats()
 
-    # 分頁 3：動態計算匯總之 VPSH 高階八大財務報表
+    # 分頁 3：動態計算匯總之 VPSH 高階八大財務報表 (已整合系統資料庫連動)
     with tab3:
         render_vpsh_core_reports()
 
