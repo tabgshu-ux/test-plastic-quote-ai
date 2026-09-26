@@ -51,7 +51,7 @@ def init_db():
         UNIQUE(user_id, module_name)
     );
 
-    -- 5. IoT 設備即時連線 Log 表 (iot_device_logs) - 新增
+    -- 5. IoT 設備即時連線 Log 表 (iot_device_logs)
     CREATE TABLE IF NOT EXISTS iot_device_logs (
         id SERIAL PRIMARY KEY,
         device_id VARCHAR(50) NOT NULL,
@@ -113,8 +113,10 @@ def init_db():
         asset_name VARCHAR(100) NOT NULL,
         category VARCHAR(50) NOT NULL,
         factory_location VARCHAR(20) NOT NULL,
-        status VARCHAR(20) DEFAULT '在用',
+        keeper VARCHAR(100),
+        status VARCHAR(20) DEFAULT '🟢 使用中',
         purchase_date DATE,
+        scrap_date DATE,
         purchase_cost NUMERIC(15, 2),
         currency VARCHAR(10) DEFAULT 'USD',
         specifications JSONB,
@@ -133,12 +135,79 @@ def init_db():
         technician VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- ====================================================
+    # 🏢 總務部 (GA) 與 簽核中心 (Workflow) 擴充資料表
+    -- ====================================================
+
+    -- 12. 總務用品採購與請購單表 (ga_procurements) - 新增
+    CREATE TABLE IF NOT EXISTS ga_procurements (
+        po_id VARCHAR(50) PRIMARY KEY,
+        item_name VARCHAR(150) NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        quantity INT DEFAULT 1,
+        estimated_cost NUMERIC(12,2) DEFAULT 0.00,
+        dept_name VARCHAR(50),
+        applicant VARCHAR(100) NOT NULL,
+        status VARCHAR(30) DEFAULT '🟡 簽核中',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 13. 零用金與行政費用報銷表 (ga_petty_cash) - 新增
+    CREATE TABLE IF NOT EXISTS ga_petty_cash (
+        pc_id VARCHAR(50) PRIMARY KEY,
+        apply_date DATE NOT NULL,
+        applicant VARCHAR(100) NOT NULL,
+        expense_type VARCHAR(50) NOT NULL,
+        amount NUMERIC(12,2) NOT NULL,
+        currency VARCHAR(10) DEFAULT 'USD',
+        description TEXT,
+        status VARCHAR(30) DEFAULT '🟡 簽核中',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 14. 行政公文與合同列管表 (ga_contracts) - 新增
+    CREATE TABLE IF NOT EXISTS ga_contracts (
+        contract_id VARCHAR(50) PRIMARY KEY,
+        doc_type VARCHAR(50) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        partner_unit VARCHAR(150) NOT NULL,
+        sign_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        owner VARCHAR(100),
+        status VARCHAR(30) DEFAULT '🟢 有效中',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 15. 電子簽核審核中心佇列主檔 (approval_queue) - 新增
+    CREATE TABLE IF NOT EXISTS approval_queue (
+        approval_id VARCHAR(50) PRIMARY KEY,
+        source_module VARCHAR(100) NOT NULL,
+        applicant VARCHAR(100) NOT NULL,
+        item_summary TEXT NOT NULL,
+        apply_date DATE DEFAULT CURRENT_DATE,
+        current_step VARCHAR(100) DEFAULT '關卡 1：主管審核',
+        status VARCHAR(30) DEFAULT '🟡 待簽核',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- 16. 電子簽核歷程 Log 明細表 (approval_logs) - 新增
+    CREATE TABLE IF NOT EXISTS approval_logs (
+        id SERIAL PRIMARY KEY,
+        approval_id VARCHAR(50) REFERENCES approval_queue(approval_id) ON DELETE CASCADE,
+        reviewer VARCHAR(100) NOT NULL,
+        reviewer_role VARCHAR(50),
+        action VARCHAR(20) NOT NULL, -- '🟢 同意' 或 '🔴 駁回'
+        comments TEXT,
+        reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
     """
+    
     cur.execute(create_tables_sql)
     conn.commit()
     cur.close()
     conn.close()
-    print("✅ 全套 AI ERP 資料庫（含 IoT 設備監控、動態廠區、權限管理與財務）Schema 初始化完成！")
+    print("✅ 全套 AI ERP 資料庫（含 IoT 設備監控、總務部 GA、電子簽核 Workflow、權限管理與財務）Schema 初始化完成！")
 
 if __name__ == "__main__":
     init_db()
