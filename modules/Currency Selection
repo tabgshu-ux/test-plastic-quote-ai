@@ -1,1 +1,55 @@
+import streamlit as st
 
+def render_pr_form():
+    st.subheader("📝 填寫請購單 (PR) — 支援當地原幣輸入")
+
+    # 定義常用跨國幣別與對 USD 的參考匯率（可從 DB 或 API 即時抓取）
+    EXCHANGE_RATES = {
+        "VND (越南盾)": {"symbol": "₫", "to_usd": 0.000040},
+        "TWD (新台幣)": {"symbol": "NT$", "to_usd": 0.0315},
+        "RMB (人民幣)": {"symbol": "¥", "to_usd": 0.1400},
+        "USD (美金)": {"symbol": "$", "to_usd": 1.0000}
+    }
+
+    col_dept, col_curr = st.columns([2, 1])
+    with col_dept:
+        dept = st.selectbox("需求部門", ["生產一課 (射出)", "總務部 (GA)", "研發部 (R&D)", "品質保證部 (QA)"])
+    with col_curr:
+        # 🟢 讓使用者選擇當地幣別
+        selected_currency = st.selectbox("請購幣別 (Currency)", list(EXCHANGE_RATES.keys()), index=0)
+
+    item_name = st.text_input("請購品項名稱", value="ABS 工程塑膠顆粒 (20 噸)")
+    
+    col_qty, col_price = st.columns([1, 2])
+    with col_qty:
+        quantity = st.number_input("請購數量", min_value=1, value=20)
+    with col_price:
+        # 🟢 根據選擇的幣別提示輸入當地原幣單價
+        curr_info = EXCHANGE_RATES[selected_currency]
+        unit_price = st.number_input(f"預估單價 ({selected_currency})", min_value=0.0, value=30000000.0 if "VND" in selected_currency else 1200.0, step=100.0)
+
+    # 計算當地原幣總金額與換算 USD 金額
+    total_local_amount = quantity * unit_price
+    total_usd_amount = total_local_amount * curr_info["to_usd"]
+
+    st.success(
+        f"✅ 預估當地總金額：**{curr_info['symbol']} {total_local_amount:,.2f} {selected_currency.split()[0]}** "
+        f"（折合美金約 **${total_usd_amount:,.2f} USD**）"
+    )
+
+    if st.button("🚀 提交 PR 請購單並發送電子簽核", type="primary"):
+        # 儲存至 Session State 或資料庫
+        pr_record = {
+            "dept": dept,
+            "item_name": item_name,
+            "quantity": quantity,
+            "currency": selected_currency.split()[0],
+            "unit_price": unit_price,
+            "total_local_amount": total_local_amount,
+            "total_usd_amount": total_usd_amount,
+            "status": "🟡 簽核中"
+        }
+        if "pr_list" not in st.session_state:
+            st.session_state["pr_list"] = []
+        st.session_state["pr_list"].append(pr_record)
+        st.toast("✅ 請購單已成功提交，已攜帶當地幣別數據進入簽核流程！")
