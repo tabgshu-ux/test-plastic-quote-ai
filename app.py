@@ -1,229 +1,261 @@
 import streamlit as st
-import pandas as pd
-import modules.executive_dashboard as exec_dash
+
+st.set_page_config(
+    page_title="Multinational Injection Molding AI ERP",
+    page_icon="🏭",
+    layout="wide"
+)
 
 # ----------------------------------------------------
-# 🔐 1. 企業使用者帳號資料庫 (保留原本 Admin 與各部門帳號)
+# 🔐 1. 初始化使用者帳號資料庫與登入驗證狀態
 # ----------------------------------------------------
-USER_DB = {
-    "admin": {"name": "系統管理員 (System Admin)", "pass": "admin123", "role": "ADMIN", "title": "💻 系統管理員"},
-    "gm01": {"name": "張總經理", "pass": "gm123", "role": "GM", "title": "👑 董事長 / 總經理"},
-    "cfo01": {"name": "陳財務長", "pass": "cfo123", "role": "CFO", "title": "💵 財務主管"},
-    "acc01": {"name": "林會計", "pass": "acc123", "role": "ACCOUNTANT", "title": "🧾 財務會計"},
-    "ga01": {"name": "李總務主管", "pass": "ga123", "role": "GA_MANAGER", "title": "🏢 總務主管"},
-    "ga02": {"name": "王總務專員", "pass": "ga456", "role": "GA_STAFF", "title": "📋 總務專員"},
-    "pm01": {"name": "黃廠長", "pass": "pm123", "role": "PLANT_MANAGER", "title": "🏭 廠務主管"}
-}
+if "user_database" not in st.session_state:
+    st.session_state.user_database = {
+        "admin": {"password": "admin123", "name": "Alex Chen (System Admin)", "role": "Super Admin"},
+        "boss": {"password": "boss123", "name": "陳董事長 (Chairman)", "role": "Executive"},
+        "gm": {"password": "gm123", "name": "林總經理 (General Manager)", "role": "Executive"},
+        "hr_manager": {"password": "hr123", "name": "張人事主管 (HR Manager)", "role": "HR & Admin"},
+        "accountant": {"password": "fin123", "name": "王財務會計 (Accountant)", "role": "Finance"},
+        "alex": {"password": "alex123", "name": "Alex Chen (Sales)", "role": "Sales"},
+    }
+
+# 預設為未登入（畫面重整即自動要求重新登入）
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
+
+if "lang" not in st.session_state:
+    st.session_state.lang = "繁體中文"
 
 # ----------------------------------------------------
-# 🔐 2. 職務與授權頁面對照表 (Role-Based Access Control)
+# 🔓 2. 未登入身分驗證攔截區（未登入前完全中斷，防止洩漏介面）
 # ----------------------------------------------------
-ROLE_PERMISSIONS = {
-    "ADMIN": {
-        "depts": ["📈 營運戰情室 (Executive)", "💵 財務 (Finance)", "👥 人事/行政 (HR & Admin)", "💼 業務/行銷 (Sales & Marketing)", "⚒️ 研發/技術 (R&D & Engineering)", "🏭 廠務/設備 (Plant & IoT)", "💻 資訊/IT (IT & System Admin)"],
-        "fin_subs": ["📈 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)", "🏢 總務管理 (GA)"]
+if not st.session_state.logged_in:
+    st.title("🏭 跨國塑膠/橡膠射出成型 — 企業級 AI ERP 系統")
+    st.caption("請輸入您的企業帳號與密碼進行身分驗證（畫面重整將自動要求重新登入）")
+
+    col_login, _ = st.columns([1, 1])
+    with col_login:
+        with st.form("login_form_main"):
+            username_input = st.text_input("帳號 / Username", value="admin").strip().lower()
+            password_input = st.text_input("密碼 / Password", type="password", value="admin123").strip()
+            submit_button = st.form_submit_button("🔑 登入系統", type="primary")
+
+            if submit_button:
+                db = st.session_state.user_database
+                if username_input in db and db[username_input]["password"] == password_input:
+                    st.session_state.logged_in = True
+                    st.session_state.user_info = db[username_input]
+                    st.success(f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}")
+                    try:
+                        st.rerun()
+                    except Exception:
+                        pass
+                else:
+                    st.error("❌ 帳號或密碼錯誤，請重新輸入！")
+
+        st.info("""
+            💡 **測試帳號清單：**
+            - **最高主管**：`admin` / `admin123` 或 `boss` / `boss123`
+            - **財務會計**：`accountant` / `fin123`
+            - **人事主管**：`hr_manager` / `hr123`
+            - **業務專員**：`alex` / `alex123`
+            """)
+    st.stop()  # ⛔ 強制中斷！未登入者完全無法載入與執行下方任何選單與模組程式碼
+
+# ----------------------------------------------------
+# 🌐 全球多語系完整字典 (i18n) — 部門順序依企業認知重要度排列
+# ----------------------------------------------------
+I18N = {
+    "繁體中文": {
+        "dept_select": "請選擇部門/模組分類：",
+        "depts": [
+            "📈 營運戰情室 (Executive)",
+            "🧾 財務 (Finance)",
+            "👥 人事/行政 (HR & Admin)",
+            "💼 業務/行銷 (Sales & Marketing)",
+            "🛠️ 研發/技術 (R&D & Engineering)",
+            "🏭 廠務/設備 (Plant & IoT)",
+            "💻 資訊/IT (IT & System Admin)"
+        ],
+        "sub_exec": ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
+        "sub_finance": [
+            "🛒 採購與應付帳款系統 (Procurement & AP)", 
+            "📦 訂單與應收帳款系統 (Sales Orders & AR)", 
+            "📄 越南電子發票 XML 解析與登錄",
+            "📧 通用信箱電子發票讀取 (IMAP)",
+            "📊 電子發票張數監控與加購預警",
+            "🌐 全球跨國稅務 AI 智慧問答"
+        ],
+        "sub_hr": ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
+        "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
+        "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
+        "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
+        "sub_it": ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"]
     },
-    "GM": {
-        "depts": ["📈 營運戰情室 (Executive)", "💵 財務 (Finance)", "👥 人事/行政 (HR & Admin)", "💼 業務/行銷 (Sales & Marketing)", "⚒️ 研發/技術 (R&D & Engineering)", "🏭 廠務/設備 (Plant & IoT)", "💻 資訊/IT (IT & System Admin)"],
-        "fin_subs": ["📈 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)", "🏢 總務管理 (GA)"]
+    "English": {
+        "dept_select": "Select Department / Module:",
+        "depts": [
+            "📈 Executive Dashboard",
+            "🧾 Finance & Accounting",
+            "👥 HR & Administration",
+            "💼 Sales & Marketing",
+            "🛠️ R&D & Engineering",
+            "🏭 Plant & IoT Engineering",
+            "💻 IT & System Admin"
+        ],
+        "sub_exec": ["🌐 All Markets", "🇹🇼 Taiwan", "🇨🇳 China/HK", "🇺🇸 USA", "🇻🇳 Vietnam", "🛢️ Commodities & FX"],
+        "sub_finance": [
+            "🛒 Procurement & Accounts Payable (AP)", 
+            "📦 Sales Orders & Accounts Receivable (AR)", 
+            "📄 Vietnam E-Invoice XML Parser",
+            "📧 Email Invoice Fetcher (IMAP)",
+            "📊 E-Invoice Quota Alert & Top-up",
+            "🌐 Global Tax & Compliance AI"
+        ],
+        "sub_hr": ["💰 Monthly Payroll & Deductions", "⏰ Biometric Clock-in Sync"],
+        "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
+        "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
+        "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
+        "sub_it": ["🏢 Global Sites & Subsidiaries", "👥 User Auth & Web Permissions", "🔒 Role-Based Access Control (RBAC)"]
     },
-    "CFO": {
-        "depts": ["💵 財務 (Finance)"],
-        "fin_subs": ["📈 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)", "🏢 總務管理 (GA)"]
-    },
-    "ACCOUNTANT": {
-        "depts": ["💵 財務 (Finance)"],
-        "fin_subs": ["📈 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"]
-    },
-    "GA_MANAGER": {
-        "depts": ["💵 財務 (Finance)", "👥 人事/行政 (HR & Admin)"],
-        "fin_subs": ["🏢 總務管理 (GA)"]
-    },
-    "GA_STAFF": {
-        "depts": ["💵 財務 (Finance)"],
-        "fin_subs": ["🏢 總務管理 (GA)"]
-    },
-    "PLANT_MANAGER": {
-        "depts": ["🏭 廠務/設備 (Plant & IoT)"],
-        "fin_subs": []
+    "Tiếng Việt": {
+        "dept_select": "Vui lòng chọn phòng ban/phân hệ:",
+        "depts": [
+            "📈 Phòng Điều Hành (Executive)",
+            "🧾 Tài Chính / Kế Toán",
+            "👥 Nhân Sự / Hành Chính",
+            "💼 Kinh Doanh / Marketing",
+            "🛠️ R&D / Kỹ Thuật",
+            "🏭 Quản Lý Nhà Máy & IoT",
+            "💻 Công Nghệ Thông Tin (IT)"
+        ],
+        "sub_exec": ["🌐 Tất cả thị trường", "🇹🇼 Đài Loan", "🇨🇳 Trung Quốc/HK", "🇺🇸 Mỹ", "🇻🇳 Việt Nam", "🛢️ Nguyên liệu & Tỷ giá"],
+        "sub_finance": [
+            "🛒 Quản lý Mua hàng & Phải trả (AP)", 
+            "📦 Đơn bán hàng & Phải thu (AR)", 
+            "📄 Phân tích Hóa đơn XML Việt Nam",
+            "📧 Đọc Hóa đơn qua Email (IMAP)",
+            "📊 Giám sát & Báo động số lượng HĐ",
+            "🌐 Tư vấn AI Thuế Quốc Tế"
+        ],
+        "sub_hr": ["💰 Lương hàng tháng & Chấm công", "⏰ Kết nối máy chấm công"],
+        "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
+        "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
+        "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
+        "sub_it": ["🏢 Quản lý Chi nhánh & Công ty con", "👥 Phân quyền người dùng", "🔒 Ma trận quyền (RBAC)"]
     }
 }
 
 # ----------------------------------------------------
-# 🏢 3. 總務 (General Affairs / GA) 模組頁面
+# 🛡️ 安全靜態與動態模組載入器
 # ----------------------------------------------------
-def render_general_affairs_module(user_info):
-    st.title("🏢 總務管理系統 (General Affairs / GA)")
-    st.caption(f"登入使用者：{user_info['name']} ({user_info['title']}) — 固定資產、零用金與辦公耗材")
+def load_module_function(module_name, func_names):
+    try:
+        mod = __import__(f"modules.{module_name}", fromlist=["*"])
+        for fname in func_names:
+            if hasattr(mod, fname):
+                func = getattr(mod, fname)
+                def safe_wrapper(*args, **kwargs):
+                    try:
+                        return func(*args, **kwargs)
+                    except TypeError:
+                        try:
+                            return func(args[0]) if len(args) > 0 else func()
+                        except TypeError:
+                            return func()
+                return safe_wrapper
+        return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到入口函式: {func_names}")
+    except Exception as e:
+        return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-    st.divider()
-
-    ga_tab1, ga_tab2, ga_tab3 = st.tabs([
-        "🛋️ 門市與辦公室固定資產",
-        "💵 零用金與日常費用報支",
-        "📦 總務耗材與辦公用品庫存"
-    ])
-
-    with ga_tab1:
-        st.subheader("🛋️ 固定資產與設備清冊 (Fixed Assets)")
-        fixed_assets = [
-            {"資產編號": "FA-2026-001", "資產名稱": "首爾門市自動咖啡機 (Hub)", "保管部門": "總務部", "存放地點": "首爾漢陽門市", "取得金額 (USD)": "$12,000", "耐用年限": "5年", "折舊狀態": "正常提撥中"},
-            {"資產編號": "FA-2026-002", "資產名稱": "行政區伺服器與網路設備", "保管部門": "資訊部/總務", "存放地點": "台灣總部機房", "取得金額 (USD)": "$8,500", "耐用年限": "3年", "折舊狀態": "正常提撥中"},
-            {"資產編號": "FA-2026-003", "資產名稱": "總部會客室沙發與高階桌椅", "保管部門": "總務部", "存放地點": "台灣總部 3F", "取得金額 (USD)": "$4,200", "耐用年限": "5年", "折舊狀態": "正常提撥中"}
-        ]
-        st.dataframe(pd.DataFrame(fixed_assets), use_container_width=True)
-
-    with ga_tab2:
-        st.subheader("💵 零用金申請與日常費用審核 (Petty Cash)")
-        col_pc1, col_pc2 = st.columns([2, 1])
-        with col_pc1:
-            petty_cash = [
-                {"單號": "PC-20260901", "申請日期": "2026-09-20", "申請人": "張專員", "項目說明": "漢陽門市清潔用品與洗滌劑採購", "金額 (USD)": "$120.00", "審核狀態": "🟢 已核銷"},
-                {"單號": "PC-20260905", "申請日期": "2026-09-24", "申請人": "李主管", "項目說明": "公務車加油與國道過路費", "金額 (USD)": "$85.00", "審核狀態": "🟡 待財務核決"}
-            ]
-            st.dataframe(pd.DataFrame(petty_cash), use_container_width=True)
-        with col_pc2:
-            st.markdown("##### ➕ 新增零用金報銷申請")
-            st.text_input("報銷項目名稱：", placeholder="例如：印表機碳粉匣採購")
-            st.number_input("申請金額 ($ USD)：", min_value=0.0, value=50.0, step=10.0)
-            if st.button("🚀 提交零用金申請", type="primary"):
-                st.success("✅ 申請單已成功送出至財務主管審核！")
-
-    with ga_tab3:
-        st.subheader("📦 總務耗材與辦公用品庫存 (GA Supplies)")
-        ga_supplies = [
-            {"品項名稱": "☕ 環保紙杯 (Hub門市專用)", "目前庫存": "12,000 個", "安全庫存": "3,000 個", "狀態": "🟢 充足"},
-            {"品項名稱": "📄 影印紙 A4 (雙面環保)", "目前庫存": "45 箱", "安全庫存": "10 箱", "狀態": "🟢 充足"}
-        ]
-        st.dataframe(pd.DataFrame(ga_supplies), use_container_width=True)
+# 載入所有功能模組（包含採購 AP 與訂單 AR）
+render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
+render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
+render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
+render_ap = load_module_function("procurement_ap", ["render_procurement_ap_page", "show", "main"])
+render_ar = load_module_function("sales_order_ar", ["render_sales_order_ar_page", "show", "main"])
+render_tax_ai = load_module_function("finance_tax", ["render_finance_tax_page", "show", "main"])
+render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
+render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
+render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
+render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 
 # ----------------------------------------------------
-# 🚀 4. 主程式與身份驗證 (Authentication & Main Flow)
+# 側邊欄 (Sidebar) 選單渲染
 # ----------------------------------------------------
-def main():
-    st.set_page_config(
-        page_title="Multinational ERP System",
-        page_icon="📈",
-        layout="wide"
-    )
+st.sidebar.title("🏭 AI ERP")
+st.sidebar.markdown("### 👤 User Status")
 
-    # 初始化 Session 登入狀態
-    if "user_account" not in st.session_state:
-        st.session_state["user_account"] = None
-
-    # ----------------------------------------------------
-    # 🔓 未登入狀態：強制顯示登入視窗
-    # ----------------------------------------------------
-    if st.session_state["user_account"] is None:
-        st.title("🔒 企業 ERP 跨國管理系統 — 使用者登入")
-        
-        col_login, col_tip = st.columns([1, 1])
-        with col_login:
-            account = st.text_input("請輸入員工/管理員帳號 (Account)：")
-            password = st.text_input("請輸入登入密碼 (Password)：", type="password")
-            
-            if st.button("🚀 登入系統", type="primary"):
-                if account in USER_DB and USER_DB[account]["pass"] == password:
-                    st.session_state["user_account"] = account
-                    st.toast(f"✅ 歡迎登入，{USER_DB[account]['name']}！")
-                    st.rerun()
-                else:
-                    st.error("❌ 帳號或密碼錯誤，請重新輸入！")
-
-        with col_tip:
-            st.info("""
-            💡 **測試帳號密碼指引：**
-            * **admin** / `admin123` ：系統管理員（完整最高存取權限）
-            * **gm01** / `gm123` ：張總經理（全部部門權限）
-            * **cfo01** / `cfo123` ：陳財務長（財務與總務全部權限）
-            * **acc01** / `acc123` ：林會計（僅財務權限，無總務）
-            * **ga01** / `ga123` ：李總務主管（僅總務與人事權限）
-            * **pm01** / `pm123` ：黃廠長（僅廠務設備權限）
-            """)
-        st.stop()
-
-    # ----------------------------------------------------
-    # 🔐 已登入狀態：取得當前使用者資訊與對應權限
-    # ----------------------------------------------------
-    user_account = st.session_state["user_account"]
-    user_info = USER_DB[user_account]
-    user_role = user_info["role"]
-    
-    permissions = ROLE_PERMISSIONS.get(user_role, {"depts": [], "fin_subs": []})
-    allowed_depts = permissions["depts"]
-    allowed_fin_subs = permissions["fin_subs"]
-
-    # 側邊欄：使用者資訊與登出按鈕
-    st.sidebar.markdown(f"👤 **登入身分**：{user_info['name']}")
-    st.sidebar.caption(f"職務：{user_info['title']}")
-    if st.sidebar.button("🚪 安全登出系統", type="secondary"):
-        st.session_state["user_account"] = None
+st.sidebar.success(f"🟢 **{st.session_state.user_info['name']}**")
+if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
+    st.session_state.logged_in = False
+    st.session_state.user_info = None
+    try:
         st.rerun()
+    except Exception:
+        pass
 
-    st.sidebar.divider()
+st.sidebar.markdown("---")
 
-    # 系統語言切換
-    st.sidebar.markdown("### 🌐 System Language")
-    lang = st.sidebar.selectbox(
-        "選擇語言 / Select Language",
-        ["繁體中文", "Tiếng Việt", "English", "简体中文", "Bahasa Indonesia"],
-        key="global_sys_lang"
-    )
-    st.session_state["lang"] = lang
+selected_lang = st.sidebar.selectbox(
+    "🌐 System Language:",
+    ["繁體中文", "Tiếng Việt", "English"],
+    key="fixed_lang_selector_key"
+)
 
-    st.sidebar.divider()
+st.session_state["lang"] = selected_lang
+lang_dict = I18N.get(selected_lang, I18N["繁體中文"])
+st.sidebar.markdown("---")
 
-    # ----------------------------------------------------
-    # 側邊欄：動態過濾選單（僅顯示該帳號授權之部門）
-    # ----------------------------------------------------
-    st.sidebar.markdown("### 📌 授權功能選單：")
+dept_options = lang_dict["depts"]
+selected_dept = st.sidebar.radio(
+    lang_dict["dept_select"],
+    options=dept_options,
+    key=f"sidebar_dept_radio_{selected_lang}"
+)
+st.sidebar.markdown("---")
+
+dept_idx = dept_options.index(selected_dept)
+
+# ----------------------------------------------------
+# 🔀 路由分流 (確保以 if 開頭，縮排完全對齊)
+# ----------------------------------------------------
+if dept_idx == 0:  # 📈 營運戰情室 (Executive)
+    sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key=f"sub_exec_{selected_lang}")
+    render_exec_db(sub_option, selected_lang)
+
+elif dept_idx == 1:  # 🧾 財務 (Finance)
+    sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
+    sub_idx = lang_dict["sub_finance"].index(sub_option)
     
-    selected_dept = st.sidebar.radio(
-        "選擇部門/模組：",
-        allowed_depts,
-        key="authenticated_dept_radio"
-    )
+    if sub_idx == 0:  # 🛒 採購與應付帳款 (Procurement & AP)
+        render_ap(sub_option, selected_lang)
+    elif sub_idx == 1:  # 📦 訂單與應收帳款 (Sales Orders & AR)
+        render_ar(sub_option, selected_lang)
+    elif sub_idx == 5:  # 全球稅務 AI
+        render_tax_ai(sub_option, selected_lang)
+    else:  # 電子發票管理
+        render_invoice(sub_option, selected_lang)
 
-    # ----------------------------------------------------
-    # 頁面主體渲染邏輯
-    # ----------------------------------------------------
-    if "📈 營運戰情室" in selected_dept:
-        exec_dash.render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)", lang=lang)
+elif dept_idx == 2:  # 👥 人事/行政 (HR & Admin)
+    sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
+    render_payroll(sub_option, selected_lang)
 
-    elif "💵 財務" in selected_dept:
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("#### 💵 授權財務與總務細項：")
+elif dept_idx == 3:  # 💼 業務/行銷 (Sales & Marketing)
+    sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key=f"sub_sales_{selected_lang}")
+    render_sales(sub_option, selected_lang)
 
-        selected_fin_sub = st.sidebar.radio(
-            "選擇細項：",
-            allowed_fin_subs,
-            key="authenticated_fin_sub_radio"
-        )
+elif dept_idx == 4:  # 🛠️ 研發/技術 (R&D & Engineering)
+    sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key=f"sub_rd_{selected_lang}")
+    render_asset(sub_option, selected_lang)
 
-        if "🏢 總務管理" in selected_fin_sub:
-            render_general_affairs_module(user_info)
-        else:
-            exec_dash.render_executive_dashboard_page(sub_option=selected_fin_sub, lang=lang)
+elif dept_idx == 5:  # 🏭 廠務/設備 (Plant & IoT)
+    sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key=f"sub_plant_{selected_lang}")
+    render_erp_db(sub_option, selected_lang)
 
-    elif "👥 人事/行政" in selected_dept:
-        st.title("👥 人事與行政管理系統 (HR & Admin)")
-        st.info(f"當前身分：{user_info['name']} ({user_info['title']}) — 專屬授權 HR 考勤、薪資發放與人員績效模組。")
-
-    elif "💼 業務/行銷" in selected_dept:
-        st.title("💼 業務與行銷管理系統 (Sales & CRM)")
-        st.info(f"當前身分：{user_info['name']} ({user_info['title']}) — 專屬授權 CRM 客戶訂單與經銷商渠道管理。")
-
-    elif "⚒️ 研發/技術" in selected_dept:
-        st.title("⚒️ 研發與技術管理系統 (R&D & Engineering)")
-        st.info(f"當前身分：{user_info['name']} ({user_info['title']}) — 專屬授權 3D 鞋型設計與自動化模具研發專案。")
-
-    elif "🏭 廠務/設備" in selected_dept:
-        st.title("🏭 廠務與自動化設備 MES 系統")
-        exec_dash.render_plant_oee_kpi()
-
-    elif "💻 資訊/IT" in selected_dept:
-        st.title("💻 資訊系統與權限管理 (IT & System Admin)")
-        st.info(f"當前身分：{user_info['name']} ({user_info['title']}) — 專屬授權 ERP 系統日誌與網路資安監控。")
-
-if __name__ == "__main__":
-    main()
+elif dept_idx == 6:  # 💻 資訊/IT (IT & System Admin)
+    sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key=f"sub_it_{selected_lang}")
+    render_user_mgmt(sub_option, selected_lang)
