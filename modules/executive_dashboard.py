@@ -110,7 +110,7 @@ def get_exec_lang_dict(lang_param=None):
     return EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
 
 # ----------------------------------------------------
-# 📊 1. 根據國家/區域切換的即時股票看板 (Metric Cards)
+# 📊 1. 股票與市場看板 (Metric Cards)
 # ----------------------------------------------------
 def render_market_stock_metrics(market_key):
     if "Taiwan" in market_key or "台灣" in market_key or "Đài Loan" in market_key:
@@ -148,7 +148,7 @@ def render_market_stock_metrics(market_key):
         col3.metric("LME 倫敦銅 (Copper)", "$9,250 USD", "+85.0 (+0.93%)")
         col4.metric("塑膠粒 PP 遠東區", "$980 USD/噸", "+12.0 (+1.24%)")
 
-    else:  # 全部市場 (All Markets)
+    else:
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("台積電 (2330.TW)", "$985 TWD", "+15.0 (+1.55%)")
         col2.metric("VN-Index (越南)", "1,280.5 點", "+8.2 (+0.64%)")
@@ -156,7 +156,7 @@ def render_market_stock_metrics(market_key):
         col4.metric("美金/越南盾 (USD/VND)", "25,420 VND", "-15.0 (-0.06%)")
 
 # ----------------------------------------------------
-# 📰 2. 近 7 天動態新聞資料庫 (含超連結 url)
+# 📰 2. 財經新聞資料庫
 # ----------------------------------------------------
 def get_mock_7day_news(market):
     if "Taiwan" in market or "台灣" in market or "Đài Loan" in market:
@@ -176,14 +176,6 @@ def get_mock_7day_news(market):
                 "source": "中央社 / CNA",
                 "sentiment": "🟡 中立 / Neutral",
                 "summary": "外資小幅淨流入，出口製造業利潤率受匯率變動影響有限，整體外貿環境維持溫和成長。"
-            },
-            {
-                "date": "2026-03-20",
-                "title": "塑膠與橡膠原物料價格小幅回升，加工廠預備提早鎖定 Q2 報價",
-                "url": "https://tw.stock.yahoo.com/news/plastic-raw-material-price-increase",
-                "source": "工商時報 / CTEE",
-                "sentiment": "🟡 關注 / Caution",
-                "summary": "塑膠粒 (PP/ABS) 進口成本略增 2.5%，建議業務部門報價時適當反映原料成本加價。"
             }
         ]
     elif "Vietnam" in market or "越南" in market or "Việt Nam" in market:
@@ -195,25 +187,6 @@ def get_mock_7day_news(market):
                 "source": "VnExpress / Vietnam News",
                 "sentiment": "🟢 看多 / Bullish",
                 "summary": "外資持續挹注平陽省與同奈省工業區，製造業擴廠動能強勁，帶動當地射出成型與周邊設備需求。"
-            },
-            {
-                "date": "2026-03-21",
-                "title": "Cục Thuế ban hành công văn mới về kiểm tra Hóa đơn điện tử và Thuế nhà thầu (FCT)",
-                "url": "https://baodautu.vn/kiem-tra-hoa-don-dien-tu-moi-nhat",
-                "source": "Báo Đầu Tư",
-                "sentiment": "🔴 警戒 / Alert",
-                "summary": "越南稅務局加強查核企業電子發票開立與外國承包商稅抵扣憑證，提醒財務人員備妥合約與匯款水單。"
-            }
-        ]
-    elif "USA" in market or "美國" in market or "Mỹ" in market:
-        return [
-            {
-                "date": "2026-03-23",
-                "title": "Fed Signals Potential Rate Adjustments as Inflation Moderates Near 2%",
-                "url": "https://finance.yahoo.com/news/fed-rate-cuts-update",
-                "source": "Wall Street Journal / Yahoo Finance",
-                "sentiment": "🟢 看多 / Bullish",
-                "summary": "美聯儲通膨指標顯著回落，美股科技與高端製造業板塊受資金追捧溫和上揚。"
             }
         ]
     else:
@@ -252,7 +225,7 @@ def ask_stock_ai_advisor(query_text, lang="繁體中文"):
         return f"❌ AI 回應異常: {str(e)}"
 
 # ----------------------------------------------------
-# 📊 4. 分頁二：全球廠區 AR/AP 財務統計
+# 📊 4. 全球廠區 AR/AP 財務統計
 # ----------------------------------------------------
 def render_financial_ar_ap_stats():
     st.markdown("### 📊 跨國集團全球廠區應收/應付帳款 (AR/AP) 總覽")
@@ -272,23 +245,73 @@ def render_financial_ar_ap_stats():
     st.dataframe(pd.DataFrame(ar_ap_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 📊 5. 新增：VPSH 高階 8 大財務與營運分析報表
+# 🧮 5. 動態計算引擎：從底層營運算式自動運算匯總「綜合損益表」
 # ----------------------------------------------------
 def render_vpsh_core_reports():
     st.markdown("### 📊 VPSH 高階八大財務與營運決策戰情報表 (USD)")
 
-    # 頂部 KPI 卡片
+    # 🎛️ 可調式高管參數設定選單（允許總經理模擬試算）
+    with st.expander("⚙️ 營運底層計算參數試算模組 (點擊展開可調整試算條件)", expanded=False):
+        c_p1, c_p2, c_p3 = st.columns(3)
+        sales_units = c_p1.number_input("總銷售套數 (VIP套裝)", min_value=1000, value=22320, step=1000)
+        unit_price = c_p2.number_input("VIP套裝銷售單價 ($ USD)", min_value=100.0, value=345.0, step=5.0)
+        shoe_cost_per_set = c_p3.number_input("鞋款生產成本/套 ($ USD)", min_value=10.0, value=42.0, step=1.0)
+
+    # ----------------------------------------------------
+    # 動態算式計算 logic
+    # ----------------------------------------------------
+    # 1. 營業收入
+    revenue = sales_units * unit_price
+
+    # 2. 營業成本
+    cost_shoes = sales_units * shoe_cost_per_set  # $9拖鞋 + $15運動鞋 + $18休閒鞋 = $42
+    cost_coffee_hub = sales_units * 0.694 * 60 * 0.25
+    cost_coffee_f2b = sales_units * 0.306 * 30 * 0.50
+    total_cogs = cost_shoes + cost_coffee_hub + cost_coffee_f2b
+
+    # 3. 銷貨毛利
+    gross_profit = revenue - total_cogs
+    gross_margin = (gross_profit / revenue * 100) if revenue > 0 else 0
+
+    # 4. 營業費用
+    exp_salary = 20000 * 12  # 8 人團隊
+    exp_rent = 36000 * 12    # 首爾門市
+    exp_f2c = 11616 * 64.55
+    exp_f2b = 10800 * 64.55
+    exp_bm3 = 0
+    exp_recovery_fund = sales_units * 17.25
+    exp_donations = sales_units * 5.0
+    exp_utilities = 1250 * 12
+    exp_handling = revenue * 0.80 * 0.03  # 80% Momo Pay × 3%
+    exp_depreciation = 3750 * 12
+
+    total_opex = (exp_salary + exp_rent + exp_f2c + exp_f2b + exp_bm3 +
+                  exp_recovery_fund + exp_donations + exp_utilities +
+                  exp_handling + exp_depreciation)
+
+    # 5. 營業利益
+    ebit = gross_profit - total_opex
+    ebit_margin = (ebit / revenue * 100) if revenue > 0 else 0
+
+    # 6. 所得稅與淨利
+    tax_rate = 0.20
+    tax_expense = ebit * tax_rate if ebit > 0 else 0
+    net_income = ebit - tax_expense
+    net_margin = (net_income / revenue * 100) if revenue > 0 else 0
+
+    # 頂部動態 KPI 卡片展示
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("營業收入 (Revenue)", "$7,700,400 USD", "22,320 套")
-    k2.metric("本期淨利 (Net Income)", "$2,759,928 USD", "淨利率 35.84%")
+    k1.metric("動態總營業收入", f"${revenue:,.0f} USD", f"{sales_units:,} 套")
+    k2.metric("動態本期淨利", f"${net_income:,.0f} USD", f"淨利率 {net_margin:.2f}%")
     k3.metric("期末現金餘額", "$3,900,928 USD", "流動性極佳")
     k4.metric("股權報酬率 (ROE)", "78.20%", "回收期 8.7 個月")
-    k5.metric("產能利用率", "56.94%", "最大產能 39.2k 套")
+    k5.metric("動態產能利用率", f"{(sales_units/39200*100):.2f}%", "最大產能 39.2k 套")
 
     st.markdown("---")
 
+    # 八大報表頁籤
     r_tab1, r_tab2, r_tab3, r_tab4, r_tab5, r_tab6, r_tab7, r_tab8 = st.tabs([
-        "一、綜合損益表",
+        "一、綜合損益表 (算式自動匯總)",
         "二、資產負債表",
         "三、現金流量表",
         "四、股東權益變動",
@@ -298,30 +321,116 @@ def render_vpsh_core_reports():
         "八、產能利用率"
     ])
 
-    # 一、綜合損益表
+    # ----------------------------------------------------
+    # 一、動態計算匯總之綜合損益表 (Income Statement)
+    # ----------------------------------------------------
     with r_tab1:
-        st.subheader("一、 綜合損益表 (Income Statement) - USD")
-        income_data = [
-            {"項目 (Item)": "營業收入 (Revenue)", "金額 (USD)": "$7,700,400", "計算說明 / 明細": "總銷量 22,320 套 × $345/套"},
-            {"項目 (Item)": "  [-] VIP套裝生產成本 cost:shoes", "金額 (USD)": "($937,440)", "計算說明 / 明細": "22,320 套 × $42.00 ($9拖鞋 + $15運動鞋 + $18休閒鞋)"},
-            {"項目 (Item)": "  [-] Hub咖啡銷貨成本 coffee", "金額 (USD)": "($387,252)", "計算說明 / 明細": "22,320 套 × 69.4% × 60杯 × $0.25/杯"},
-            {"項目 (Item)": "  [-] F2B咖啡補貼支出 coffee", "金額 (USD)": "($102,449)", "計算說明 / 明細": "22,320 套 × 30.6% × 30杯 × $0.50/杯"},
-            {"項目 (Item)": "銷貨毛利 (Gross Profit)", "金額 (USD)": "$6,273,259", "計算說明 / 明細": "毛利率約 81.47%"},
-            {"項目 (Item)": "  [-] 人事薪資費用 (Salary)", "金額 (USD)": "($240,000)", "計算說明 / 明細": "$20,000/月 × 12個月 (含專業經理人、會計、助理、生產銷售員共8人)"},
-            {"項目 (Item)": "  [-] 租金費用 (Rent)", "金額 (USD)": "($432,000)", "計算說明 / 明細": "$36,000/月 × 12個月 (首爾漢陽大學門市)"},
-            {"項目 (Item)": "  [-] F2C 大使分潤 Profit sharing", "金額 (USD)": "($749,831)", "計算說明 / 明細": "11,616 套 (H1 3,600套) × $64.55/套"},
-            {"項目 (Item)": "  [-] F2B 聯盟分潤 Profit sharing", "金額 (USD)": "($697,140)", "計算說明 / 明細": "10,800 套 (H2 F2B) × $64.55/套"},
-            {"項目 (Item)": "  [-] BM3 分潤 Profit sharing (商業模式: 3份利潤)", "金額 (USD)": "($0)", "計算說明 / 明細": "已包含於渠道分潤估算中 (由專屬團隊/機構處置)"},
-            {"項目 (Item)": "  [-] 5% 回收基金 Recovery Fund", "金額 (USD)": "($385,020)", "計算說明 / 明細": "22,320 套 × $17.25/套 (專款專用提撥)"},
-            {"項目 (Item)": "  [-] 5 USD 扶貧捐贈 Donations", "金額 (USD)": "($111,600)", "計算說明 / 明細": "22,320 套 × $5.00/套 (公益提撥)"},
-            {"項目 (Item)": "  [-] 水電費 Water and electricity fees", "金額 (USD)": "($15,000)", "計算說明 / 明細": "$1,250/月 × 12個月"},
-            {"項目 (Item)": "  [-] 支付金流手續費 handling fee", "金額 (USD)": "($147,758)", "計算說明 / 明細": "22,320 套 × $345 × 80% (Momo Pay) × 3% 手續費 ($8.28/套)"},
-            {"項目 (Item)": "  [-] 折舊與攤提費用 depreciation", "金額 (USD)": "($45,000)", "計算說明 / 明細": "$3,750/月 × 12個月 (設備及裝修折舊)"},
-            {"項目 (Item)": "營業利益 (Income / EBIT)", "金額 (USD)": "$3,449,910", "計算說明 / 明細": "營業利益率 44.80%"},
-            {"項目 (Item)": "  [-] 所得稅費用 (Tax @ 20%)", "金額 (USD)": "($689,982)", "計算說明 / 明細": "預估企業所得稅"},
-            {"項目 (Item)": "本期淨利 (Net Income)", "金額 (USD)": "$2,759,928", "計算說明 / 明細": "淨利率 35.84%"}
+        st.subheader("一、 綜合損益表 (Income Statement) - 由底層營運算式即時動態加總 (USD)")
+
+        dynamic_income_data = [
+            {
+                "項目 (Item)": "營業收入 (Revenue)",
+                "金額 (USD)": f"${revenue:,.0f}",
+                "計算說明 / 底層營運明細": f"總銷量 {sales_units:,} 套 × ${unit_price:.2f}/套"
+            },
+            {
+                "項目 (Item)": "營業成本 (Cost of Goods Sold)",
+                "金額 (USD)": f"(${total_cogs:,.0f})",
+                "計算說明 / 底層營運明細": f"以下三項鞋款與咖啡生產/補貼成本加總："
+            },
+            {
+                "項目 (Item)": "  [-] VIP套裝生產成本 cost:shoes",
+                "金額 (USD)": f"(${cost_shoes:,.0f})",
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × ${shoe_cost_per_set:.2f} ($9拖鞋 + $15運動鞋 + $18休閒鞋)"
+            },
+            {
+                "項目 (Item)": "  [-] Hub咖啡銷貨成本 coffee",
+                "金額 (USD)": f"(${cost_coffee_hub:,.0f})",
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × 69.4% × 60杯 × $0.25/杯"
+            },
+            {
+                "項目 (Item)": "  [-] F2B咖啡補貼支出 coffee",
+                "金額 (USD)": f"(${cost_coffee_f2b:,.0f})",
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × 30.6% × 30杯 × $0.50/杯"
+            },
+            {
+                "項目 (Item)": "銷貨毛利 (Gross Profit)",
+                "金額 (USD)": f"${gross_profit:,.0f}",
+                "計算說明 / 底層營運明細": f"營業收入 ${revenue:,.0f} - 營業成本 ${total_cogs:,.0f} (毛利率: {gross_margin:.2f}%)"
+            },
+            {
+                "項目 (Item)": "營業費用 (Operating Expenses)",
+                "金額 (USD)": f"(${total_opex:,.0f})",
+                "計算說明 / 底層營運明細": f"包含人事、租金、渠道分潤、公益基金、金流、水電與折舊"
+            },
+            {
+                "項目 (Item)": "  [-] 人事薪資費用 (Salary)",
+                "金額 (USD)": f"(${exp_salary:,.0f})",
+                "計算說明 / 底層營運明細": "$20,000/月 × 12個月 (含專業經理人、會計、助理、生產銷售員共8人)"
+            },
+            {
+                "項目 (Item)": "  [-] 租金費用 (Rent)",
+                "金額 (USD)": f"(${exp_rent:,.0f})",
+                "計算說明 / 底層營運明細": "$36,000/月 × 12個月 (首爾漢陽大學門市)"
+            },
+            {
+                "項目 (Item)": "  [-] F2C 大使分潤 Profit sharing",
+                "金額 (USD)": f"(${exp_f2c:,.0f})",
+                "計算說明 / 底層營運明細": "11,616 套 (H1 3,600套) × $64.55/套"
+            },
+            {
+                "項目 (Item)": "  [-] F2B 聯盟分潤 Profit sharing",
+                "金額 (USD)": f"(${exp_f2b:,.0f})",
+                "計算說明 / 底層營運明細": "10,800 套 (H2 F2B 10,800套) × $64.55/套"
+            },
+            {
+                "項目 (Item)": "  [-] BM3 分潤 Profit sharing (商業模式: 3份利潤)",
+                "金額 (USD)": "($0)",
+                "計算說明 / 底層營運明細": "已包含於渠道分潤估算中 (由專屬團隊/機構處置)"
+            },
+            {
+                "項目 (Item)": "  [-] 5% 回收基金 Recovery Fund",
+                "金額 (USD)": f"(${exp_recovery_fund:,.0f})",
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × $17.25/套 (專款專用提撥)"
+            },
+            {
+                "項目 (Item)": "  [-] 5 USD 扶貧捐贈 Donations",
+                "金額 (USD)": f"(${exp_donations:,.0f})",
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × $5.00/套 (公益提撥)"
+            },
+            {
+                "項目 (Item)": "  [-] 水電費 Water and electricity fees",
+                "金額 (USD)": f"(${exp_utilities:,.0f})",
+                "計算說明 / 底層營運明細": "$1,250/月 × 12個月"
+            },
+            {
+                "項目 (Item)": "  [-] 支付金流手續費 handling fee",
+                "金額 (USD)": f"(${exp_handling:,.0f})",
+                "計算說明 / 底層營運明細": f"{sales_units:,} 套 × ${unit_price:.0f} × 80% (Momo Pay) × 3% 手續費 (${(unit_price*0.8*0.03):.2f}/套)"
+            },
+            {
+                "項目 (Item)": "  [-] 折舊與攤提費用 depreciation",
+                "金額 (USD)": f"(${exp_depreciation:,.0f})",
+                "計算說明 / 底層營運明細": "$3,750/月 × 12個月 (設備及裝修折舊)"
+            },
+            {
+                "項目 (Item)": "營業利益 (Income / EBIT)",
+                "金額 (USD)": f"${ebit:,.0f}",
+                "計算說明 / 底層營運明細": f"銷貨毛利 ${gross_profit:,.0f} - 營業費用 ${total_opex:,.0f} (營業利益率: {ebit_margin:.2f}%)"
+            },
+            {
+                "項目 (Item)": "  [-] 所得稅費用 (Tax @ 20%)",
+                "金額 (USD)": f"(${tax_expense:,.0f})",
+                "計算說明 / 底層營運明細": f"預估企業所得稅 (營業利益 ${ebit:,.0f} × 20%)"
+            },
+            {
+                "項目 (Item)": "本期淨利 (Net Income)",
+                "金額 (USD)": f"${net_income:,.0f}",
+                "計算說明 / 底層營運明細": f"營業利益 ${ebit:,.0f} - 所得稅 ${tax_expense:,.0f} (淨利率: {net_margin:.2f}%)"
+            }
         ]
-        st.dataframe(pd.DataFrame(income_data), use_container_width=True, height=500)
+
+        st.dataframe(pd.DataFrame(dynamic_income_data), use_container_width=True, height=520)
 
     # 二、資產負債表
     with r_tab2:
@@ -389,9 +498,9 @@ def render_vpsh_core_reports():
     with r_tab5:
         st.subheader("五、 核心財務指標 (Core Financial Key Indicators)")
         kpi_core_data = [
-            {"指標名稱": "毛利率 (Gross Margin)", "數值": "81.47%", "產業基準與分析評語": "直營/F2X 垂直整合的高附加價值模型"},
-            {"指標名稱": "營業利益率 (Operating Margin)", "數值": "44.80%", "產業基準與分析評語": "極致自動化與高轉換率所帶來的營運槓桿效益"},
-            {"指標名稱": "淨利率 (Net Profit Margin)", "數值": "35.84%", "產業基準與分析評語": "高獲利科技與軟硬體結合零售型態"},
+            {"指標名稱": "毛利率 (Gross Margin)", "數值": f"{gross_margin:.2f}%", "產業基準與分析評語": "直營/F2X 垂直整合的高附加價值模型"},
+            {"指標名稱": "營業利益率 (Operating Margin)", "數值": f"{ebit_margin:.2f}%", "產業基準與分析評語": "極致自動化與高轉換率所帶來的營運槓桿效益"},
+            {"指標名稱": "淨利率 (Net Profit Margin)", "數值": f"{net_margin:.2f}%", "產業基準與分析評語": "高獲利科技與軟硬體結合零售型態"},
             {"指標名稱": "資產報酬率 (ROA)", "數值": "58.52%", "產業基準與分析評語": "輕資產高資產週轉效率"},
             {"指標名稱": "股權報酬率 (ROE)", "數值": "78.20%", "產業基準與分析評語": "對原始投資資本 ($2M) 提供極佳的回報"},
             {"指標名稱": "投資回收期 (Payback Period)", "數值": "約 8.7 個月", "產業基準與分析評語": "首年本期淨利 $2.76M 即可徹底回收原始投資 $2M"}
@@ -405,7 +514,7 @@ def render_vpsh_core_reports():
         with col_eq1:
             eq_struct_data = [
                 {"股東名稱 / 類別": "VPSH 創始團隊 / 母公司", "持股比例 (%)": "60.0%", "備註說明": "2,040,000 USD 之實繳資本額(現金+設備)"},
-                {"股東名稱 / 類別": "員工股權信託 ESOP Trust", "持股比例 (%)": "40.0%", "备註說明": "ESOP 全體員工股權池 (Employee Stock Option Pool)"},
+                {"股東名稱 / 類別": "員工股權信託 ESOP Trust", "持股比例 (%)": "40.0%", "備註說明": "ESOP 全體員工股權池 (Employee Stock Option Pool)"},
                 {"股東名稱 / 類別": "實繳金額", "持股比例 (%)": "-", "備註說明": "$2,040,000 USD"},
                 {"股東名稱 / 類別": "公司註冊資本額", "持股比例 (%)": "100.0%", "備註說明": "$3,400,000 USD"}
             ]
@@ -427,8 +536,8 @@ def render_vpsh_core_reports():
             {"營運指標項目": "ESG 青年大使數量 (ESG Ambassadors)", "2027年度 達成數據": "120 名 (120 人)", "說明 / 明細": "來自建國大學、漢陽大學、世宗大學"},
             {"營運指標項目": "F2B 聯盟合作店家 (F2B Partner Shops)", "2027年度 達成數據": "20 家精選咖啡館", "說明 / 明細": "每家每日約 300 人流，轉化率 1%"},
             {"營運指標項目": "BM3商業模式3 數據套件", "2027年度 達成數據": "4,320 套/年 (每年 4,320 套)", "說明 / 明細": "F2B:1,440套+D2C:1,440套+Spoke:1,440套"},
-            {"營運指標項目": "5%回收基金累積金額 Recovery Fund", "2027年度 達成數據": "$385,020 USD (385,020 美元)", "說明 / 明細": "每一套組撥入 $17.25 USD"},
-            {"營運指標項目": "5 USD 扶貧捐贈金額 Donations", "2027年度 達成數據": "$111,600 USD (111,600 美元)", "說明 / 明細": "每一套組撥入 $5.00 USD"},
+            {"營運指標項目": "5%回收基金累積金額 Recovery Fund", "2027年度 達成數據": f"${exp_recovery_fund:,.0f} USD", "說明 / 明細": "每一套組撥入 $17.25 USD"},
+            {"營運指標項目": "5 USD 扶貧捐贈金額 Donations", "2027年度 達成數據": f"${exp_donations:,.0f} USD", "說明 / 明細": "每一套組撥入 $5.00 USD"},
             {"營運指標項目": "營運廠區面積 (Factory Hub Area)", "2027年度 達成數據": "1,500 ㎡ (1,500 平方米)", "說明 / 明細": "Hub Center Demo Factory"},
             {"營運指標項目": "正職員工數量 (Full-time Employees)", "2027年度 達成數據": "8 人 / 條生產線", "說明 / 明細": "1經理 + 1會計 + 1助理 + 5生產銷售員"}
         ]
@@ -437,28 +546,29 @@ def render_vpsh_core_reports():
     # 八、產能利用率分析
     with r_tab8:
         st.subheader("八、 產能利用率分析 (Capacity Utilization Rate)")
+        cap_util_rate = (sales_units / 39200 * 100)
         cap_analysis_data = [
             {"產能分析項目": "單小時理論產能 (Production capacity/H)", "數據說明": "60 雙 / 小時", "計算邏輯 / 數據源": "PGH-999 全自動化 PU 成型線設計標準"},
             {"產能分析項目": "日營運時間與日產能 (Production capacity/D)", "數據說明": "480 雙/天 = 160 套/天", "計算邏輯 / 數據源": "8 小時/天 (每 3 雙組合為 1 VIP 套裝)"},
             {"產能分析項目": "年度設計最大總產能 (Production capacity/Y)", "數據說明": "39,200 套 / 年", "計算邏輯 / 數據源": "245 天工作日 × 160 套/天"},
-            {"產能分析項目": "2027 年度實際銷售套數 Actual number of units sold", "數據說明": "22,320 套 / 年", "計算邏輯 / 數據源": "H1 (3,600) + H2 (14,400) + H3 (4,320)"},
-            {"產能分析項目": "2027 年度產能利用率 (Capacity Utilization Rate)", "數據說明": "56.94%", "計算邏輯 / 數據源": "22,320 套 / 39,200 套（展現充足擴充空間）"}
+            {"產能分析項目": "2027 年度實際銷售套數 Actual number of units sold", "數據說明": f"{sales_units:,} 套 / 年", "計算邏輯 / 數據源": "H1 (3,600) + H2 (14,400) + H3 (4,320)"},
+            {"產能分析項目": "2027 年度產能利用率 (Capacity Utilization Rate)", "數據說明": f"{cap_util_rate:.2f}%", "計算邏輯 / 數據源": f"{sales_units:,} 套 / 39,200 套（展現充足擴充空間）"}
         ]
         col_c1, col_c2 = st.columns([3, 2])
         with col_c1:
             st.dataframe(pd.DataFrame(cap_analysis_data), use_container_width=True)
         with col_c2:
             fig_cap = px.pie(
-                values=[22320, 39200 - 22320],
-                names=["實際產出 (56.94%)", "剩餘產能 (43.06%)"],
-                title="2027 產能利用率 (56.94%)",
+                values=[sales_units, max(0, 39200 - sales_units)],
+                names=[f"實際產出 ({cap_util_rate:.1f}%)", f"剩餘產能 ({100-cap_util_rate:.1f}%)"],
+                title=f"2027 產能利用率 ({cap_util_rate:.1f}%)",
                 hole=0.6,
                 color_discrete_sequence=["#2ecc71", "#ecf0f1"]
             )
             st.plotly_chart(fig_cap, use_container_width=True)
 
 # ----------------------------------------------------
-# ⚡ 6. 分頁四：全球廠區營運 KPI 與機台稼動 (OEE)
+# ⚡ 6. 機台稼動 (OEE) KPI
 # ----------------------------------------------------
 def render_plant_oee_kpi():
     st.markdown("### ⚡ 全球廠區射出機台稼動率 (OEE) 與生產 KPI")
@@ -478,7 +588,7 @@ def render_plant_oee_kpi():
     st.dataframe(pd.DataFrame(oee_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 模組主頁面進入點
+# 模組進入點
 # ----------------------------------------------------
 def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)", lang=None):
     L = get_exec_lang_dict(lang)
@@ -494,7 +604,7 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
 
     st.divider()
 
-    # 4 大跨國戰情室分頁（包含新增之 VPSH 高階八大財務報表）
+    # 4 大戰情室分頁
     tab1, tab2, tab3, tab4 = st.tabs([
         L["tab_market"],
         L["tab_fin_stat"],
@@ -502,7 +612,7 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
         L["tab_plant_kpi"]
     ])
 
-    # 分頁 1：全球股市即時看盤、帶有超連結的新聞、AI 摘要與底部對話框
+    # 分頁 1：全球股市與看盤
     with tab1:
         st.markdown(f"### {L['stock_section_title']} [{sub_option}]")
         render_market_stock_metrics(sub_option)
@@ -532,7 +642,7 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
         with col_watch:
             st.markdown(f"### {L['watch_title']}")
             with st.expander("➕ 新增觀察個股/指數", expanded=True):
-                st.selectbox("選擇股票市場區域", [sub_option, "🇹🇼 台灣 (Taiwan)", "🇻🇳 越南 (Vietnam)", "🇺🇸 美國 (USA)"], key=f"select_watch_mkt_{current_lang}")
+                st.selectbox("選擇股票市場區域", [sub_option, "🇹🇼 台灣 (Taiwan)", "VN 越南 (Vietnam)", "US 美國 (USA)"], key=f"select_watch_mkt_{current_lang}")
                 st.text_input("股票代碼 (如 2881.TW / NVDA / VNM.VN)", value="2855.TW", key=f"input_watch_code_{current_lang}")
 
         st.divider()
@@ -556,11 +666,11 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
     with tab2:
         render_financial_ar_ap_stats()
 
-    # 分頁 3：新增之 VPSH 高階八大財務與營運分析報表
+    # 分頁 3：動態計算匯總之 VPSH 高階八大財務報表
     with tab3:
         render_vpsh_core_reports()
 
-    # 分頁 4：全球廠區營運 KPI 與機台稼動 OEE
+    # 分頁 4：機台稼動 (OEE) KPI
     with tab4:
         render_plant_oee_kpi()
 
