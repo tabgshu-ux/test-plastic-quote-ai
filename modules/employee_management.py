@@ -6,16 +6,16 @@ import streamlit as st
 # 🌐 跨國匯率與幣別配置
 # ----------------------------------------------------
 EXCHANGE_RATES = {
-    "VND (越南盾)": {"symbol": "₫", "code": "VND", "step": 100000.0, "default_sal": 9000000.0},
-    "TWD (新台幣)": {"symbol": "NT$", "code": "TWD", "step": 1000.0, "default_sal": 45000.0},
-    "RMB (人民幣)": {"symbol": "¥", "code": "RMB", "step": 100.0, "default_sal": 8000.0},
-    "IDR (印尼盾)": {"symbol": "Rp", "code": "IDR", "step": 100000.0, "default_sal": 5000000.0},
+    "🇻🇳 越南 (Vietnam)": {"symbol": "₫", "code": "VND", "step": 100000.0, "default_sal": 9000000.0},
+    "🇹🇼 台灣 (Taiwan)": {"symbol": "NT$", "code": "TWD", "step": 1000.0, "default_sal": 45000.0},
+    "🇨🇳 中國 (China)": {"symbol": "¥", "code": "RMB", "step": 100.0, "default_sal": 8000.0},
+    "🇮🇩 印尼 (Indonesia)": {"symbol": "Rp", "code": "IDR", "step": 100000.0, "default_sal": 5000000.0},
     "USD (美金)": {"symbol": "$", "code": "USD", "step": 100.0, "default_sal": 1500.0}
 }
 
-def render_employee_management():
-    st.subheader("🌐 跨國企業人事與職位管理 (台灣 / 越南 / 中國 / 印尼)")
-    st.caption("支援多國籍員工資料維護、各國法定保險/稅務提繳計算，並自動同步請假系統與權限後台。")
+def render_employee_management(sub_option="📋 員工人事資料表", lang="繁體中文"):
+    st.title("📋 員工人事資料表與跨國檔案管理")
+    st.caption("支援多國籍員工資料維護（含姓名、地址、電話、起薪）、各國法定保險/稅務提繳計算，並自動同步請假系統與權限後台。")
 
     # ----------------------------------------------------
     # 🗄️ 1. 初始化 Session State 資料庫
@@ -25,16 +25,16 @@ def render_employee_management():
             {
                 "emp_id": "VN-001", "name": "Nguyễn Văn A", "country": "🇻🇳 越南 (Vietnam)",
                 "dept": "生產一課 (射出)", "position": "射出機技術員", "id_number": "038095001234",
-                "phone": "0912345678", "currency": "VND", "base_salary": 9000000.0,
+                "phone": "0912345678", "address": "Bình Dương, Việt Nam", "currency": "VND", "base_salary": 9000000.0,
                 "insurance_deduction": 945000.0, # 10.5%
                 "join_date": "2024-03-01", "extra_info": "醫院: Bệnh viện Bình Dương", "role": "User (一般員工)"
             },
             {
                 "emp_id": "TW-001", "name": "陳大明", "country": "🇹🇼 台灣 (Taiwan)",
                 "dept": "管理部", "position": "行政專員", "id_number": "A123456789",
-                "phone": "0912345678", "currency": "TWD", "base_salary": 45000.0,
+                "phone": "0912345678", "address": "台北市信義區忠孝東路四段", "currency": "TWD", "base_salary": 45000.0,
                 "insurance_deduction": 2480.0, # 勞健保估算
-                "join_date": "2023-01-15", "extra_info": "勞保級距: $45,800 / 健保級距: $45,800", "role": "Supervisor (主管)"
+                "join_date": "2023-01-15", "extra_info": "勞保級距: $45,800 | 健保級距: $45,800", "role": "Supervisor (主管)"
             }
         ]
 
@@ -57,35 +57,36 @@ def render_employee_management():
     # TAB 1: 跨國員工檔案管理 (依國籍動態渲染欄位)
     # ====================================================
     with tab_emp:
-        with st.expander("➕ 新增跨國員工個人檔案 (Add International Employee)", expanded=True):
+        with st.expander("➕ 新增跨國員工個人檔案 (Add International Employee Profile)", expanded=True):
             with st.form("add_global_emp_form"):
                 st.markdown("##### 📍 步驟 1：基本資訊與選擇員工國籍/廠區")
                 col_c1, col_c2, col_c3 = st.columns(3)
                 with col_c1:
-                    country = st.selectbox("員工國籍 / 所屬廠區", [
+                    country = st.selectbox("員工國籍 / 所屬廠區 *", [
                         "🇻🇳 越南 (Vietnam)", 
                         "🇹🇼 台灣 (Taiwan)", 
                         "🇨🇳 中國 (China)", 
                         "🇮🇩 印尼 (Indonesia)"
                     ])
                 with col_c2:
-                    # 依據選擇的國籍預設工號字首
                     prefix_map = {"🇻🇳 越南 (Vietnam)": "VN", "🇹🇼 台灣 (Taiwan)": "TW", "🇨🇳 中國 (China)": "CN", "🇮🇩 印尼 (Indonesia)": "ID"}
                     prefix = prefix_map.get(country, "EMP")
-                    emp_id = st.text_input("員工編號 (Emp ID)", f"{prefix}-{len(st.session_state.employee_db)+1:03d}")
+                    emp_id = st.text_input("員工編號 (Emp ID) *", f"{prefix}-{len(st.session_state.employee_db)+1:03d}")
                 with col_c3:
-                    emp_name = st.text_input("員工全名 (Full Name)", "張小華")
+                    emp_name = st.text_input("員工全名 (Full Name) *", "張小華")
 
                 col_b1, col_b2, col_b3 = st.columns(3)
                 with col_b1:
                     dept = st.selectbox("所屬部門", ["生產一課 (射出)", "品質保證部 (QA)", "總務行政部 (GA)", "財務部 (Finance)", "研發部 (R&D)"])
+                    phone = st.text_input("聯絡電話 (Phone) *", "0912345678")
                 with col_b2:
                     emp_position = st.text_input("職位名稱", "射出工程師")
+                    address = st.text_input("居住/戶籍地址 (Address) *", "台北市信義區忠孝東路")
                 with col_b3:
                     emp_role = st.selectbox("系統權限角色 (Role)", ["User (一般員工)", "Supervisor (主管)", "Admin (系統管理者)"])
 
                 st.markdown("---")
-                st.markdown(f"##### 📋 步驟 2：輸入【{country}】專屬身分與法定保險資訊")
+                st.markdown(f"##### 📋 步驟 2：輸入【{country}】專屬身分、起薪與法定保險資訊")
 
                 # 🟢 動態渲染各國特有欄位
                 id_number = ""
@@ -99,19 +100,17 @@ def render_employee_management():
                     col_vn1, col_vn2, col_vn3 = st.columns(3)
                     with col_vn1:
                         id_number = st.text_input("身份證字號 (Số CCCD)", "038095009999")
-                        phone = st.text_input("聯絡電話", "0912345678")
                     with col_vn2:
-                        join_date = st.date_input("入職日期", datetime.date.today())
+                        join_date = st.date_input("入職/到職日期", datetime.date.today())
                         contract_date = st.date_input("合約簽署日期", datetime.date.today())
                     with col_vn3:
                         hospital = st.text_input("醫保指定醫院 (Bệnh viện)", "Bệnh viện Quốc tế Hạnh Phúc")
-                        temp_addr = st.text_input("暫住地址 (Địa chỉ tạm trú)", "Bình Dương")
-                        extra_info = f"就醫醫院: {hospital} | 暫住: {temp_addr}"
+                        extra_info = f"就醫醫院: {hospital}"
 
                     # 薪資與 10.5% 保險扣額
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
-                        base_sal = st.number_input("保險底薪 (VND)", min_value=0.0, value=9000000.0, step=100000.0)
+                        base_sal = st.number_input("約定起薪 / 保險底薪 (VND)", min_value=0.0, value=9000000.0, step=100000.0)
                     with col_sal2:
                         est_ins_deduction = base_sal * 0.105  # 越南社醫失保 10.5%
                         st.number_input("每月社醫失保個人扣繳 (10.5% VND)", value=est_ins_deduction, disabled=True)
@@ -123,18 +122,17 @@ def render_employee_management():
                     col_tw1, col_tw2, col_tw3 = st.columns(3)
                     with col_tw1:
                         id_number = st.text_input("身分證字號 (ID Number)", "A123456789")
-                        phone = st.text_input("聯絡電話", "0912345678")
                     with col_tw2:
                         join_date = st.date_input("到職日期", datetime.date.today())
                         labor_level = st.number_input("勞保投保級距 (TWD)", value=45800)
                     with col_tw3:
                         health_level = st.number_input("健保投保級距 (TWD)", value=45800)
                         pension_rate = st.number_input("勞退個人自提比例 (%)", min_value=0, max_value=6, value=0)
-                        extra_info = f"勞保: ${labor_level:,.0f} \vert{} 健保: ${health_level:,.0f} | 勞退自提: {pension_rate}%"
+                        extra_info = f"勞保級距: ${labor_level:,.0f} \vert{} 健保級距: ${health_level:,.0f} | 勞退自提: {pension_rate}%"
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
-                        base_sal = st.number_input("約定月薪 (TWD)", min_value=0.0, value=45000.0, step=1000.0)
+                        base_sal = st.number_input("約定起薪 / 月薪 (TWD)", min_value=0.0, value=45000.0, step=1000.0)
                     with col_sal2:
                         est_ins_deduction = 1150.0 + 672.0  # 預估勞健保自付額
                         est_ins_deduction = st.number_input("預估每月勞健保自付額 (TWD)", value=est_ins_deduction)
@@ -146,7 +144,6 @@ def render_employee_management():
                     col_cn1, col_cn2, col_cn3 = st.columns(3)
                     with col_cn1:
                         id_number = st.text_input("居民身份證號", "441900199001011234")
-                        phone = st.text_input("聯絡電話", "13800138000")
                     with col_cn2:
                         join_date = st.date_input("入職日期", datetime.date.today())
                         city = st.text_input("參保城市", "廣東東莞")
@@ -156,7 +153,7 @@ def render_employee_management():
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
-                        base_sal = st.number_input("基本工資 (RMB)", min_value=0.0, value=8000.0, step=500.0)
+                        base_sal = st.number_input("約定起薪 / 基本工資 (RMB)", min_value=0.0, value=8000.0, step=500.0)
                     with col_sal2:
                         est_ins_deduction = base_sal * 0.105  # 五險一金個人扣繳約 10.5%
                         est_ins_deduction = st.number_input("預估五險一金個人扣款 (RMB)", value=est_ins_deduction)
@@ -168,7 +165,6 @@ def render_employee_management():
                     col_id1, col_id2, col_id3 = st.columns(3)
                     with col_id1:
                         id_number = st.text_input("NIK 身份證號", "3201012345670001")
-                        phone = st.text_input("聯絡電話", "08123456789")
                     with col_id2:
                         join_date = st.date_input("入職日期 (Tanggal Masuk)", datetime.date.today())
                         bpjs_tk = st.text_input("BPJS Ketenagakerjaan 號碼", "00012345678")
@@ -178,7 +174,7 @@ def render_employee_management():
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
-                        base_sal = st.number_input("基本工資 (IDR)", min_value=0.0, value=5000000.0, step=100000.0)
+                        base_sal = st.number_input("約定起薪 / 基本工資 (IDR)", min_value=0.0, value=5000000.0, step=100000.0)
                     with col_sal2:
                         est_ins_deduction = base_sal * 0.04  # BPJS 個人扣繳約 4%
                         st.number_input("BPJS 個人提繳估算 (4% IDR)", value=est_ins_deduction, disabled=True)
@@ -186,56 +182,60 @@ def render_employee_management():
                         allowance = st.number_input("交通/伙食津貼 (IDR)", min_value=0.0, value=1000000.0)
 
                 curr_code = EXCHANGE_RATES[curr_key]["code"]
-                curr_symbol = EXCHANGE_RATES[curr_key]["symbol"]
 
                 # 提交並進行 3 模組連動
                 if st.form_submit_button("✅ 儲存跨國員工檔案 (同步請假與權限)", type="primary"):
-                    # 1️⃣ 寫入員工主檔
-                    st.session_state.employee_db.append({
-                        "emp_id": emp_id,
-                        "name": emp_name,
-                        "country": country,
-                        "dept": dept,
-                        "position": emp_position,
-                        "id_number": id_number,
-                        "phone": phone,
-                        "currency": curr_code,
-                        "base_salary": base_sal,
-                        "insurance_deduction": est_ins_deduction,
-                        "join_date": str(join_date),
-                        "extra_info": extra_info,
-                        "role": emp_role
-                    })
+                    if not emp_name or not phone or not address:
+                        st.error("❌ 請填寫姓名、電話與地址等必填欄位！")
+                    else:
+                        # 1️⃣ 寫入員工主檔
+                        st.session_state.employee_db.append({
+                            "emp_id": emp_id,
+                            "name": emp_name,
+                            "country": country,
+                            "dept": dept,
+                            "position": emp_position,
+                            "id_number": id_number,
+                            "phone": phone,
+                            "address": address,
+                            "currency": curr_code,
+                            "base_salary": base_sal,
+                            "insurance_deduction": est_ins_deduction,
+                            "join_date": str(join_date),
+                            "extra_info": extra_info,
+                            "role": emp_role
+                        })
 
-                    # 2️⃣ 同步至權限系統後台
-                    st.session_state.users_permissions[emp_id] = {
-                        "username": emp_id,
-                        "full_name": emp_name,
-                        "country": country,
-                        "role": emp_role.split()[0],
-                        "allowed_modules": ["👥 人事管理", "🌴 請假系統", "🏢 總務管理"]
-                    }
+                        # 2️⃣ 同步至權限系統後台
+                        st.session_state.users_permissions[emp_id] = {
+                            "username": emp_id,
+                            "full_name": emp_name,
+                            "country": country,
+                            "role": emp_role.split()[0],
+                            "allowed_modules": ["👥 人事/行政", "🌴 請假系統", "🏢 總務管理"]
+                        }
 
-                    st.success(f"🎉 成功建立【{country}】員工 `{emp_name}` ({emp_id})！")
-                    st.info(f"✅ 已自動計算該國保險扣繳，並於【請假系統】與【權限系統後台】開通權限與帳號！")
-                    st.rerun()
+                        st.success(f"🎉 成功建立【{country}】員工 `{emp_name}` ({emp_id})！")
+                        st.info(f"✅ 已自動計算該國保險扣繳，並於【請假系統】與【權限系統後台】開通權限與帳號！")
+                        st.rerun()
 
         st.divider()
-        st.markdown("#### 📋 全球在職員工清單與保險扣額總覽")
+        st.markdown("#### 📋 全球在職員工資料表 (含姓名、電話、地址與起薪)")
         if st.session_state.employee_db:
             global_list = []
             for emp in st.session_state.employee_db:
-                c_symbol = EXCHANGE_RATES.get(f"{emp['currency']} (美金)", {}).get("symbol", "$") if emp['currency']=='USD' else ""
                 global_list.append({
                     "工號": emp["emp_id"],
                     "姓名": emp["name"],
                     "國籍/廠區": emp["country"],
                     "部門": emp["dept"],
                     "職位": emp["position"],
-                    "證號": emp["id_number"],
-                    "幣別": emp["currency"],
-                    "保險底薪/月薪": f"{emp['base_salary']:,.0f} {emp['currency']}",
-                    "預估保險個人扣繳": f"-{emp['insurance_deduction']:,.0f} {emp['currency']}",
+                    "聯絡電話": emp.get("phone", "-"),
+                    "居住地址": emp.get("address", "-"),
+                    "身分證號": emp["id_number"],
+                    "起薪/保險底薪": f"{emp['base_salary']:,.0f} {emp['currency']}",
+                    "預估保險扣減額": f"-{emp['insurance_deduction']:,.0f} {emp['currency']}",
+                    "到職日期": emp.get("join_date", "-"),
                     "國籍保險與備註": emp["extra_info"]
                 })
             st.dataframe(pd.DataFrame(global_list), use_container_width=True)
@@ -302,3 +302,9 @@ def render_employee_management():
                 "開通模組": ", ".join(info["allowed_modules"])
             })
         st.dataframe(pd.DataFrame(perm_list), use_container_width=True)
+
+def show(sub_option="📋 員工人事資料表", lang="繁體中文"):
+    render_employee_management(sub_option, lang)
+
+def main(sub_option="📋 員工人事資料表", lang="繁體中文"):
+    render_employee_management(sub_option, lang)
