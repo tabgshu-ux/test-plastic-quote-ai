@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 # ----------------------------------------------------
-# 🌐 跨國匯率與幣別配置 (Key 完全統一)
+# 🌐 跨國匯率與幣別配置
 # ----------------------------------------------------
 EXCHANGE_RATES = {
     "🇻🇳 越南 (Vietnam)": {"symbol": "₫", "code": "VND", "step": 100000.0, "default_sal": 9000000.0},
@@ -51,21 +51,28 @@ def render_employee_management(*args, **kwargs):
     ])
 
     with tab_emp:
+        # ----------------------------------------------------
+        # ➕ 新增員工區塊
+        # ----------------------------------------------------
         with st.expander("➕ 新增跨國員工個人檔案 (Add International Employee Profile)", expanded=True):
+            st.markdown("##### 📍 步驟 1：選擇員工國籍/廠區（選擇後即時切換下方欄位）")
+            
+            # 🟢 移出 Form 外，國籍選擇即可即時連動下方欄位
+            country = st.selectbox("員工國籍 / 所屬廠區 *", [
+                "🇻🇳 越南 (Vietnam)", 
+                "🇹🇼 台灣 (Taiwan)", 
+                "🇨🇳 中國 (China)", 
+                "🇮🇩 印尼 (Indonesia)"
+            ], key="add_emp_country_select")
+
+            prefix_map = {"🇻🇳 越南 (Vietnam)": "VN", "🇹🇼 台灣 (Taiwan)": "TW", "🇨🇳 中國 (China)": "CN", "🇮🇩 印尼 (Indonesia)": "ID"}
+            prefix = prefix_map.get(country, "EMP")
+            default_emp_id = prefix + "-" + str(len(st.session_state.employee_db)+1).zfill(3)
+
             with st.form("add_global_emp_form"):
-                st.markdown("##### 📍 步驟 1：基本資訊與選擇員工國籍/廠區")
-                col_c1, col_c2, col_c3 = st.columns(3)
-                with col_c1:
-                    country = st.selectbox("員工國籍 / 所屬廠區 *", [
-                        "🇻🇳 越南 (Vietnam)", 
-                        "🇹🇼 台灣 (Taiwan)", 
-                        "🇨🇳 中國 (China)", 
-                        "🇮🇩 印尼 (Indonesia)"
-                    ])
+                col_c2, col_c3 = st.columns(2)
                 with col_c2:
-                    prefix_map = {"🇻🇳 越南 (Vietnam)": "VN", "🇹🇼 台灣 (Taiwan)": "TW", "🇨🇳 中國 (China)": "CN", "🇮🇩 印尼 (Indonesia)": "ID"}
-                    prefix = prefix_map.get(country, "EMP")
-                    emp_id = st.text_input("員工編號 (Emp ID) *", prefix + "-" + str(len(st.session_state.employee_db)+1).zfill(3))
+                    emp_id = st.text_input("員工編號 (Emp ID) *", default_emp_id)
                 with col_c3:
                     emp_name = st.text_input("員工全名 (Full Name) *", "張小華")
 
@@ -84,9 +91,9 @@ def render_employee_management(*args, **kwargs):
 
                 id_number = ""
                 extra_info = ""
-                curr_key = country  # 🟢 修正：直接以 country 選項作為 EXCHANGE_RATES 的 Key
 
                 if "越南" in country:
+                    curr_key = "🇻🇳 越南 (Vietnam)"
                     col_vn1, col_vn2, col_vn3 = st.columns(3)
                     with col_vn1:
                         id_number = st.text_input("身份證字號 (Số CCCD)", "038095009999")
@@ -101,12 +108,13 @@ def render_employee_management(*args, **kwargs):
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 保險底薪 (VND)", min_value=0.0, value=9000000.0, step=100000.0)
                     with col_sal2:
-                        est_ins_deduction = base_sal * 0.105
-                        st.number_input("每月社醫失保個人扣繳 (10.5% VND)", value=est_ins_deduction, disabled=True)
+                        # 🟢 取消 disabled=True，讓使用者可自訂保險金額
+                        est_ins_deduction = st.number_input("每月社醫失保個人扣繳 (10.5% VND)", min_value=0.0, value=base_sal * 0.105, step=10000.0)
                     with col_sal3:
                         allowance = st.number_input("各類津貼總計 (VND)", min_value=0.0, value=1530000.0, step=50000.0)
 
                 elif "台灣" in country:
+                    curr_key = "🇹🇼 台灣 (Taiwan)"
                     col_tw1, col_tw2, col_tw3 = st.columns(3)
                     with col_tw1:
                         id_number = st.text_input("身分證字號 (ID Number)", "A123456789")
@@ -116,18 +124,18 @@ def render_employee_management(*args, **kwargs):
                     with col_tw3:
                         health_level = st.number_input("健保投保級距 (TWD)", value=45800)
                         pension_rate = st.number_input("勞退個人自提比例 (%)", min_value=0, max_value=6, value=0)
-                        extra_info = "勞保級距: $" + f"{labor_level:,.0f}" + " | 健保級距: $" + f"{health_level:,.0f}" + " | 勞退自提: " + str(pension_rate) + "%"
+                        extra_info = "勞保級距: $" + f"{labor_level:,.0f}" + " \vert{} 健保級距: $" + f"{health_level:,.0f}" + " | 勞退自提: " + str(pension_rate) + "%"
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 月薪 (TWD)", min_value=0.0, value=45000.0, step=1000.0)
                     with col_sal2:
-                        est_ins_deduction = 1150.0 + 672.0
-                        est_ins_deduction = st.number_input("預估每月勞健保自付額 (TWD)", value=est_ins_deduction)
+                        est_ins_deduction = st.number_input("預估每月勞健保自付額 (TWD)", min_value=0.0, value=1822.0)
                     with col_sal3:
                         allowance = st.number_input("伙食津貼/其他 (TWD)", min_value=0.0, value=3000.0)
 
                 elif "中國" in country:
+                    curr_key = "🇨🇳 中國 (China)"
                     col_cn1, col_cn2, col_cn3 = st.columns(3)
                     with col_cn1:
                         id_number = st.text_input("居民身份證號", "441900199001011234")
@@ -142,12 +150,12 @@ def render_employee_management(*args, **kwargs):
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 基本工資 (RMB)", min_value=0.0, value=8000.0, step=500.0)
                     with col_sal2:
-                        est_ins_deduction = base_sal * 0.105
-                        est_ins_deduction = st.number_input("預估五險一金個人扣款 (RMB)", value=est_ins_deduction)
+                        est_ins_deduction = st.number_input("預估五險一金個人扣款 (RMB)", min_value=0.0, value=base_sal * 0.105)
                     with col_sal3:
                         allowance = st.number_input("職務津貼 (RMB)", min_value=0.0, value=1000.0)
 
                 else:
+                    curr_key = "🇮🇩 印尼 (Indonesia)"
                     col_id1, col_id2, col_id3 = st.columns(3)
                     with col_id1:
                         id_number = st.text_input("NIK 身份證號", "3201012345670001")
@@ -162,14 +170,11 @@ def render_employee_management(*args, **kwargs):
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 基本工資 (IDR)", min_value=0.0, value=5000000.0, step=100000.0)
                     with col_sal2:
-                        est_ins_deduction = base_sal * 0.04
-                        st.number_input("BPJS 個人提繳估算 (4% IDR)", value=est_ins_deduction, disabled=True)
+                        est_ins_deduction = st.number_input("BPJS 個人提繳估算 (4% IDR)", min_value=0.0, value=base_sal * 0.04)
                     with col_sal3:
                         allowance = st.number_input("交通/伙食津貼 (IDR)", min_value=0.0, value=1000000.0)
 
-                # 🟢 安全取得幣別代碼
-                curr_info = EXCHANGE_RATES.get(curr_key, {"code": "USD"})
-                curr_code = curr_info["code"]
+                curr_code = EXCHANGE_RATES.get(curr_key, {"code": "USD"})["code"]
 
                 if st.form_submit_button("✅ 儲存跨國員工檔案 (同步請假與權限)", type="primary"):
                     if not emp_name or not phone or not address:
@@ -202,6 +207,59 @@ def render_employee_management(*args, **kwargs):
 
                         st.success("🎉 成功建立【" + str(country) + "】員工 " + str(emp_name) + " (" + str(emp_id) + ")！")
                         st.rerun()
+
+        # ----------------------------------------------------
+        # ✏️ 2. 編輯 / 搬家變更員工資料區塊
+        # ----------------------------------------------------
+        if st.session_state.employee_db:
+            with st.expander("✏️ 編輯 / 變更既有員工資料 (Edit Employee Profile / Update Address)", expanded=False):
+                emp_list_options = [str(e["emp_id"]) + " - " + str(e["name"]) + " (" + str(e["country"]) + ")" for e in st.session_state.employee_db]
+                selected_edit_emp = st.selectbox("請選擇欲修改資料的員工：", emp_list_options, key="select_edit_emp")
+                
+                if selected_edit_emp:
+                    target_id = selected_edit_emp.split(" - ")[0]
+                    # 尋找目標員工
+                    emp_index = next((i for i, e in enumerate(st.session_state.employee_db) if e["emp_id"] == target_id), None)
+                    
+                    if emp_index is not None:
+                        target_emp = st.session_state.employee_db[emp_index]
+                        
+                        with st.form("edit_employee_form"):
+                            st.markdown("##### 📝 修改員工號碼 `" + str(target_emp["emp_id"]) + "` 的基本與居住資訊")
+                            
+                            col_e1, col_e2, col_e3 = st.columns(3)
+                            with col_e1:
+                                new_name = st.text_input("員工姓名", target_emp["name"])
+                                new_dept = st.selectbox("部門", ["生產一課 (射出)", "品質保證部 (QA)", "總務行政部 (GA)", "財務部 (Finance)", "研發部 (R&D)"], index=0)
+                            with col_e2:
+                                new_phone = st.text_input("聯絡電話", target_emp.get("phone", ""))
+                                new_pos = st.text_input("職位名稱", target_emp.get("position", ""))
+                            with col_e3:
+                                new_address = st.text_input("居住/戶籍地址 (搬家變更此處)", target_emp.get("address", ""))
+                                new_sal = st.number_input("起薪/底薪 (" + str(target_emp.get("currency", "USD")) + ")", value=float(target_emp.get("base_salary", 0.0)))
+
+                            col_btn1, col_btn2 = st.columns([1, 1])
+                            with col_btn1:
+                                btn_update = st.form_submit_button("💾 儲存修改內容", type="primary")
+                            with col_btn2:
+                                btn_delete = st.form_submit_button("🗑️ 刪除此員工資料")
+
+                            if btn_update:
+                                st.session_state.employee_db[emp_index]["name"] = new_name
+                                st.session_state.employee_db[emp_index]["dept"] = new_dept
+                                st.session_state.employee_db[emp_index]["phone"] = new_phone
+                                st.session_state.employee_db[emp_index]["position"] = new_pos
+                                st.session_state.employee_db[emp_index]["address"] = new_address
+                                st.session_state.employee_db[emp_index]["base_salary"] = new_sal
+                                st.success("✅ 員工 `" + str(target_id) + "` 的資料已成功更新！")
+                                st.rerun()
+
+                            if btn_delete:
+                                st.session_state.employee_db.pop(emp_index)
+                                if target_id in st.session_state.users_permissions:
+                                    del st.session_state.users_permissions[target_id]
+                                st.warning("🗑️ 員工 `" + str(target_id) + "` 資料已刪除！")
+                                st.rerun()
 
         st.divider()
         st.markdown("#### 📋 全球在職員工資料表 (含姓名、電話、地址與起薪)")
