@@ -13,12 +13,12 @@ def get_db_connection():
         port=os.getenv("DB_PORT", "5432")
     )
 
-def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"):
+def render_user_management_page(*args, **kwargs):
     st.title("💻 資訊/IT 部門 — 權限與系統管理中心")
     st.caption("管理集團部門結構、全球廠區據點擴建，以及跨國 ERP 模組授權 (RBAC) 與全系統操作軌跡稽核")
 
     # ----------------------------------------------------
-    # 🗄️ 1. 初始化 Session State (全域操作稽核日誌與系統數據)
+    # 🗄️ 1. 初始化 Session State (全域操作稽核日誌)
     # ----------------------------------------------------
     if "system_audit_logs" not in st.session_state:
         st.session_state.system_audit_logs = [
@@ -89,7 +89,7 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
             }
         ]
 
-    # 自動同步倉儲或其它模組連線過來的紀錄至 IT 全域日誌
+    # 同步倉儲異動紀錄至全域稽核日誌
     if "inventory_logs" in st.session_state and st.session_state.inventory_logs:
         existing_log_ids = {log["log_id"] for log in st.session_state.system_audit_logs}
         for inv in st.session_state.inventory_logs:
@@ -114,16 +114,15 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
                     "status": "🚨 異常" if "異常" in inv.get("type", "") or "盤虧" in inv.get("type", "") else "🟢 正常"
                 })
 
-    # 四大功能頁籤 (包含原始 3 大功能 + 強化之系統操作軌跡與稽核)
     tabs = st.tabs([
         "🏢 跨國廠區與子公司管理", 
         "👥 人員帳號與網頁授權", 
         "🔒 模組權限矩陣設定",
-        "📜 系統全域操作軌跡與稽核 (Audit Trail)"
+        "📜 全系統操作軌跡與稽核 (Audit Trail)"
     ])
 
     # ----------------------------------------------------
-    # TAB 1: 跨國廠區與子公司動態管理 (保留完整原始功能)
+    # TAB 1: 跨國廠區與子公司動態管理
     # ----------------------------------------------------
     with tabs[0]:
         st.subheader("🌐 全球廠區與海外子公司據點維護")
@@ -156,7 +155,6 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
                             "currency": f_currency, "revenue": "$0.00", "status": f_status
                         })
                         
-                        # 寫入 IT 操作軌跡
                         now_dt = datetime.datetime.now()
                         st.session_state.system_audit_logs.append({
                             "log_id": "AUD-" + now_dt.strftime('%Y%m%d-%H%M%S'),
@@ -181,7 +179,7 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
             st.dataframe(df_factories, use_container_width=True)
 
     # ----------------------------------------------------
-    # TAB 2: 人員帳號與網頁授權 (保留完整原始功能)
+    # TAB 2: 人員帳號與網頁授權
     # ----------------------------------------------------
     with tabs[1]:
         st.subheader("新增人員與選單授權設定")
@@ -235,7 +233,7 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
             st.dataframe(mock_users, use_container_width=True)
 
     # ----------------------------------------------------
-    # TAB 3: 模組權限矩陣設定 (保留完整原始功能)
+    # TAB 3: 模組權限矩陣設定
     # ----------------------------------------------------
     with tabs[2]:
         st.subheader("🔒 角色與模組 Access Control List (ACL) 矩陣")
@@ -248,7 +246,7 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
         st.data_editor(acl_df, use_container_width=True)
 
     # ----------------------------------------------------
-    # TAB 4: 🆕 全系統操作軌跡與稽核中心 (含年月日多維度搜尋)
+    # TAB 4: 📜 全系統操作軌跡與稽核中心
     # ----------------------------------------------------
     with tabs[3]:
         st.subheader("📜 系統操作與異動歷史紀錄 (System Audit Logs)")
@@ -281,9 +279,6 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
 
         st.markdown("---")
 
-        # ------------------------------------------------
-        # 📊 資料過濾與呈現邏輯
-        # ------------------------------------------------
         filtered_logs = []
         for log in logs_data:
             match_kw = True
@@ -334,8 +329,8 @@ def render_user_management_page(sub_option="🏢 跨國廠區與子公司管理"
         else:
             st.info("💡 查無符合目前日期（年/月/日）或關鍵字條件的操作紀錄。")
 
-def show(sub_option="🏢 跨國廠區與子公司管理"):
-    render_user_management_page(sub_option)
+def show(*args, **kwargs):
+    render_user_management_page(*args, **kwargs)
 
-def main(sub_option="🏢 跨國廠區與子公司管理"):
-    render_user_management_page(sub_option)
+def main(*args, **kwargs):
+    render_user_management_page(*args, **kwargs)
