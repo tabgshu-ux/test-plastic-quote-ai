@@ -84,7 +84,7 @@ if not st.session_state.logged_in:
                 if username_input in db and db[username_input]["password"] == password_input:
                     st.session_state.logged_in = True
                     st.session_state.user_info = db[username_input]
-                    st.success(f"✅ 登入成功！歡迎，{st.session_state.user_info['name']}")
+                    st.success("✅ 登入成功！歡迎，" + str(st.session_state.user_info['name']))
                     try:
                         st.rerun()
                     except Exception:
@@ -223,11 +223,11 @@ I18N = {
 }
 
 # ----------------------------------------------------
-# 🛡️ 安全動態模組載入器 (萬用參數調適)
+# 🛡️ 安全動態模組載入器 (萬用無錯包裝)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
-        mod = __import__(f"modules.{module_name}", fromlist=["*"])
+        mod = __import__("modules." + str(module_name), fromlist=["*"])
         for fname in func_names:
             if hasattr(mod, fname):
                 func = getattr(mod, fname)
@@ -241,14 +241,14 @@ def load_module_function(module_name, func_names):
                             try:
                                 return func()
                             except Exception:
-                                st.error(f"❌ 執行 modules/{module_name}.py 內部錯誤：\n```python\n{traceback.format_exc()}\n```")
+                                st.error("❌ 執行 modules/" + str(module_name) + ".py 內部錯誤：\n```python\n" + str(traceback.format_exc()) + "\n```")
                     except Exception:
-                        st.error(f"❌ 執行 modules/{module_name}.py 發生例外錯誤：\n```python\n{traceback.format_exc()}\n```")
+                        st.error("❌ 執行 modules/" + str(module_name) + ".py 例外錯誤：\n```python\n" + str(traceback.format_exc()) + "\n```")
                 return safe_wrapper
-        return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到入口函式: {func_names}")
+        return lambda *args, **kwargs: st.error("⚠️ 在 modules/" + str(module_name) + ".py 中找不到入口函式: " + str(func_names))
     except Exception:
         err_detail = traceback.format_exc()
-        return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤追蹤**:\n```python\n{err_detail}\n```")
+        return lambda *args, **kwargs: st.error("❌ 載入 modules/" + str(module_name) + ".py 失敗！\n\n**詳細錯誤追蹤**:\n```python\n" + str(err_detail) + "\n```")
 
 # 載入所有功能模組
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
@@ -272,7 +272,7 @@ allowed_depts = user_info.get("allowed_depts", "ALL")
 
 st.sidebar.title("🏭 AI ERP")
 st.sidebar.markdown("### 👤 User Status")
-st.sidebar.success(f"🟢 **{user_info['name']}** ({user_info['role']})")
+st.sidebar.success("🟢 **" + str(user_info['name']) + "** (" + str(user_info['role']) + ")")
 
 if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
     st.session_state.logged_in = False
@@ -307,7 +307,7 @@ else:
 selected_dept = st.sidebar.radio(
     lang_dict["dept_select"],
     options=available_depts,
-    key=f"sidebar_dept_radio_{selected_lang}"
+    key="sidebar_dept_radio_" + str(selected_lang)
 )
 st.sidebar.markdown("---")
 
@@ -317,11 +317,11 @@ dept_idx = all_depts.index(selected_dept)
 # 🔀 路由分流
 # ----------------------------------------------------
 if dept_idx == 0:  # 📈 營運戰情室
-    sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key=f"sub_exec_{selected_lang}")
+    sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key="sub_exec_" + str(selected_lang))
     render_exec_db(sub_option, selected_lang)
 
 elif dept_idx == 1:  # 🧾 財務
-    sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key=f"sub_finance_{selected_lang}")
+    sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key="sub_finance_" + str(selected_lang))
     sub_idx = lang_dict["sub_finance"].index(sub_option)
     if sub_idx == 0:
         render_ap(sub_option, selected_lang)
@@ -333,11 +333,11 @@ elif dept_idx == 1:  # 🧾 財務
         render_invoice(sub_option, selected_lang)
 
 elif dept_idx == 2:  # 🏢 總務部
-    sub_option = st.sidebar.radio("General Affairs:", lang_dict["sub_ga"], key=f"sub_ga_{selected_lang}")
+    sub_option = st.sidebar.radio("General Affairs:", lang_dict["sub_ga"], key="sub_ga_" + str(selected_lang))
     render_ga(sub_option, selected_lang)
 
 elif dept_idx == 3:  # 👥 人事/行政
-    sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
+    sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key="sub_hr_" + str(selected_lang))
     sub_idx = lang_dict["sub_hr"].index(sub_option)
     
     if sub_idx == 0:
@@ -346,17 +346,17 @@ elif dept_idx == 3:  # 👥 人事/行政
         render_payroll(sub_option, selected_lang)
 
 elif dept_idx == 4:  # 💼 業務/行銷
-    sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key=f"sub_sales_{selected_lang}")
+    sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key="sub_sales_" + str(selected_lang))
     render_sales(sub_option, selected_lang)
 
 elif dept_idx == 5:  # 🛠️ 研發/技術
-    sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key=f"sub_rd_{selected_lang}")
+    sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key="sub_rd_" + str(selected_lang))
     render_asset(sub_option, selected_lang)
 
 elif dept_idx == 6:  # 🏭 廠務/設備
-    sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key=f"sub_plant_{selected_lang}")
+    sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key="sub_plant_" + str(selected_lang))
     render_erp_db(sub_option, selected_lang)
 
 elif dept_idx == 7:  # 💻 資訊/IT
-    sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key=f"sub_it_{selected_lang}")
+    sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key="sub_it_" + str(selected_lang))
     render_user_mgmt(sub_option, selected_lang)
