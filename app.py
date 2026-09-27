@@ -1,3 +1,4 @@
+import traceback
 import streamlit as st
 
 st.set_page_config(
@@ -133,7 +134,6 @@ I18N = {
             "📄 行政公文與合同管理 (Admin Documents & Contracts)",
             "📑 總務與簽核審核中心 (Approval Center)"
         ],
-        # 🟢 在 HR 子選單加上「📋 員工人事資料表」
         "sub_hr": [
             "📋 員工人事資料表", 
             "💰 每月薪資與考勤變動扣款", 
@@ -172,7 +172,6 @@ I18N = {
             "📄 Admin Documents & Contracts",
             "📑 Approval & Workflow Center"
         ],
-        # 🟢 Added Employee Profiles to HR Sub-menu
         "sub_hr": [
             "📋 Global Employee Profiles", 
             "💰 Monthly Payroll & Deductions", 
@@ -211,7 +210,6 @@ I18N = {
             "📄 Quản lý Công văn & Hợp đồng",
             "📑 Trung tâm Phê duyệt & Ký duyệt"
         ],
-        # 🟢 Added Employee Profiles to HR Sub-menu
         "sub_hr": [
             "📋 Hồ sơ nhân sự toàn cầu", 
             "💰 Lương hàng tháng & Chấm công", 
@@ -225,7 +223,7 @@ I18N = {
 }
 
 # ----------------------------------------------------
-# 🛡️ 安全動態模組載入器
+# 🛡️ 安全動態模組載入器 (已優化錯誤除錯機制)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -236,17 +234,15 @@ def load_module_function(module_name, func_names):
                 def safe_wrapper(*args, **kwargs):
                     try:
                         return func(*args, **kwargs)
-                    except TypeError:
-                        try:
-                            return func(args[0]) if len(args) > 0 else func()
-                        except TypeError:
-                            return func()
+                    except Exception:
+                        st.error(f"❌ 執行 modules/{module_name}.py 時發生錯誤：\n```python\n{traceback.format_exc()}\n```")
                 return safe_wrapper
         return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到入口函式: {func_names}")
-    except Exception as e:
-        return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
+    except Exception:
+        err_detail = traceback.format_exc()
+        return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤追蹤**:\n```python\n{err_detail}\n```")
 
-# 載入所有功能模組 (含全新的員工人事管理模組)
+# 載入所有功能模組
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
 render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
@@ -258,7 +254,6 @@ render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_pag
 render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 render_ga = load_module_function("general_affairs", ["render_general_affairs_page", "show", "main"])
-# 🟢 載入員工人事檔案管理模組
 render_emp_mgmt = load_module_function("employee_management", ["render_employee_management", "show", "main"])
 
 # ----------------------------------------------------
@@ -337,7 +332,7 @@ elif dept_idx == 3:  # 👥 人事/行政
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
     sub_idx = lang_dict["sub_hr"].index(sub_option)
     
-    # 🟢 路由分流處理：點選第 0 個選項時呈現員工人事資料表，其餘呈現薪資扣款模組
+    # 路由分流處理：點選第 0 個選項時呈現員工人事資料表，其餘呈現薪資扣款模組
     if sub_idx == 0:
         render_emp_mgmt(sub_option, selected_lang)
     else:
