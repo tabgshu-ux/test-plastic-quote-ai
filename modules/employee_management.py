@@ -16,7 +16,7 @@ EXCHANGE_RATES = {
 def render_employee_management(sub_option="📋 員工人事資料表", lang="繁體中文"):
     current_sub_option = sub_option if sub_option else "📋 員工人事資料表"
     
-    st.title(f"📋 員工人事資料表與跨國檔案管理 — [{current_sub_option}]")
+    st.title(f"📋 員工人事資料表與跨國檔案管理")
     st.caption("支援多國籍員工資料維護（含姓名、地址、電話、起薪）、各國法定保險/稅務提繳計算，並自動同步請假系統與權限後台。")
 
     # ----------------------------------------------------
