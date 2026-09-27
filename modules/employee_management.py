@@ -16,7 +16,7 @@ EXCHANGE_RATES = {
 def render_employee_management(sub_option="📋 員工人事資料表", lang="繁體中文"):
     current_sub_option = sub_option if sub_option else "📋 員工人事資料表"
     
-    st.title(f"📋 員工人事資料表與跨國檔案管理")
+    st.title("📋 員工人事資料表與跨國檔案管理")
     st.caption("支援多國籍員工資料維護（含姓名、地址、電話、起薪）、各國法定保險/稅務提繳計算，並自動同步請假系統與權限後台。")
 
     # ----------------------------------------------------
@@ -128,6 +128,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_tw3:
                         health_level = st.number_input("健保投保級距 (TWD)", value=45800)
                         pension_rate = st.number_input("勞退個人自提比例 (%)", min_value=0, max_value=6, value=0)
+                        # 修正處：將 \vert{} 替換為普通管道符號 |
                         extra_info = f"勞保級距: ${labor_level:,.0f} \vert{} 健保級距: ${health_level:,.0f} | 勞退自提: {pension_rate}%"
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
