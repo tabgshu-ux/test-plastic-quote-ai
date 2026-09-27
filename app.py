@@ -75,8 +75,8 @@ if not st.session_state.logged_in:
     col_login, _ = st.columns([1, 1])
     with col_login:
         with st.form("login_form_main"):
-            username_input = st.text_input("帳號 / Username", value="ga_user").strip().lower()
-            password_input = st.text_input("密碼 / Password", type="password", value="ga123").strip()
+            username_input = st.text_input("帳號 / Username", value="admin").strip().lower()
+            password_input = st.text_input("密碼 / Password", type="password", value="admin123").strip()
             submit_button = st.form_submit_button("🔑 登入系統", type="primary")
 
             if submit_button:
@@ -103,7 +103,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ----------------------------------------------------
-# 🌐 全球多語系完整字典 (i18n)
+# 🌐 全球多語系完整字典 (i18n) - 已新增資訊稽核選項
 # ----------------------------------------------------
 I18N = {
     "繁體中文": {
@@ -142,7 +142,12 @@ I18N = {
         "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
         "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
         "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
-        "sub_it": ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"]
+        "sub_it": [
+            "🏢 跨國廠區與子公司管理", 
+            "👥 人員帳號與網頁授權", 
+            "🔒 模組權限矩陣 (RBAC)",
+            "📜 全系統操作軌跡與稽核"
+        ]
     },
     "English": {
         "dept_select": "Select Department / Module:",
@@ -180,7 +185,12 @@ I18N = {
         "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
         "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
         "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
-        "sub_it": ["🏢 Global Sites & Subsidiaries", "👥 User Auth & Web Permissions", "🔒 Role-Based Access Control (RBAC)"]
+        "sub_it": [
+            "🏢 Global Sites & Subsidiaries", 
+            "👥 User Auth & Web Permissions", 
+            "🔒 Role-Based Access Control (RBAC)",
+            "📜 System Audit Logs & Tracking"
+        ]
     },
     "Tiếng Việt": {
         "dept_select": "Vui lòng chọn phòng ban/phân hệ:",
@@ -218,7 +228,12 @@ I18N = {
         "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
         "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
         "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
-        "sub_it": ["🏢 Quản lý Chi nhánh & Công ty con", "👥 Phân quyền người dùng", "🔒 Ma trận quyền (RBAC)"]
+        "sub_it": [
+            "🏢 Quản lý Chi nhánh & Công ty con", 
+            "👥 Phân quyền người dùng", 
+            "🔒 Ma trận quyền (RBAC)",
+            "📜 Nhật ký thao tác hệ thống"
+        ]
     }
 }
 
@@ -297,7 +312,6 @@ st.sidebar.markdown("---")
 
 all_depts = lang_dict["depts"]
 
-# 權限過濾
 if allowed_depts != "ALL":
     available_depts = [d for d in all_depts if any(a in d for a in allowed_depts)]
     if not available_depts:
@@ -317,11 +331,11 @@ dept_idx = all_depts.index(selected_dept)
 # ----------------------------------------------------
 # 🔀 路由分流
 # ----------------------------------------------------
-if dept_idx == 0:  # 📈 營運戰情室
+if dept_idx == 0:
     sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key="sub_exec_" + str(selected_lang))
     render_exec_db(sub_option, selected_lang)
 
-elif dept_idx == 1:  # 🧾 財務
+elif dept_idx == 1:
     sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key="sub_finance_" + str(selected_lang))
     sub_idx = lang_dict["sub_finance"].index(sub_option)
     if sub_idx == 0:
@@ -333,7 +347,7 @@ elif dept_idx == 1:  # 🧾 財務
     else:
         render_invoice(sub_option, selected_lang)
 
-elif dept_idx == 2:  # 🏢 總務與倉儲
+elif dept_idx == 2:
     sub_option = st.sidebar.radio("General Affairs & WH:", lang_dict["sub_ga"], key="sub_ga_" + str(selected_lang))
     sub_idx = lang_dict["sub_ga"].index(sub_option)
     if sub_idx == 0:
@@ -341,24 +355,23 @@ elif dept_idx == 2:  # 🏢 總務與倉儲
     else:
         render_ga(sub_option, selected_lang)
 
-elif dept_idx == 3:  # 👥 人事/行政
+elif dept_idx == 3:
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key="sub_hr_" + str(selected_lang))
     sub_idx = lang_dict["sub_hr"].index(sub_option)
-    
     if sub_idx == 0:
         render_emp_mgmt(sub_option, selected_lang)
     else:
         render_payroll(sub_option, selected_lang)
 
-elif dept_idx == 4:  # 💼 業務/行銷
+elif dept_idx == 4:
     sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key="sub_sales_" + str(selected_lang))
     render_sales(sub_option, selected_lang)
 
-elif dept_idx == 5:  # 🛠️ 研發/技術
+elif dept_idx == 5:
     sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key="sub_rd_" + str(selected_lang))
     render_asset(sub_option, selected_lang)
 
-elif dept_idx == 6:  # 🏭 廠務/設備
+elif dept_idx == 6:
     sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key="sub_plant_" + str(selected_lang))
     render_erp_db(sub_option, selected_lang)
 
