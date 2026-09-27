@@ -133,7 +133,12 @@ I18N = {
             "📄 行政公文與合同管理 (Admin Documents & Contracts)",
             "📑 總務與簽核審核中心 (Approval Center)"
         ],
-        "sub_hr": ["💰 每月薪資與考勤變動扣款", "⏰ 網路打卡機連線對接"],
+        # 🟢 在 HR 子選單加上「📋 員工人事資料表」
+        "sub_hr": [
+            "📋 員工人事資料表", 
+            "💰 每月薪資與考勤變動扣款", 
+            "⏰ 網路打卡機連線對接"
+        ],
         "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
         "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
         "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
@@ -167,7 +172,12 @@ I18N = {
             "📄 Admin Documents & Contracts",
             "📑 Approval & Workflow Center"
         ],
-        "sub_hr": ["💰 Monthly Payroll & Deductions", "⏰ Biometric Clock-in Sync"],
+        # 🟢 Added Employee Profiles to HR Sub-menu
+        "sub_hr": [
+            "📋 Global Employee Profiles", 
+            "💰 Monthly Payroll & Deductions", 
+            "⏰ Biometric Clock-in Sync"
+        ],
         "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
         "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
         "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
@@ -201,7 +211,12 @@ I18N = {
             "📄 Quản lý Công văn & Hợp đồng",
             "📑 Trung tâm Phê duyệt & Ký duyệt"
         ],
-        "sub_hr": ["💰 Lương hàng tháng & Chấm công", "⏰ Kết nối máy chấm công"],
+        # 🟢 Added Employee Profiles to HR Sub-menu
+        "sub_hr": [
+            "📋 Hồ sơ nhân sự toàn cầu", 
+            "💰 Lương hàng tháng & Chấm công", 
+            "⏰ Kết nối máy chấm công"
+        ],
         "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
         "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
         "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
@@ -231,7 +246,7 @@ def load_module_function(module_name, func_names):
     except Exception as e:
         return lambda *args, **kwargs: st.error(f"❌ 載入 modules/{module_name}.py 失敗！\n\n**詳細錯誤原因**: `{e}`")
 
-# 載入所有功能模組
+# 載入所有功能模組 (含全新的員工人事管理模組)
 render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
 render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
 render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
@@ -243,6 +258,8 @@ render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_pag
 render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 render_ga = load_module_function("general_affairs", ["render_general_affairs_page", "show", "main"])
+# 🟢 載入員工人事檔案管理模組
+render_emp_mgmt = load_module_function("employee_management", ["render_employee_management", "show", "main"])
 
 # ----------------------------------------------------
 # 🔒 RBAC 權限過濾與側邊欄選單
@@ -318,7 +335,13 @@ elif dept_idx == 2:  # 🏢 總務部
 
 elif dept_idx == 3:  # 👥 人事/行政
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
-    render_payroll(sub_option, selected_lang)
+    sub_idx = lang_dict["sub_hr"].index(sub_option)
+    
+    # 🟢 路由分流處理：點選第 0 個選項時呈現員工人事資料表，其餘呈現薪資扣款模組
+    if sub_idx == 0:
+        render_emp_mgmt(sub_option, selected_lang)
+    else:
+        render_payroll(sub_option, selected_lang)
 
 elif dept_idx == 4:  # 💼 業務/行銷
     sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key=f"sub_sales_{selected_lang}")
