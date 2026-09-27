@@ -8,13 +8,17 @@ import streamlit as st
 EXCHANGE_RATES = {
     "🇻🇳 越南 (Vietnam)": {"symbol": "₫", "code": "VND", "step": 100000.0, "default_sal": 9000000.0},
     "🇹🇼 台灣 (Taiwan)": {"symbol": "NT$", "code": "TWD", "step": 1000.0, "default_sal": 45000.0},
-    "🇨🇳 中國 (China)": {"symbol": "¥", "code": "RMB", "step": 100.0, "default_sal": 8000.0},
+    "🇨🇳 中國 (China)": {"symbol": "¥", "code": "RMB", "step": 500.0, "default_sal": 8000.0},
     "🇮🇩 印尼 (Indonesia)": {"symbol": "Rp", "code": "IDR", "step": 100000.0, "default_sal": 5000000.0},
     "USD (美金)": {"symbol": "$", "code": "USD", "step": 100.0, "default_sal": 1500.0}
 }
 
 def render_employee_management(sub_option="📋 員工人事資料表", lang="繁體中文"):
-    st.title("📋 員工人事資料表與跨國檔案管理")
+    # 確保參數即使沒有傳入也有預設值
+    current_sub_option = sub_option or "📋 員工人事資料表"
+    current_lang = lang or "繁體中文"
+
+    st.title(f"📋 員工人事資料表與跨國檔案管理 — [{current_sub_option}]")
     st.caption("支援多國籍員工資料維護（含姓名、地址、電話、起薪）、各國法定保險/稅務提繳計算，並自動同步請假系統與權限後台。")
 
     # ----------------------------------------------------
@@ -88,7 +92,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                 st.markdown("---")
                 st.markdown(f"##### 📋 步驟 2：輸入【{country}】專屬身分、起薪與法定保險資訊")
 
-                # 🟢 動態渲染各國特有欄位
+                # 動態渲染各國特有欄位
                 id_number = ""
                 extra_info = ""
                 curr_key = "VND (越南盾)"
@@ -107,12 +111,11 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                         hospital = st.text_input("醫保指定醫院 (Bệnh viện)", "Bệnh viện Quốc tế Hạnh Phúc")
                         extra_info = f"就醫醫院: {hospital}"
 
-                    # 薪資與 10.5% 保險扣額
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 保險底薪 (VND)", min_value=0.0, value=9000000.0, step=100000.0)
                     with col_sal2:
-                        est_ins_deduction = base_sal * 0.105  # 越南社醫失保 10.5%
+                        est_ins_deduction = base_sal * 0.105
                         st.number_input("每月社醫失保個人扣繳 (10.5% VND)", value=est_ins_deduction, disabled=True)
                     with col_sal3:
                         allowance = st.number_input("各類津貼總計 (VND)", min_value=0.0, value=1530000.0, step=50000.0)
@@ -134,7 +137,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 月薪 (TWD)", min_value=0.0, value=45000.0, step=1000.0)
                     with col_sal2:
-                        est_ins_deduction = 1150.0 + 672.0  # 預估勞健保自付額
+                        est_ins_deduction = 1150.0 + 672.0
                         est_ins_deduction = st.number_input("預估每月勞健保自付額 (TWD)", value=est_ins_deduction)
                     with col_sal3:
                         allowance = st.number_input("伙食津貼/其他 (TWD)", min_value=0.0, value=3000.0)
@@ -155,7 +158,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 基本工資 (RMB)", min_value=0.0, value=8000.0, step=500.0)
                     with col_sal2:
-                        est_ins_deduction = base_sal * 0.105  # 五險一金個人扣繳約 10.5%
+                        est_ins_deduction = base_sal * 0.105
                         est_ins_deduction = st.number_input("預估五險一金個人扣款 (RMB)", value=est_ins_deduction)
                     with col_sal3:
                         allowance = st.number_input("職務津貼 (RMB)", min_value=0.0, value=1000.0)
@@ -176,19 +179,18 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_sal1:
                         base_sal = st.number_input("約定起薪 / 基本工資 (IDR)", min_value=0.0, value=5000000.0, step=100000.0)
                     with col_sal2:
-                        est_ins_deduction = base_sal * 0.04  # BPJS 個人扣繳約 4%
+                        est_ins_deduction = base_sal * 0.04
                         st.number_input("BPJS 個人提繳估算 (4% IDR)", value=est_ins_deduction, disabled=True)
                     with col_sal3:
                         allowance = st.number_input("交通/伙食津貼 (IDR)", min_value=0.0, value=1000000.0)
 
                 curr_code = EXCHANGE_RATES[curr_key]["code"]
 
-                # 提交並進行 3 模組連動
+                # 提交按鈕
                 if st.form_submit_button("✅ 儲存跨國員工檔案 (同步請假與權限)", type="primary"):
                     if not emp_name or not phone or not address:
                         st.error("❌ 請填寫姓名、電話與地址等必填欄位！")
                     else:
-                        # 1️⃣ 寫入員工主檔
                         st.session_state.employee_db.append({
                             "emp_id": emp_id,
                             "name": emp_name,
@@ -206,7 +208,6 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                             "role": emp_role
                         })
 
-                        # 2️⃣ 同步至權限系統後台
                         st.session_state.users_permissions[emp_id] = {
                             "username": emp_id,
                             "full_name": emp_name,
@@ -216,7 +217,6 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                         }
 
                         st.success(f"🎉 成功建立【{country}】員工 `{emp_name}` ({emp_id})！")
-                        st.info(f"✅ 已自動計算該國保險扣繳，並於【請假系統】與【權限系統後台】開通權限與帳號！")
                         st.rerun()
 
         st.divider()
@@ -241,11 +241,10 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
             st.dataframe(pd.DataFrame(global_list), use_container_width=True)
 
     # ====================================================
-    # TAB 2: 請假系統 (連動所有跨國員工)
+    # TAB 2: 請假系統
     # ====================================================
     with tab_leave:
         st.subheader("🌴 全球員工請假申請與簽核")
-        
         emp_options = [f"{e['emp_id']} - {e['name']} ({e['country']} / {e['dept']})" for e in st.session_state.employee_db]
 
         with st.expander("➕ 填寫請假申請單", expanded=True):
@@ -287,7 +286,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
         st.dataframe(pd.DataFrame(st.session_state.leave_requests), use_container_width=True)
 
     # ====================================================
-    # TAB 3: 權限系統後台 (連動顯示跨國帳號)
+    # TAB 3: 權限系統後台
     # ====================================================
     with tab_perm:
         st.subheader("🔑 權限系統後台 — 跨國人員帳號與權限清單")
