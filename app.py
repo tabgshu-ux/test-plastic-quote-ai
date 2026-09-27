@@ -223,7 +223,7 @@ I18N = {
 }
 
 # ----------------------------------------------------
-# 🛡️ 安全動態模組載入器 (已優化錯誤除錯機制)
+# 🛡️ 安全動態模組載入器 (具備萬用參數自動調適)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -234,8 +234,16 @@ def load_module_function(module_name, func_names):
                 def safe_wrapper(*args, **kwargs):
                     try:
                         return func(*args, **kwargs)
+                    except TypeError:
+                        try:
+                            return func(args[0]) if len(args) > 0 else func()
+                        except TypeError:
+                            try:
+                                return func()
+                            except Exception:
+                                st.error(f"❌ 執行 modules/{module_name}.py 內部發生錯誤：\n```python\n{traceback.format_exc()}\n```")
                     except Exception:
-                        st.error(f"❌ 執行 modules/{module_name}.py 時發生錯誤：\n```python\n{traceback.format_exc()}\n```")
+                        st.error(f"❌ 執行 modules/{module_name}.py 時發生例外錯誤：\n```python\n{traceback.format_exc()}\n```")
                 return safe_wrapper
         return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到入口函式: {func_names}")
     except Exception:
@@ -332,7 +340,6 @@ elif dept_idx == 3:  # 👥 人事/行政
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key=f"sub_hr_{selected_lang}")
     sub_idx = lang_dict["sub_hr"].index(sub_option)
     
-    # 路由分流處理：點選第 0 個選項時呈現員工人事資料表，其餘呈現薪資扣款模組
     if sub_idx == 0:
         render_emp_mgmt(sub_option, selected_lang)
     else:
