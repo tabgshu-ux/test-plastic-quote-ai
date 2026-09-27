@@ -3,8 +3,8 @@ import pandas as pd
 import streamlit as st
 
 def render_warehouse_management(*args, **kwargs):
-    st.title("📦 倉儲與庫存管理系統 (Warehouse & Inventory Management)")
-    st.caption("支援多廠區倉庫物料/成品管理，包含建立新物料條碼、進倉入庫、出倉領料、庫存盤點與防錯防呆比對。")
+    st.title("📦 倉儲嚴格管制與防偷防呆管理系統")
+    st.caption("🔒 已啟動高強度安全防護：強制實物條碼比對、雙人簽核領料、盤點異常告警與不可竄改稽核軌跡。")
 
     # ----------------------------------------------------
     # 🗄️ 1. 初始化 Session State 倉儲資料庫
@@ -55,7 +55,6 @@ def render_warehouse_management(*args, **kwargs):
             }
         ]
 
-    # 🟢 防呆防錯：確保歷史舊資料都含有 barcode 欄位，避免 KeyError
     for item in st.session_state.warehouse_stock:
         if "barcode" not in item or not item["barcode"]:
             item["barcode"] = "未建檔條碼"
@@ -71,36 +70,33 @@ def render_warehouse_management(*args, **kwargs):
                 "change_qty": 5000.0, 
                 "unit": "kg", 
                 "operator": "李總務", 
+                "checker": "張主管",
                 "date": "2026-09-20", 
                 "remark": "採購單 PO-2026-088 到貨入庫"
             }
         ]
 
-    # ----------------------------------------------------
-    # 📌 2. 建立 5 大倉儲功能分頁
-    # ----------------------------------------------------
-    tab_stock, tab_add_item, tab_in, tab_out, tab_logs = st.tabs([
-        "📊 即時庫存與條碼總覽 (Overview)", 
-        "➕ 新建品項與條碼建檔 (New Item)",
-        "📥 進倉入庫作業 (Inbound)", 
-        "📤 出倉領料/條碼防錯 (Outbound)", 
-        "📜 庫存異動履歷 (Logs)"
+    tab_stock, tab_add_item, tab_in, tab_out, tab_audit = st.tabs([
+        "📊 庫存監視與安全預警", 
+        "➕ 新建品項條碼建檔",
+        "📥 嚴格進倉驗收 (雙核)", 
+        "📤 條碼防錯領料出倉 (防偷)", 
+        "🚨 防竊盤點與稽核軌跡"
     ])
 
     # ====================================================
-    # TAB 1: 即時庫存與條碼總覽
+    # TAB 1: 庫存監視與安全預警
     # ====================================================
     with tab_stock:
-        st.subheader("📊 多廠區庫存與防錯條碼清單")
-        
+        st.subheader("📊 嚴格庫存監控視窗")
         low_stock_items = [item for item in st.session_state.warehouse_stock if item["qty"] < item["min_safety_qty"]]
         col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("📦 現有品項總數", str(len(st.session_state.warehouse_stock)) + " 項")
-        col_m2.metric("⚠️ 安全庫存預警品項", str(len(low_stock_items)) + " 項", delta_color="inverse")
-        col_m3.metric("🏷️ 條碼防錯建檔率", "100%")
+        col_m1.metric("📦 現有管制品項", str(len(st.session_state.warehouse_stock)) + " 項")
+        col_m2.metric("⚠️ 低庫存預警", str(len(low_stock_items)) + " 項", delta_color="inverse")
+        col_m3.metric("🔐 條碼防錯機制", "全時段強制比對")
 
         if low_stock_items:
-            st.warning("⚠️ **安全庫存過低預警！** 以下品項庫存已低於安全標準：")
+            st.error("🚨 **警告：以下物料/成品庫存異常或低於安全庫存，請立即進行實體盤點確認是否有偷拿情事！**")
             low_stock_display = []
             for l_item in low_stock_items:
                 low_stock_display.append({
@@ -133,37 +129,36 @@ def render_warehouse_management(*args, **kwargs):
             if match_search and match_cat:
                 filtered_stock.append({
                     "物料/產品料號": s["item_code"],
-                    "🏷️ 物品條碼": s.get("barcode", "未建檔"),
+                    "🏷️ 條碼 (Barcode)": s.get("barcode", "未建檔"),
                     "品名規格": s["item_name"],
                     "物料類別": s["category"],
-                    "📍 存放倉庫與儲位": s["wh_location"],
-                    "目前庫存量": f"{s['qty']:,.1f} {s['unit']}",
-                    "安全庫存量": f"{s['min_safety_qty']:,.1f} {s['unit']}",
-                    "狀態": "🔴 庫存不足" if s["qty"] < s["min_safety_qty"] else "🟢 正常",
-                    "防錯規格與備註": s.get("spec_note", "-"),
-                    "最後更新": s["last_update"]
+                    "📍 儲位": s["wh_location"],
+                    "系統帳面庫存": f"{s['qty']:,.1f} {s['unit']}",
+                    "安全庫存": f"{s['min_safety_qty']:,.1f} {s['unit']}",
+                    "狀態": "🔴 庫存偏低" if s["qty"] < s["min_safety_qty"] else "🟢 正常",
+                    "規格細節與防錯標記": s.get("spec_note", "-"),
+                    "最後更新日": s["last_update"]
                 })
 
         st.dataframe(pd.DataFrame(filtered_stock), use_container_width=True)
 
     # ====================================================
-    # TAB 2: 新建品項與條碼建檔
+    # TAB 2: 新建品項條碼建檔
     # ====================================================
     with tab_add_item:
-        st.subheader("➕ 新建倉儲物料/成品品項與條碼")
-        st.caption("在此建立新品項的料號、條碼、存放倉庫位置及安全庫存，建立後即可進行進出倉作業。")
+        st.subheader("➕ 物品條碼建檔與防錯規格設定")
+        st.caption("所有物料或成品必須強制綁定獨一無二的條碼（可使用掃描槍輸入），未建檔物品禁止出庫。")
 
         with st.form("form_add_new_warehouse_item"):
-            st.markdown("##### 📍 步驟 1：基本屬性與防錯條碼資訊")
             col_a1, col_a2, col_a3 = st.columns(3)
             with col_a1:
                 new_cat = st.selectbox("物料類別 *", ["塑膠原料 (Raw Material)", "完成品 (Finished Product)", "模具備件/耗材 (Spare Parts)"])
                 new_code = st.text_input("物料/產品料號 (Item Code) *", "RM-ABS-003")
             with col_a2:
                 new_name = st.text_input("品名規格名稱 *", "高散熱 PA66 尼龍原料")
-                new_barcode = st.text_input("🏷️ 物品條碼 (Barcode/EAN) * (可手動或掃描槍輸入)", "4710123456036")
+                new_barcode = st.text_input("🏷️ 獨一條碼 (EAN/UPC/自訂碼) *", "4710123456036")
             with col_a3:
-                new_wh = st.selectbox("存放倉庫與預設儲位 *", [
+                new_wh = st.selectbox("指定發放倉庫/儲位 *", [
                     "🇻🇳 越南廠 - 原料倉 (VN-RAW-A1)",
                     "🇻🇳 越南廠 - 成品倉 (VN-FG-B2)",
                     "🇹🇼 台灣總部 - 原料倉 (TW-RAW-01)",
@@ -173,28 +168,26 @@ def render_warehouse_management(*args, **kwargs):
                 ])
                 new_unit = st.selectbox("計量單位 *", ["kg", "pcs", "包", "箱", "捲", "組"])
 
-            st.markdown("---")
-            st.markdown("##### 📋 步驟 2：庫存數量與成本防呆資訊")
             col_b1, col_b2, col_b3 = st.columns(3)
             with col_b1:
-                new_qty = st.number_input("初始建檔庫存量", min_value=0.0, value=0.0, step=10.0)
+                new_qty = st.number_input("初始帳面數量", min_value=0.0, value=0.0, step=10.0)
             with col_b2:
-                new_min = st.number_input("最低安全庫存量 (低於此值告警)", min_value=0.0, value=1000.0, step=100.0)
+                new_min = st.number_input("安全庫存下限", min_value=0.0, value=1000.0, step=100.0)
             with col_b3:
-                new_price = st.number_input("預估單價 / 成本", min_value=0.0, value=100.0, step=10.0)
-                new_curr = st.selectbox("計價幣別", ["TWD", "VND", "RMB", "IDR", "USD"])
+                new_price = st.number_input("單價成本", min_value=0.0, value=100.0, step=10.0)
+                new_curr = st.selectbox("幣別", ["TWD", "VND", "RMB", "IDR", "USD"])
 
-            new_spec = st.text_input("防錯規格詳細說明 (如：顏色、材質牌號、尺寸重量，防止員工拿錯替代品)", "顏色: 黑色, 牌號: PA66-GF30, 防錯標籤: 黃色貼紙")
+            new_spec = st.text_input("🔒 防錯防偷特徵說明 (如：防偽貼紙顏色、材質牌號、包裝標記)", "顏色: 黑色, 防偽貼紙: 藍色防拆貼, 重量規格: 25kg/包")
 
-            btn_create_item = st.form_submit_button("✅ 儲存並建立新品項條碼", type="primary")
+            btn_create_item = st.form_submit_button("✅ 完成建檔並鎖定條碼", type="primary")
 
             if btn_create_item:
                 if not new_code or not new_name or not new_barcode:
                     st.error("❌ 請填寫料號、品名與條碼等必填欄位！")
                 else:
-                    code_exists = any(s["item_code"] == new_code for s in st.session_state.warehouse_stock)
+                    code_exists = any(s["item_code"] == new_code or s.get("barcode") == new_barcode for s in st.session_state.warehouse_stock)
                     if code_exists:
-                        st.error("❌ 料號 `" + str(new_code) + "` 已存在，請更換料號！")
+                        st.error("❌ 料號或條碼已存在，禁止重複建檔！")
                     else:
                         st.session_state.warehouse_stock.append({
                             "item_code": new_code,
@@ -210,72 +203,78 @@ def render_warehouse_management(*args, **kwargs):
                             "spec_note": new_spec,
                             "last_update": str(datetime.date.today())
                         })
-                        st.success("🎉 成功建立新物料 `" + str(new_name) + "` (" + str(new_code) + ")，條碼 `" + str(new_barcode) + "` 已綁定！")
+                        st.success("🎉 成功建檔物料 `" + str(new_name) + "`，條碼 `" + str(new_barcode) + "` 已鎖定！")
                         st.rerun()
 
     # ====================================================
-    # TAB 3: 進倉入庫作業
+    # TAB 3: 嚴格進倉驗收
     # ====================================================
     with tab_in:
-        st.subheader("📥 採購到貨 / 生產完工進倉單據")
+        st.subheader("📥 雙人核可進倉驗收單")
         
         with st.form("form_inbound_stock"):
             col_in1, col_in2 = st.columns(2)
             with col_in1:
                 item_options = [s["item_code"] + " - " + s["item_name"] + " [條碼: " + str(s.get("barcode","未建檔")) + "]" for s in st.session_state.warehouse_stock]
-                selected_item_str = st.selectbox("選擇進倉品項 (既有物料/成品)", item_options if item_options else ["無庫存資料"])
-                in_qty = st.number_input("本次進倉數量 *", min_value=0.1, value=100.0, step=10.0)
+                selected_item_str = st.selectbox("選擇驗收入庫品項", item_options if item_options else ["無庫存資料"])
+                in_qty = st.number_input("驗收數量 *", min_value=0.1, value=100.0, step=10.0)
             with col_in2:
                 in_date = st.date_input("入庫日期", datetime.date.today())
-                operator_name = st.text_input("經手人 / 倉管人員", "李總務")
+                operator_name = st.text_input("倉管點交人 *", "李總務")
+                checker_name = st.text_input("主管/稽核複核人 *", "張主管")
 
-            in_remark = st.text_input("進倉備註 (如：採購單號 / 供應商名稱 / 批號)", "採購進貨入庫")
-            btn_inbound = st.form_submit_button("✅ 確認進倉並更新庫存", type="primary")
+            in_remark = st.text_input("驗收單據/發票號碼 (作為財務核銷依據)", "PO-2026-0099")
+            btn_inbound = st.form_submit_button("✅ 雙人簽核並完成進倉", type="primary")
 
             if btn_inbound and selected_item_str != "無庫存資料":
-                code = selected_item_str.split(" - ")[0]
-                item_idx = next((i for i, s in enumerate(st.session_state.warehouse_stock) if s["item_code"] == code), None)
+                if not operator_name or not checker_name:
+                    st.error("❌ 必須填寫『點交人』與『稽核複核人』才能進倉！")
+                else:
+                    code = selected_item_str.split(" - ")[0]
+                    item_idx = next((i for i, s in enumerate(st.session_state.warehouse_stock) if s["item_code"] == code), None)
 
-                if item_idx is not None:
-                    st.session_state.warehouse_stock[item_idx]["qty"] += in_qty
-                    st.session_state.warehouse_stock[item_idx]["last_update"] = str(in_date)
+                    if item_idx is not None:
+                        st.session_state.warehouse_stock[item_idx]["qty"] += in_qty
+                        st.session_state.warehouse_stock[item_idx]["last_update"] = str(in_date)
 
-                    log_id = "LOG-" + datetime.date.today().strftime('%Y%m%d') + "-" + str(len(st.session_state.inventory_logs)+1).zfill(2)
-                    st.session_state.inventory_logs.append({
-                        "log_id": log_id,
-                        "type": "📥 進倉入庫",
-                        "item_code": code,
-                        "item_name": st.session_state.warehouse_stock[item_idx]["item_name"],
-                        "wh_location": st.session_state.warehouse_stock[item_idx]["wh_location"],
-                        "change_qty": +in_qty,
-                        "unit": st.session_state.warehouse_stock[item_idx]["unit"],
-                        "operator": operator_name,
-                        "date": str(in_date),
-                        "remark": in_remark
-                    })
-                    st.success("🎉 成功進倉 " + str(in_qty) + " " + st.session_state.warehouse_stock[item_idx]["unit"] + "！庫存已同步更新。")
-                    st.rerun()
+                        log_id = "LOG-" + datetime.date.today().strftime('%Y%m%d') + "-" + str(len(st.session_state.inventory_logs)+1).zfill(2)
+                        st.session_state.inventory_logs.append({
+                            "log_id": log_id,
+                            "type": "📥 進倉入庫",
+                            "item_code": code,
+                            "item_name": st.session_state.warehouse_stock[item_idx]["item_name"],
+                            "wh_location": st.session_state.warehouse_stock[item_idx]["wh_location"],
+                            "change_qty": +in_qty,
+                            "unit": st.session_state.warehouse_stock[item_idx]["unit"],
+                            "operator": operator_name,
+                            "checker": checker_name,
+                            "date": str(in_date),
+                            "remark": in_remark
+                        })
+                        st.success("🎉 進倉驗收成功！點交人：" + str(operator_name) + " | 複核人：" + str(checker_name))
+                        st.rerun()
 
     # ====================================================
-    # TAB 4: 出倉領料/條碼防錯比對
+    # TAB 4: 條碼防錯領料出倉 (防偷機制)
     # ====================================================
     with tab_out:
-        st.subheader("📤 領料 / 銷售出貨 / 條碼防錯比對扣減")
-        st.info("💡 **防呆機制**：員工領料時可使用掃描槍刷條碼，系統自動比對條碼與物料規格，防止拿錯替代品。")
+        st.subheader("📤 條碼強制比對領料出倉 (防偷防拿錯機制)")
+        st.warning("🔒 **系統防竊提示**：領料時必須使用條碼槍刷取實物包裝上的條碼。若條碼與申請品項不符，系統將會**鎖死出庫並記錄異常告警**！")
 
         with st.form("form_outbound_stock"):
             col_out1, col_out2 = st.columns(2)
             with col_out1:
-                item_options_out = [s["item_code"] + " - " + s["item_name"] + " [庫存: " + str(s["qty"]) + " " + s["unit"] + "]" for s in st.session_state.warehouse_stock]
-                selected_out_str = st.selectbox("1️⃣ 選擇應領料品項 (需求單據)", item_options_out if item_options_out else ["無庫存資料"])
-                out_qty = st.number_input("本次領料/出貨數量 *", min_value=0.1, value=50.0, step=10.0)
+                item_options_out = [s["item_code"] + " - " + s["item_name"] + " [帳面庫存: " + str(s["qty"]) + " " + s["unit"] + "]" for s in st.session_state.warehouse_stock]
+                selected_out_str = st.selectbox("1️⃣ 選擇領料單據需求品項", item_options_out if item_options_out else ["無庫存資料"])
+                out_qty = st.number_input("申請領料/出貨數量 *", min_value=0.1, value=50.0, step=10.0)
             with col_out2:
-                scanned_barcode = st.text_input("2️⃣ 🏷️ 刷取實物條碼進行比對 (掃描槍輸入/手動) *", placeholder="請掃描實物條碼...")
-                out_operator = st.text_input("領料人 / 出貨專員", "張工程師")
+                scanned_barcode = st.text_input("2️⃣ 🏷️ 刷取實物條碼 (條碼槍輸入/手動) *", placeholder="請對準實物條碼刷卡...")
+                out_operator = st.text_input("領料申請人 *", "張工程師")
+                out_checker = st.text_input("倉管發料複核人 *", "李總務")
 
             out_date = st.date_input("出庫日期", datetime.date.today())
-            out_remark = st.text_input("出倉備註 (領料工單號 / 客戶單號)", "車間領料射出生產")
-            btn_outbound = st.form_submit_button("🚀 條碼防錯比對並扣減庫存", type="primary")
+            out_remark = st.text_input("領料工單號 / 客戶訂單號 (必填，便於追蹤物料去向)", "WO-2026-0512")
+            btn_outbound = st.form_submit_button("🚀 驗證實物條碼並發料扣庫", type="primary")
 
             if btn_outbound and selected_out_str != "無庫存資料":
                 code = selected_out_str.split(" - ")[0]
@@ -285,8 +284,27 @@ def render_warehouse_management(*args, **kwargs):
                     target_item = st.session_state.warehouse_stock[item_idx]
                     real_barcode = str(target_item.get("barcode", "")).strip()
 
-                    if scanned_barcode.strip() and scanned_barcode.strip() != real_barcode:
-                        st.error("🚨 **防錯警示！條碼不相符！**\n需求條碼為 `" + str(real_barcode) + "`，但您掃描的條碼為 `" + str(scanned_barcode) + "`。員工拿錯物料，請重新確認實物！")
+                    # 🚨 防偷/防拿錯核心邏輯：檢驗條碼
+                    if not scanned_barcode.strip():
+                        st.error("❌ 必須刷取或輸入實物條碼才能執行發料作業！")
+                    elif scanned_barcode.strip() != real_barcode:
+                        st.error("🚨 **防偷防錯告警！實物條碼不符！**\n單據需求條碼為 `" + str(real_barcode) + "`，但現場刷入的條碼為 `" + str(scanned_barcode) + "`。\n**系統已鎖定發料功能，請確認是否有員工偷換物料或拿錯替代品！**")
+                        
+                        # 自動紀錄異常告警至稽核日誌
+                        log_id = "LOG-ERR-" + datetime.date.today().strftime('%Y%m%d') + "-" + str(len(st.session_state.inventory_logs)+1).zfill(2)
+                        st.session_state.inventory_logs.append({
+                            "log_id": log_id,
+                            "type": "🚨 條碼異常/違規領料警告",
+                            "item_code": code,
+                            "item_name": target_item["item_name"],
+                            "wh_location": target_item["wh_location"],
+                            "change_qty": 0.0,
+                            "unit": target_item["unit"],
+                            "operator": out_operator,
+                            "checker": out_checker,
+                            "date": str(out_date),
+                            "remark": "刷錯條碼 (嘗試使用 " + str(scanned_barcode) + " 領取 " + str(real_barcode) + ")"
+                        })
                     else:
                         current_qty = target_item["qty"]
                         if out_qty > current_qty:
@@ -305,22 +323,72 @@ def render_warehouse_management(*args, **kwargs):
                                 "change_qty": -out_qty,
                                 "unit": target_item["unit"],
                                 "operator": out_operator,
+                                "checker": out_checker,
                                 "date": str(out_date),
-                                "remark": out_remark + " (條碼比對通過)"
+                                "remark": out_remark + " (條碼驗證無誤)"
                             })
-                            st.success("✅ **條碼比對正確！** 成功出倉領料 " + str(out_qty) + " " + target_item["unit"] + "！")
+                            st.success("✅ **條碼驗證完全一致！** 成功發料 " + str(out_qty) + " " + target_item["unit"] + "，具名記錄已寫入系統。")
                             st.rerun()
 
     # ====================================================
-    # TAB 5: 庫存異動履歷
+    # TAB 5: 防竊盤點與稽核軌跡
     # ====================================================
-    with tab_logs:
-        st.subheader("📜 歷史出入庫紀錄與稽核軌跡")
+    with tab_audit:
+        st.subheader("🚨 實體庫存盤點與防偷稽核軌跡")
+        st.caption("定期透過盤點對比『帳面庫存』與『現場盤點數』，若出現盤虧，系統將標註為潛在偷竊風險。")
+
+        # 盤點調整表單
+        with st.expander("🔍 執行實體庫存盤點登記 (盤盈 / 盤虧修正)", expanded=False):
+            with st.form("form_stock_taking"):
+                emp_list_take = [s["item_code"] + " - " + s["item_name"] + " (帳面: " + str(s["qty"]) + " " + s["unit"] + ")" for s in st.session_state.warehouse_stock]
+                selected_take_str = st.selectbox("選擇盤點品項", emp_list_take)
+                actual_qty = st.number_input("現場實際清點數量 *", min_value=0.0, value=100.0, step=1.0)
+                taker_name = st.text_input("盤點稽核主管 *", "王會計")
+                take_reason = st.text_input("盤點差異說明 (若缺少請註明是否涉及偷竊/損耗)", "定期例行盤點")
+
+                btn_take = st.form_submit_button("⚖️ 儲存盤點結果並自動修正庫存", type="primary")
+
+                if btn_take and selected_take_str:
+                    code = selected_take_str.split(" - ")[0]
+                    item_idx = next((i for i, s in enumerate(st.session_state.warehouse_stock) if s["item_code"] == code), None)
+
+                    if item_idx is not None:
+                        old_qty = st.session_state.warehouse_stock[item_idx]["qty"]
+                        diff_qty = actual_qty - old_qty
+
+                        st.session_state.warehouse_stock[item_idx]["qty"] = actual_qty
+                        st.session_state.warehouse_stock[item_idx]["last_update"] = str(datetime.date.today())
+
+                        log_type = "⚠️ 盤虧 (懷疑偷竊/遺失)" if diff_qty < 0 else "📈 盤盈 (入庫未記)"
+                        log_id = "LOG-AUDIT-" + datetime.date.today().strftime('%Y%m%d') + "-" + str(len(st.session_state.inventory_logs)+1).zfill(2)
+
+                        st.session_state.inventory_logs.append({
+                            "log_id": log_id,
+                            "type": log_type,
+                            "item_code": code,
+                            "item_name": st.session_state.warehouse_stock[item_idx]["item_name"],
+                            "wh_location": st.session_state.warehouse_stock[item_idx]["wh_location"],
+                            "change_qty": diff_qty,
+                            "unit": st.session_state.warehouse_stock[item_idx]["unit"],
+                            "operator": taker_name,
+                            "checker": "系統稽核員",
+                            "date": str(datetime.date.today()),
+                            "remark": take_reason + " [差異: " + f"{diff_qty:+,.1f}" + "]"
+                        })
+
+                        if diff_qty < 0:
+                            st.warning("🚨 盤點完成：現場缺少 " + f"{abs(diff_qty):,.1f}" + " " + st.session_state.warehouse_stock[item_idx]["unit"] + "，系統已標註盤虧告警！")
+                        else:
+                            st.success("✅ 盤點修正完成！")
+                        st.rerun()
+
+        st.markdown("---")
+        st.markdown("#### 📜 不可竄改的出入庫與稽核紀錄流水帳")
         if st.session_state.inventory_logs:
             df_logs = pd.DataFrame(st.session_state.inventory_logs)
             st.dataframe(df_logs, use_container_width=True)
         else:
-            st.info("💡 尚無任何庫存異動紀錄。")
+            st.info("💡 尚無異動紀錄。")
 
 def show(*args, **kwargs):
     render_warehouse_management(*args, **kwargs)
