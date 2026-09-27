@@ -7,7 +7,7 @@ def render_warehouse_management(*args, **kwargs):
     st.caption("支援多廠區倉庫物料/成品管理，包含建立新物料條碼、進倉入庫、出倉領料、庫存盤點與防錯防呆比對。")
 
     # ----------------------------------------------------
-    # 🗄️ 1. 初始化 Session State 倉儲資料庫 (含條碼欄位)
+    # 🗄️ 1. 初始化 Session State 倉儲資料庫
     # ----------------------------------------------------
     if "warehouse_stock" not in st.session_state:
         st.session_state.warehouse_stock = [
@@ -55,6 +55,11 @@ def render_warehouse_management(*args, **kwargs):
             }
         ]
 
+    # 🟢 防呆防錯：確保歷史舊資料都含有 barcode 欄位，避免 KeyError
+    for item in st.session_state.warehouse_stock:
+        if "barcode" not in item or not item["barcode"]:
+            item["barcode"] = "未建檔條碼"
+
     if "inventory_logs" not in st.session_state:
         st.session_state.inventory_logs = [
             {
@@ -96,7 +101,17 @@ def render_warehouse_management(*args, **kwargs):
 
         if low_stock_items:
             st.warning("⚠️ **安全庫存過低預警！** 以下品項庫存已低於安全標準：")
-            st.dataframe(pd.DataFrame(low_stock_items)[["item_code", "barcode", "item_name", "wh_location", "qty", "min_safety_qty", "unit"]], use_container_width=True)
+            low_stock_display = []
+            for l_item in low_stock_items:
+                low_stock_display.append({
+                    "物料/產品料號": l_item["item_code"],
+                    "🏷️ 物品條碼": l_item.get("barcode", "未建檔"),
+                    "品名規格": l_item["item_name"],
+                    "存放倉庫位置": l_item["wh_location"],
+                    "目前庫存": f"{l_item['qty']:,.1f} {l_item['unit']}",
+                    "安全庫存": f"{l_item['min_safety_qty']:,.1f} {l_item['unit']}"
+                })
+            st.dataframe(pd.DataFrame(low_stock_display), use_container_width=True)
 
         st.markdown("---")
         col_s1, col_s2 = st.columns(2)
@@ -109,23 +124,23 @@ def render_warehouse_management(*args, **kwargs):
         for s in st.session_state.warehouse_stock:
             match_search = (
                 not search_code 
-                or search_code in s["item_code"].lower() 
-                or search_code in s.get("barcode", "").lower() 
-                or search_code in s["item_name"].lower() 
-                or search_code in s["wh_location"].lower()
+                or search_code in str(s["item_code"]).lower() 
+                or search_code in str(s.get("barcode", "")).lower() 
+                or search_code in str(s["item_name"]).lower() 
+                or search_code in str(s["wh_location"]).lower()
             )
             match_cat = filter_cat == "全部 (All)" or s["category"] == filter_cat
             if match_search and match_cat:
                 filtered_stock.append({
                     "物料/產品料號": s["item_code"],
-                    "🏷️ 物品國際條碼 (EAN/UPC)": s.get("barcode", "-"),
+                    "🏷️ 物品條碼": s.get("barcode", "未建檔"),
                     "品名規格": s["item_name"],
                     "物料類別": s["category"],
                     "📍 存放倉庫與儲位": s["wh_location"],
                     "目前庫存量": f"{s['qty']:,.1f} {s['unit']}",
                     "安全庫存量": f"{s['min_safety_qty']:,.1f} {s['unit']}",
                     "狀態": "🔴 庫存不足" if s["qty"] < s["min_safety_qty"] else "🟢 正常",
-                    "規格與材質防錯備註": s.get("spec_note", "-"),
+                    "防錯規格與備註": s.get("spec_note", "-"),
                     "最後更新": s["last_update"]
                 })
 
@@ -177,7 +192,6 @@ def render_warehouse_management(*args, **kwargs):
                 if not new_code or not new_name or not new_barcode:
                     st.error("❌ 請填寫料號、品名與條碼等必填欄位！")
                 else:
-                    # 檢查料號或條碼是否重複
                     code_exists = any(s["item_code"] == new_code for s in st.session_state.warehouse_stock)
                     if code_exists:
                         st.error("❌ 料號 `" + str(new_code) + "` 已存在，請更換料號！")
@@ -208,7 +222,7 @@ def render_warehouse_management(*args, **kwargs):
         with st.form("form_inbound_stock"):
             col_in1, col_in2 = st.columns(2)
             with col_in1:
-                item_options = [s["item_code"] + " - " + s["item_name"] + " [條碼: " + str(s.get("barcode","")) + "]" for s in st.session_state.warehouse_stock]
+                item_options = [s["item_code"] + " - " + s["item_name"] + " [條碼: " + str(s.get("barcode","未建檔")) + "]" for s in st.session_state.warehouse_stock]
                 selected_item_str = st.selectbox("選擇進倉品項 (既有物料/成品)", item_options if item_options else ["無庫存資料"])
                 in_qty = st.number_input("本次進倉數量 *", min_value=0.1, value=100.0, step=10.0)
             with col_in2:
@@ -271,7 +285,6 @@ def render_warehouse_management(*args, **kwargs):
                     target_item = st.session_state.warehouse_stock[item_idx]
                     real_barcode = str(target_item.get("barcode", "")).strip()
 
-                    # 條碼防錯檢驗
                     if scanned_barcode.strip() and scanned_barcode.strip() != real_barcode:
                         st.error("🚨 **防錯警示！條碼不相符！**\n需求條碼為 `" + str(real_barcode) + "`，但您掃描的條碼為 `" + str(scanned_barcode) + "`。員工拿錯物料，請重新確認實物！")
                     else:
