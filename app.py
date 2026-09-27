@@ -40,7 +40,7 @@ if "user_database" not in st.session_state:
             "password": "ga123", 
             "name": "李總務專員 (GA Specialist)", 
             "role": "General Affairs",
-            "allowed_depts": ["🏢 總務部 (General Affairs)"]
+            "allowed_depts": ["🏢 總務與倉儲 (General Affairs & WH)"]
         },
         "hr_manager": {
             "password": "hr123", 
@@ -96,7 +96,7 @@ if not st.session_state.logged_in:
             💡 **測試帳號清單：**
             - **最高主管/系統管理員**：`admin` / `admin123` 或 `boss` / `boss123`
             - **財務會計**：`accountant` / `fin123`
-            - **總務專員 (權限限制只看總務部)**：`ga_user` / `ga123`
+            - **總務/倉儲專員**：`ga_user` / `ga123`
             - **人事主管**：`hr_manager` / `hr123`
             - **業務專員**：`alex` / `alex123`
             """)
@@ -111,7 +111,7 @@ I18N = {
         "depts": [
             "📈 營運戰情室 (Executive)",
             "🧾 財務 (Finance)",
-            "🏢 總務部 (General Affairs)",
+            "🏢 總務與倉儲 (General Affairs & WH)",
             "👥 人事/行政 (HR & Admin)",
             "💼 業務/行銷 (Sales & Marketing)",
             "🛠️ 研發/技術 (R&D & Engineering)",
@@ -128,10 +128,10 @@ I18N = {
             "🌐 全球跨國稅務 AI 智慧問答"
         ],
         "sub_ga": [
-            "📦 總務用品採購與庫存 (GA Procurement & Supplies)",
-            "🏢 公司固定資產與設備管理 (Company Assets)",
+            "📦 倉儲進出庫與物料管理 (Warehouse)",
+            "🏢 總務用品採購與庫存 (GA Procurement)",
             "💵 零用金與行政費用申請 (Petty Cash & Expenses)",
-            "📄 行政公文與合同管理 (Admin Documents & Contracts)",
+            "📄 行政公文與合同管理 (Contracts)",
             "📑 總務與簽核審核中心 (Approval Center)"
         ],
         "sub_hr": [
@@ -149,7 +149,7 @@ I18N = {
         "depts": [
             "📈 Executive Dashboard",
             "🧾 Finance & Accounting",
-            "🏢 General Affairs (GA)",
+            "🏢 General Affairs & WH",
             "👥 HR & Administration",
             "💼 Sales & Marketing",
             "🛠️ R&D & Engineering",
@@ -166,8 +166,8 @@ I18N = {
             "🌐 Global Tax & Compliance AI"
         ],
         "sub_ga": [
-            "📦 GA Procurement & Supplies",
-            "🏢 Company Asset Management",
+            "📦 Warehouse Management System",
+            "🏢 GA Procurement & Supplies",
             "💵 Petty Cash & Expense Claim",
             "📄 Admin Documents & Contracts",
             "📑 Approval & Workflow Center"
@@ -187,7 +187,7 @@ I18N = {
         "depts": [
             "📈 Phòng Điều Hành (Executive)",
             "🧾 Tài Chính / Kế Toán",
-            "🏢 Phòng Tổng Vụ (General Affairs)",
+            "🏢 Phòng Tổng Vụ & Kho (GA & WH)",
             "👥 Nhân Sự / Hành Chính",
             "💼 Kinh Doanh / Marketing",
             "🛠️ R&D / Kỹ Thuật",
@@ -204,8 +204,8 @@ I18N = {
             "🌐 Tư vấn AI Thuế Quốc Tế"
         ],
         "sub_ga": [
-            "📦 Mua sắm & Vật tư Tổng vụ",
-            "🏢 Quản lý Tài sản cố định",
+            "📦 Quản lý Kho & Nhập xuất kho",
+            "🏢 Mua sắm & Vật tư Tổng vụ",
             "💵 Quyết toán Tiền mặt & Chi phí",
             "📄 Quản lý Công văn & Hợp đồng",
             "📑 Trung tâm Phê duyệt & Ký duyệt"
@@ -263,6 +263,7 @@ render_payroll = load_module_function("payroll_management", ["render_payroll_man
 render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
 render_ga = load_module_function("general_affairs", ["render_general_affairs_page", "show", "main"])
 render_emp_mgmt = load_module_function("employee_management", ["render_employee_management", "show", "main"])
+render_wh_mgmt = load_module_function("warehouse_management", ["render_warehouse_management", "show", "main"])
 
 # ----------------------------------------------------
 # 🔒 RBAC 權限過濾與側邊欄選單
@@ -332,9 +333,13 @@ elif dept_idx == 1:  # 🧾 財務
     else:
         render_invoice(sub_option, selected_lang)
 
-elif dept_idx == 2:  # 🏢 總務部
-    sub_option = st.sidebar.radio("General Affairs:", lang_dict["sub_ga"], key="sub_ga_" + str(selected_lang))
-    render_ga(sub_option, selected_lang)
+elif dept_idx == 2:  # 🏢 總務與倉儲
+    sub_option = st.sidebar.radio("General Affairs & WH:", lang_dict["sub_ga"], key="sub_ga_" + str(selected_lang))
+    sub_idx = lang_dict["sub_ga"].index(sub_option)
+    if sub_idx == 0:
+        render_wh_mgmt(sub_option, selected_lang)
+    else:
+        render_ga(sub_option, selected_lang)
 
 elif dept_idx == 3:  # 👥 人事/行政
     sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key="sub_hr_" + str(selected_lang))
