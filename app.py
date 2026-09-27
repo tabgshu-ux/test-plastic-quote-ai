@@ -223,7 +223,7 @@ I18N = {
 }
 
 # ----------------------------------------------------
-# 🛡️ 安全動態模組載入器 (具備萬用參數自動調適)
+# 🛡️ 安全動態模組載入器 (萬用參數調適，完全排除 TypeError)
 # ----------------------------------------------------
 def load_module_function(module_name, func_names):
     try:
@@ -241,9 +241,9 @@ def load_module_function(module_name, func_names):
                             try:
                                 return func()
                             except Exception:
-                                st.error(f"❌ 執行 modules/{module_name}.py 內部發生錯誤：\n```python\n{traceback.format_exc()}\n```")
+                                st.error(f"❌ 執行 modules/{module_name}.py 內部錯誤：\n```python\n{traceback.format_exc()}\n```")
                     except Exception:
-                        st.error(f"❌ 執行 modules/{module_name}.py 時發生例外錯誤：\n```python\n{traceback.format_exc()}\n```")
+                        st.error(f"❌ 執行 modules/{module_name}.py 發生例外錯誤：\n```python\n{traceback.format_exc()}\n```")
                 return safe_wrapper
         return lambda *args, **kwargs: st.error(f"⚠️ 在 modules/{module_name}.py 中找不到入口函式: {func_names}")
     except Exception:
