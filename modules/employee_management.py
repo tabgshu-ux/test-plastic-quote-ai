@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 # ----------------------------------------------------
-# 🌐 跨國匯率與幣別配置
+# 🌐 跨國匯率與幣別配置 (Key 完全統一)
 # ----------------------------------------------------
 EXCHANGE_RATES = {
     "🇻🇳 越南 (Vietnam)": {"symbol": "₫", "code": "VND", "step": 100000.0, "default_sal": 9000000.0},
@@ -84,12 +84,9 @@ def render_employee_management(*args, **kwargs):
 
                 id_number = ""
                 extra_info = ""
-                curr_key = "VND (越南盾)"
-                default_sal = 9000000.0
-                est_ins_deduction = 0.0
+                curr_key = country  # 🟢 修正：直接以 country 選項作為 EXCHANGE_RATES 的 Key
 
                 if "越南" in country:
-                    curr_key = "VND (越南盾)"
                     col_vn1, col_vn2, col_vn3 = st.columns(3)
                     with col_vn1:
                         id_number = st.text_input("身份證字號 (Số CCCD)", "038095009999")
@@ -110,7 +107,6 @@ def render_employee_management(*args, **kwargs):
                         allowance = st.number_input("各類津貼總計 (VND)", min_value=0.0, value=1530000.0, step=50000.0)
 
                 elif "台灣" in country:
-                    curr_key = "TWD (新台幣)"
                     col_tw1, col_tw2, col_tw3 = st.columns(3)
                     with col_tw1:
                         id_number = st.text_input("身分證字號 (ID Number)", "A123456789")
@@ -120,7 +116,6 @@ def render_employee_management(*args, **kwargs):
                     with col_tw3:
                         health_level = st.number_input("健保投保級距 (TWD)", value=45800)
                         pension_rate = st.number_input("勞退個人自提比例 (%)", min_value=0, max_value=6, value=0)
-                        # 🟢 改用 + 號接字串，徹底解決語法衝突問題！
                         extra_info = "勞保級距: $" + f"{labor_level:,.0f}" + " | 健保級距: $" + f"{health_level:,.0f}" + " | 勞退自提: " + str(pension_rate) + "%"
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
@@ -133,7 +128,6 @@ def render_employee_management(*args, **kwargs):
                         allowance = st.number_input("伙食津貼/其他 (TWD)", min_value=0.0, value=3000.0)
 
                 elif "中國" in country:
-                    curr_key = "RMB (人民幣)"
                     col_cn1, col_cn2, col_cn3 = st.columns(3)
                     with col_cn1:
                         id_number = st.text_input("居民身份證號", "441900199001011234")
@@ -154,7 +148,6 @@ def render_employee_management(*args, **kwargs):
                         allowance = st.number_input("職務津貼 (RMB)", min_value=0.0, value=1000.0)
 
                 else:
-                    curr_key = "IDR (印尼盾)"
                     col_id1, col_id2, col_id3 = st.columns(3)
                     with col_id1:
                         id_number = st.text_input("NIK 身份證號", "3201012345670001")
@@ -174,7 +167,9 @@ def render_employee_management(*args, **kwargs):
                     with col_sal3:
                         allowance = st.number_input("交通/伙食津貼 (IDR)", min_value=0.0, value=1000000.0)
 
-                curr_code = EXCHANGE_RATES[curr_key]["code"]
+                # 🟢 安全取得幣別代碼
+                curr_info = EXCHANGE_RATES.get(curr_key, {"code": "USD"})
+                curr_code = curr_info["code"]
 
                 if st.form_submit_button("✅ 儲存跨國員工檔案 (同步請假與權限)", type="primary"):
                     if not emp_name or not phone or not address:
