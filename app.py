@@ -103,7 +103,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ----------------------------------------------------
-# 🌐 全球多語系完整字典 (i18n) - 已新增資訊稽核選項
+# 🌐 全球多語系完整字典 (i18n) - 左下角選單已整合為單一名稱
 # ----------------------------------------------------
 I18N = {
     "繁體中文": {
@@ -143,10 +143,7 @@ I18N = {
         "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
         "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
         "sub_it": [
-            "🏢 跨國廠區與子公司管理", 
-            "👥 人員帳號與網頁授權", 
-            "🔒 模組權限矩陣 (RBAC)",
-            "📜 全系統操作軌跡與稽核"
+            "💻 系統管理與稽核中心"
         ]
     },
     "English": {
@@ -186,10 +183,7 @@ I18N = {
         "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
         "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
         "sub_it": [
-            "🏢 Global Sites & Subsidiaries", 
-            "👥 User Auth & Web Permissions", 
-            "🔒 Role-Based Access Control (RBAC)",
-            "📜 System Audit Logs & Tracking"
+            "💻 System Admin & Audit Center"
         ]
     },
     "Tiếng Việt": {
@@ -229,10 +223,7 @@ I18N = {
         "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
         "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
         "sub_it": [
-            "🏢 Quản lý Chi nhánh & Công ty con", 
-            "👥 Phân quyền người dùng", 
-            "🔒 Ma trận quyền (RBAC)",
-            "📜 Nhật ký thao tác hệ thống"
+            "💻 Quản trị Hệ thống & Kiểm toán"
         ]
     }
 }
