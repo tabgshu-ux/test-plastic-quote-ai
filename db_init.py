@@ -212,6 +212,20 @@ def init_db():
         rate_to_usd NUMERIC(15, 6) NOT NULL,       -- 對美金匯率 (例如 1 USD = 25420 VND)
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- 18. 請假紀錄與假勤資料表 (leaves)
+CREATE TABLE IF NOT EXISTS leaves (
+    leave_id VARCHAR(50) PRIMARY KEY,
+    employee_id VARCHAR(50) REFERENCES employees(employee_id) ON DELETE CASCADE,
+    employee_name VARCHAR(100) NOT NULL,
+    leave_type VARCHAR(30) NOT NULL, -- 年假、病假、事假、公假等
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    days_count NUMERIC(4,1) NOT NULL,
+    reason TEXT,
+    status VARCHAR(30) DEFAULT '🟡 待簽核',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
     """
     
     cur.execute(create_tables_sql)
