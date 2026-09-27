@@ -14,10 +14,8 @@ EXCHANGE_RATES = {
 }
 
 def render_employee_management(sub_option="📋 員工人事資料表", lang="繁體中文"):
-    # 確保參數即使沒有傳入也有預設值
-    current_sub_option = sub_option or "📋 員工人事資料表"
-    current_lang = lang or "繁體中文"
-
+    current_sub_option = sub_option if sub_option else "📋 員工人事資料表"
+    
     st.title(f"📋 員工人事資料表與跨國檔案管理 — [{current_sub_option}]")
     st.caption("支援多國籍員工資料維護（含姓名、地址、電話、起薪）、各國法定保險/稅務提繳計算，並自動同步請假系統與權限後台。")
 
@@ -58,7 +56,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
     ])
 
     # ====================================================
-    # TAB 1: 跨國員工檔案管理 (依國籍動態渲染欄位)
+    # TAB 1: 跨國員工檔案管理
     # ====================================================
     with tab_emp:
         with st.expander("➕ 新增跨國員工個人檔案 (Add International Employee Profile)", expanded=True):
@@ -92,7 +90,6 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                 st.markdown("---")
                 st.markdown(f"##### 📋 步驟 2：輸入【{country}】專屬身分、起薪與法定保險資訊")
 
-                # 動態渲染各國特有欄位
                 id_number = ""
                 extra_info = ""
                 curr_key = "VND (越南盾)"
@@ -163,7 +160,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_sal3:
                         allowance = st.number_input("職務津貼 (RMB)", min_value=0.0, value=1000.0)
 
-                else: # 印尼 (Indonesia)
+                else: # 印尼
                     curr_key = "IDR (印尼盾)"
                     col_id1, col_id2, col_id3 = st.columns(3)
                     with col_id1:
@@ -186,7 +183,6 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
 
                 curr_code = EXCHANGE_RATES[curr_key]["code"]
 
-                # 提交按鈕
                 if st.form_submit_button("✅ 儲存跨國員工檔案 (同步請假與權限)", type="primary"):
                     if not emp_name or not phone or not address:
                         st.error("❌ 請填寫姓名、電話與地址等必填欄位！")
@@ -278,7 +274,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                         "狀態": "🟡 簽核中"
                     })
 
-                    st.success(f"✅ 假單已送出！單號：{lv_id}，天數：{days} 天")
+                    st.success(f"✅ 假單已送出！單號：{lv_id}，天數：{days}天")
                     st.rerun()
 
         st.markdown("---")
