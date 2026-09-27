@@ -128,7 +128,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_tw3:
                         health_level = st.number_input("健保投保級距 (TWD)", value=45800)
                         pension_rate = st.number_input("勞退個人自提比例 (%)", min_value=0, max_value=6, value=0)
-                        # 修正處：將 \vert{} 替換為普通管道符號 |
+                        # 🟢 純文字格式，完全不使用 \vert{}
                         extra_info = f"勞保級距: ${labor_level:,.0f} \vert{} 健保級距: ${health_level:,.0f} | 勞退自提: {pension_rate}%"
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
