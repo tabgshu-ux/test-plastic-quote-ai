@@ -28,14 +28,14 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                 "emp_id": "VN-001", "name": "Nguyễn Văn A", "country": "🇻🇳 越南 (Vietnam)",
                 "dept": "生產一課 (射出)", "position": "射出機技術員", "id_number": "038095001234",
                 "phone": "0912345678", "address": "Bình Dương, Việt Nam", "currency": "VND", "base_salary": 9000000.0,
-                "insurance_deduction": 945000.0, # 10.5%
+                "insurance_deduction": 945000.0,
                 "join_date": "2024-03-01", "extra_info": "醫院: Bệnh viện Bình Dương", "role": "User (一般員工)"
             },
             {
                 "emp_id": "TW-001", "name": "陳大明", "country": "🇹🇼 台灣 (Taiwan)",
                 "dept": "管理部", "position": "行政專員", "id_number": "A123456789",
                 "phone": "0912345678", "address": "台北市信義區忠孝東路四段", "currency": "TWD", "base_salary": 45000.0,
-                "insurance_deduction": 2480.0, # 勞健保估算
+                "insurance_deduction": 2480.0,
                 "join_date": "2023-01-15", "extra_info": "勞保級距: $45,800 | 健保級距: $45,800", "role": "Supervisor (主管)"
             }
         ]
@@ -46,18 +46,12 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
     if "users_permissions" not in st.session_state:
         st.session_state.users_permissions = {}
 
-    # ----------------------------------------------------
-    # 📌 2. 建立 3 大跨國功能頁籤
-    # ----------------------------------------------------
     tab_emp, tab_leave, tab_perm = st.tabs([
         "👥 跨國員工檔案管理 (Global Profiles)", 
         "🌴 請假系統 (Leave System)", 
         "🔑 權限系統後台 (Permissions System)"
     ])
 
-    # ====================================================
-    # TAB 1: 跨國員工檔案管理
-    # ====================================================
     with tab_emp:
         with st.expander("➕ 新增跨國員工個人檔案 (Add International Employee Profile)", expanded=True):
             with st.form("add_global_emp_form"):
@@ -128,8 +122,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_tw3:
                         health_level = st.number_input("健保投保級距 (TWD)", value=45800)
                         pension_rate = st.number_input("勞退個人自提比例 (%)", min_value=0, max_value=6, value=0)
-                        # 🟢 純文字格式，完全不使用 \vert{}
-                       extra_info = f"勞保級距: ${labor_level:,.0f} | 健保級距: ${health_level:,.0f} | 勞退自提: {pension_rate}%"
+                        extra_info = f"勞保級距: ${labor_level:,.0f} \vert{} 健保級距: ${health_level:,.0f} | 勞退自提: {pension_rate}%"
 
                     col_sal1, col_sal2, col_sal3 = st.columns(3)
                     with col_sal1:
@@ -161,7 +154,7 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                     with col_sal3:
                         allowance = st.number_input("職務津貼 (RMB)", min_value=0.0, value=1000.0)
 
-                else: # 印尼
+                else:
                     curr_key = "IDR (印尼盾)"
                     col_id1, col_id2, col_id3 = st.columns(3)
                     with col_id1:
@@ -237,9 +230,6 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
                 })
             st.dataframe(pd.DataFrame(global_list), use_container_width=True)
 
-    # ====================================================
-    # TAB 2: 請假系統
-    # ====================================================
     with tab_leave:
         st.subheader("🌴 全球員工請假申請與簽核")
         emp_options = [f"{e['emp_id']} - {e['name']} ({e['country']} / {e['dept']})" for e in st.session_state.employee_db]
@@ -282,9 +272,6 @@ def render_employee_management(sub_option="📋 員工人事資料表", lang="�
         st.markdown("#### 📋 歷史請假紀錄")
         st.dataframe(pd.DataFrame(st.session_state.leave_requests), use_container_width=True)
 
-    # ====================================================
-    # TAB 3: 權限系統後台
-    # ====================================================
     with tab_perm:
         st.subheader("🔑 權限系統後台 — 跨國人員帳號與權限清單")
         
