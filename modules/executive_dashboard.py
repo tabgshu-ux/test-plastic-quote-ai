@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-# 嘗試載入外部財經 API 庫 yfinance (若未安裝則自動備援)
+# 嘗試載入外部財經 API 庫 yfinance
 try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
@@ -124,7 +124,7 @@ def get_exec_lang_dict(lang_param=None):
     return EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
 
 # ----------------------------------------------------
-# 💱 跨國匯率參照字典 (以 USD 為基準換算)
+# 💱 跨國匯率參照字典
 # ----------------------------------------------------
 EXCHANGE_RATES = {
     "USD (美金)": {"symbol": "$", "rate": 1.0},
@@ -162,7 +162,7 @@ def fetch_realtime_stock_data(ticker_symbol):
         return f"無法取得 {ticker_symbol} 外部數據: {str(e)}"
 
 # ----------------------------------------------------
-# 💬 3. AI 財經顧問對話框 (修復 404，結合外部數據與潛力股推薦)
+# 💬 3. AI 財經顧問對話框 (解決 404，多備援模型機制)
 # ----------------------------------------------------
 def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
     api_key = os.getenv("GEMINI_API_KEY", "")
@@ -181,7 +181,7 @@ def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
 
     full_prompt = f"{system_prompt}\n\n{external_data}\n\n【使用者諮詢問題】: {query_text}"
 
-    # 若未設置 GEMINI_API_KEY，提供模擬極具質感的顧問報告
+    # 若未設置 GEMINI_API_KEY 或套件無效，回傳豐富精美範例
     if not api_key or not GENAI_AVAILABLE:
         return f"""
 📊 **【AI 財經顧問 - 深度分析與崩盤風險報告】** *(備註: 未偵測到 GEMINI_API_KEY，以下為動態模擬範例)*
@@ -212,20 +212,28 @@ def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
   * **AVGO (博通)**：受益客製化 AI 晶片 (ASIC) 與網通晶片需求暴增。
 """
 
-    try:
-        genai.configure(api_key=api_key)
-        # 🟢 修正 404 錯誤：切換為官方最新標準模型 gemini-1.5-flash
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(full_prompt)
-        return response.text
-    except Exception as e:
+    # 🟢 萬無一失的模型名稱備援清單 (不帶 models/ 前綴以相容 v1beta 與 v1)
+    candidate_models = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash",
+        "gemini-pro"
+    ]
+
+    genai.configure(api_key=api_key)
+    
+    last_error = ""
+    for model_name in candidate_models:
         try:
-            # 備援模型 gemini-1.5-pro
-            model = genai.GenerativeModel('gemini-1.5-pro')
+            model = genai.GenerativeModel(model_name)
             response = model.generate_content(full_prompt)
-            return response.text
-        except Exception as err_fallback:
-            return f"❌ AI 回應異常 (模型服務連線失敗): {str(err_fallback)}"
+            if response and response.text:
+                return response.text
+        except Exception as err:
+            last_error = str(err)
+            continue
+
+    return f"❌ AI 回應異常 (已嘗試多個 API 模型但皆無法連線): {last_error}"
 
 # ----------------------------------------------------
 # 📊 1. 股票與市場看板 (Metric Cards)
