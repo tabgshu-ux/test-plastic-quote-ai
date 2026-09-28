@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from modules.security_utils import scan_file_for_viruses, sanitize_user_input
 
 def render_approval_center(lang):
     st.title("📑 企業 AI 簽核與表單審核中心")
