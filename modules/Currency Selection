@@ -1,4 +1,5 @@
 import streamlit as st
+from modules.security_utils import scan_file_for_viruses, sanitize_user_input
 
 def render_pr_form():
     st.subheader("📝 填寫請購單 (PR) — 支援當地原幣輸入")
