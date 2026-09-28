@@ -1,9 +1,22 @@
-import streamlit as st
+import datetime
 import os
 import pandas as pd
 import plotly.express as px
-import google.generativeai as genai
-from datetime import datetime, date
+import streamlit as st
+
+# 嘗試載入外部財經 API 庫 yfinance (若未安裝則自動備援)
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
+
+# 嘗試載入 Google Generative AI API
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except ImportError:
+    GENAI_AVAILABLE = False
 
 # ----------------------------------------------------
 # 🌐 營運戰情室多語系字典 (i18n) - 完全保留
@@ -122,6 +135,99 @@ EXCHANGE_RATES = {
 }
 
 # ----------------------------------------------------
+# 🔍 抓取真實外部股票資訊 (yfinance)
+# ----------------------------------------------------
+def fetch_realtime_stock_data(ticker_symbol):
+    if not YFINANCE_AVAILABLE or not ticker_symbol:
+        return ""
+    try:
+        stock = yf.Ticker(ticker_symbol)
+        hist = stock.history(period="5d")
+        if hist.empty:
+            return f"⚠️ 找不到股票代碼 [{ticker_symbol}] 的外部即時數據。"
+        
+        last_price = hist['Close'].iloc[-1]
+        prev_price = hist['Close'].iloc[-2] if len(hist) > 1 else last_price
+        change_pct = ((last_price - prev_price) / prev_price) * 100
+        
+        return f"""
+        【外部實時財經數據 - {ticker_symbol}】:
+        - 最新收盤價: {last_price:,.2f}
+        - 近一日漲跌幅: {change_pct:+.2f}%
+        - 近 5 日最高價: {hist['High'].max():,.2f}
+        - 近 5 日最低價: {hist['Low'].min():,.2f}
+        - 平均成交量: {hist['Volume'].mean():,.0f}
+        """
+    except Exception as e:
+        return f"無法取得 {ticker_symbol} 外部數據: {str(e)}"
+
+# ----------------------------------------------------
+# 💬 3. AI 財經顧問對話框 (修復 404，結合外部數據與潛力股推薦)
+# ----------------------------------------------------
+def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    external_data = fetch_realtime_stock_data(symbol.strip())
+
+    system_prompt = f"""
+    你是一位專屬高階董事長與總經理的頂級 AI 財經顧問與投資策略專家。
+    請用{lang}針對使用者的問題進行極具深度與專業度的分析報告。
+
+    請依據以下結構撰寫解析報告：
+    1. 📊 **【市場/個股總體評估】**：分析當前大盤趨勢、總體經濟環境或該個股核心基本面。
+    2. 📈 **【漲跌原因剖析】**：詳細說明推動上漲（如 AI 需求、降息、營收暴增）或導致下跌（如估值偏高、地緣政治、關稅）的核心原因。
+    3. ⚠️ **【崩盤與修正風險評估】**：客觀評估大盤或個股近期出現深度拉回或崩盤的可能性與潛在警示指標。
+    4. 💡 **【潛力股票推薦與決策建議】**：針對當前市場環境，推薦 2~3 支具備強勁基本面/漲勢潛力的股票（附帶理由），並提供高層操作建議。
+    """
+
+    full_prompt = f"{system_prompt}\n\n{external_data}\n\n【使用者諮詢問題】: {query_text}"
+
+    # 若未設置 GEMINI_API_KEY，提供模擬極具質感的顧問報告
+    if not api_key or not GENAI_AVAILABLE:
+        return f"""
+📊 **【AI 財經顧問 - 深度分析與崩盤風險報告】** *(備註: 未偵測到 GEMINI_API_KEY，以下為動態模擬範例)*
+
+### 1. 📊 市場/個股總體評估
+針對您詢問的問題：**『{query_text}』**，目前全球科技股與半導體供應鏈受到聯準會利率政策、AI 企業資本支出持續創高影響，整體呈現高位震盪多頭格局。
+
+### 2. 📈 漲跌原因剖析
+* **🟢 核心看漲動力**：
+  1. **AI 算力與先進封裝需求強勁**：台積電 (2330.TW) 與 NVIDIA (NVDA) 產能持續供不應求。
+  2. **全球降息循環開啟**：市場資金流動性增加，有利科技股與高成長股重新評價 (Re-rating)。
+* **🔴 潛在下跌壓力**：
+  1. **估值處於歷史高位區間**：短線漲幅已大，市場對財報與季報毛利率的要求極為嚴苛。
+  2. **地緣政治與供應鏈成本**：關稅政策與海外擴廠導致短期資本支出升向。
+
+### 3. ⚠️ 崩盤風險評估
+* **最近大盤崩盤可能性**：**低至中等 (約 10%~15% 健康技術性修正機率)**。
+* **風險觀察重點**：
+  * 美國科技巨頭 (CSP) 是否削減 AI 資本支出。
+  * 觀察全球油價與通膨是否引發二次升息風險。
+
+### 4. 💡 潛力個股推薦與決策建議
+* **🟢 台股推薦**：
+  * **2330.TW (台積電)**：先進製程獨霸，CoWoS 擴產帶來持續成長動能。
+  * **2317.TW (鴻海)**：AI 伺服器組裝市佔顯著提升，本益比仍具安全邊際。
+* **🟢 美股推薦**：
+  * **NVDA (輝達)**：AI 算力基礎設施無可替代的龍頭。
+  * **AVGO (博通)**：受益客製化 AI 晶片 (ASIC) 與網通晶片需求暴增。
+"""
+
+    try:
+        genai.configure(api_key=api_key)
+        # 🟢 修正 404 錯誤：切換為官方最新標準模型 gemini-1.5-flash
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(full_prompt)
+        return response.text
+    except Exception as e:
+        try:
+            # 備援模型 gemini-1.5-pro
+            model = genai.GenerativeModel('gemini-1.5-pro')
+            response = model.generate_content(full_prompt)
+            return response.text
+        except Exception as err_fallback:
+            return f"❌ AI 回應異常 (模型服務連線失敗): {str(err_fallback)}"
+
+# ----------------------------------------------------
 # 📊 1. 股票與市場看板 (Metric Cards)
 # ----------------------------------------------------
 def render_market_stock_metrics(market_key):
@@ -153,7 +259,7 @@ def render_market_stock_metrics(market_key):
         col3.metric("上證指數 (SSEC)", "2,860 點", "+5.2 (+0.18%)")
         col4.metric("恆生指數 (HSI)", "17,650 點", "+110.0 (+0.63%)")
 
-    elif "Commodities" in market_key or "原物料" in market_key or "Nguyên料" in market_key:
+    elif "Commodities" in market_key or "原物料" in market_key or "Nguyên" in market_key:
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("美金/越南盾 (USD/VND)", "25,420 VND", "-15.0 (-0.06%)")
         col2.metric("WTI 原油 (Crude Oil)", "$78.5 USD", "+0.45 (+0.58%)")
@@ -214,29 +320,6 @@ def get_mock_7day_news(market):
         ]
 
 # ----------------------------------------------------
-# 💬 3. AI 財經顧問對話框
-# ----------------------------------------------------
-def ask_stock_ai_advisor(query_text, lang="繁體中文"):
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        return """📊 **【AI 財經顧問 - 個股動態速評】**
-
-* **基本面分析**：營收與 EPS 維持高成長，本益比 (P/E) 處於近五年合理區間中值。
-* **籌碼面與技術面**：外資與投信近期呈淨買超，日線站穩 20 日均線（月線）支撐。
-* **董事長營運決策建議**：
-  1. **短線策略**：回檔至 5 日線可小量分批佈局。
-  2. **風險提醒**：注意全球終端需求變動與匯率避險控管。"""
-
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f"你是一位專為董事長服務的資深跨國投資顧問。請用{lang}簡明回答：{query_text}"
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"❌ AI 回應異常: {str(e)}"
-
-# ----------------------------------------------------
 # 📊 4. 全球廠區 AR/AP 財務統計
 # ----------------------------------------------------
 def render_financial_ar_ap_stats():
@@ -257,16 +340,14 @@ def render_financial_ar_ap_stats():
     st.dataframe(pd.DataFrame(ar_ap_data), use_container_width=True)
 
 # ----------------------------------------------------
-# 🧮 5. 通用型企業綜合損益表 (支援多幣別動態切換與連動)
+# 🧮 5. 通用型企業綜合損益表
 # ----------------------------------------------------
 def render_consolidated_income_statement(sub_option="🌐 全部市場 (All Markets)"):
     st.markdown("### 📊 企業綜合損益表 (Income Statement / P&L)")
     st.caption("數據由全系統各模組（業務訂單、總務採購、零用金報銷、設備維修）即時自動勾稽與動態計算")
 
-    # 💱 幣別顯示控制列
     col_curr_sel, col_rate_info = st.columns([2, 3])
     with col_curr_sel:
-        # 根據選擇的市場自動設定預設幣別
         default_idx = 0
         if "Vietnam" in sub_option or "越南" in sub_option:
             default_idx = 1
@@ -287,23 +368,19 @@ def render_consolidated_income_statement(sub_option="🌐 全部市場 (All Mark
 
     st.markdown("---")
 
-    # 1. 營業收入：從業務報價/訂單勾稽 (基礎以 USD 運算，再乘上記帳匯率)
     quotes = st.session_state.get("quotations_data", [])
     sys_revenue_usd = sum(q.get("金額 (USD)", 0.0) for q in quotes if "成交" in q.get("狀態", "") or "已核准" in q.get("狀態", ""))
     base_revenue_usd = sys_revenue_usd if sys_revenue_usd > 0 else 250000.0
     total_revenue = base_revenue_usd * rate
 
-    # 2. 營業成本：從總務與生產採購單勾稽
     purchases = st.session_state.get("ga_purchase_data", [])
     sys_cogs_usd = sum(p.get("預估金額 (USD)", 0.0) for p in purchases if "已核准" in p.get("狀態", "") or "簽核中" in p.get("狀態", ""))
     base_cogs_usd = sys_cogs_usd if sys_cogs_usd > 0 else 115000.0
     total_cogs = base_cogs_usd * rate
 
-    # 3. 銷貨毛利
     gross_profit = total_revenue - total_cogs
     gross_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0.0
 
-    # 4. 營業費用 (OPEX)：從零用金與模具維修履歷勾稽
     petty_cash_items = st.session_state.get("ga_petty_cash_data", [])
     sys_petty_usd = sum(pc.get("金額 (USD)", 0.0) for pc in petty_cash_items if "已核銷" in pc.get("狀態", "") or "已核准" in pc.get("狀態", ""))
     
@@ -314,17 +391,14 @@ def render_consolidated_income_statement(sub_option="🌐 全部市場 (All Mark
 
     total_opex = payroll_expense + utilities_expense + admin_expense + depreciation_expense
 
-    # 5. 營業利益
     ebit = gross_profit - total_opex
     ebit_margin = (ebit / total_revenue * 100) if total_revenue > 0 else 0.0
 
-    # 6. 所得稅與淨利
     tax_rate = 0.20
     tax_expense = max(0.0, ebit * tax_rate)
     net_income = ebit - tax_expense
     net_margin = (net_income / total_revenue * 100) if total_revenue > 0 else 0.0
 
-    # 頂部 KPI 卡片 (金額單位跟隨選擇的幣別)
     k1, k2, k3, k4 = st.columns(4)
     k1.metric(f"營業收入 ({curr_code})", f"{curr_symbol} {total_revenue:,.2f}")
     k2.metric(f"營業毛利 ({curr_code})", f"{curr_symbol} {gross_profit:,.2f}", f"毛利率 {gross_margin:.1f}%")
@@ -333,7 +407,6 @@ def render_consolidated_income_statement(sub_option="🌐 全部市場 (All Mark
 
     st.markdown("---")
 
-    # 損益明細表
     pl_data = [
         {"會計科目": f"一、營業收入 (Revenue)", f"金額 ({curr_code})": f"{curr_symbol} {total_revenue:,.2f}", "說明/勾稽來源": "業務模組已成交銷售訂單"},
         {"會計科目": f"二、營業成本 (COGS)", f"金額 ({curr_code})": f"({curr_symbol} {total_cogs:,.2f})", "說明/勾稽來源": "總務與廠區進貨採購單據"},
@@ -350,7 +423,6 @@ def render_consolidated_income_statement(sub_option="🌐 全部市場 (All Mark
 
     st.dataframe(pd.DataFrame(pl_data), use_container_width=True)
 
-    # 視覺化圖表 (金額單位隨選擇幣別調整)
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
         df_pie = pd.DataFrame([
@@ -402,14 +474,12 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
     st.title(L["page_title"])
     st.caption(L["sub_title"])
 
-    # 👑 董事長/總經理 專屬觀察重點
     with st.expander(L["boss_notes_title"], expanded=True):
         st.write("• **台積電 (TSMC 2330.TW)**：🟢 **偏多 (適合逢低定額)** — AI 晶片先進封裝獨占，長線穩定成長")
         st.write("• **富邦金 (Fubon 2881.TW)**：🟢 **防禦 (高股息避風港)** — 配息能力強，提供穩健現金流保護")
 
     st.divider()
 
-    # 4 大戰情室分頁
     tab1, tab2, tab3, tab4 = st.tabs([
         L["tab_market"],
         L["tab_fin_stat"],
@@ -417,7 +487,6 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
         L["tab_plant_kpi"]
     ])
 
-    # 分頁 1：全球股市與看盤
     with tab1:
         st.markdown(f"### {L['stock_section_title']} [{sub_option}]")
         render_market_stock_metrics(sub_option)
@@ -452,30 +521,35 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
 
         st.divider()
 
+        # 💬 AI 個股與市場諮詢區 (支援輸入問題與代碼)
         st.markdown(f"### {L['stock_chat_title']}")
         st.caption(L["stock_chat_caption"])
-        user_stock_query = st.text_area(
-            "請輸入股票代碼或詢問個股/市場趨勢：",
-            value="請幫我分析台積電 (2330.TW) 近期 CoWoS 先進封裝產能擴張對毛利率與估值的影響？",
-            height=90,
-            placeholder=L["stock_chat_placeholder"],
-            key=f"input_stock_query_{current_lang}"
-        )
-        if st.button(L["btn_send_stock_chat"], type="primary", key=f"btn_ask_stock_ai_{current_lang}"):
-            with st.spinner("AI 財經顧問正在進行個股籌碼與財報數據分析..."):
-                answer = ask_stock_ai_advisor(user_stock_query, current_lang)
+        
+        col_q1, col_q2 = st.columns([3, 1])
+        with col_q1:
+            user_stock_query = st.text_area(
+                "請輸入股票代碼或詢問個股/市場趨勢：",
+                value="幫我分析美國股市最近崩盤的可能性，並推薦目前最具上漲潛力的股票及其漲跌原因。",
+                height=100,
+                placeholder=L["stock_chat_placeholder"],
+                key=f"input_stock_query_{current_lang}"
+            )
+        with col_q2:
+            symbol_code = st.text_input("股票/標的代碼 (可選)", value="NVDA", key=f"input_sym_code_{current_lang}")
+            btn_ask = st.button(L["btn_send_stock_chat"], type="primary", key=f"btn_ask_stock_ai_{current_lang}", use_container_width=True)
+
+        if btn_ask:
+            with st.spinner("🤖 AI 財經顧問正在抓取外部最新數據並編撰深度分析報告..."):
+                answer = ask_stock_ai_advisor(user_stock_query, current_lang, symbol_code)
                 st.markdown("#### 📝 AI 財經顧問解析報告：")
                 st.markdown(answer)
 
-    # 分頁 2：全球廠區 AR/AP 財務統計
     with tab2:
         render_financial_ar_ap_stats()
 
-    # 分頁 3：通用型企業綜合損益表 (自動連動全系統資料庫與多幣別切換)
     with tab3:
         render_consolidated_income_statement(sub_option)
 
-    # 分頁 4：機台稼動 (OEE) KPI
     with tab4:
         render_plant_oee_kpi()
 
