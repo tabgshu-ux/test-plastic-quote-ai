@@ -19,7 +19,7 @@ except ImportError:
     GENAI_AVAILABLE = False
 
 # ----------------------------------------------------
-# 🌐 營運戰情室多語系字典 (i18n) - 完全保留
+# 🌐 營運戰情室多語系字典 (i18n)
 # ----------------------------------------------------
 EXEC_I18N = {
     "繁體中文": {
@@ -123,9 +123,6 @@ def get_exec_lang_dict(lang_param=None):
     lang = lang_param or st.session_state.get("lang", "繁體中文")
     return EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
 
-# ----------------------------------------------------
-# 💱 跨國匯率參照字典
-# ----------------------------------------------------
 EXCHANGE_RATES = {
     "USD (美金)": {"symbol": "$", "rate": 1.0},
     "VND (越南盾)": {"symbol": "₫", "rate": 25420.0},
@@ -162,7 +159,7 @@ def fetch_realtime_stock_data(ticker_symbol):
         return f"無法取得 {ticker_symbol} 外部數據: {str(e)}"
 
 # ----------------------------------------------------
-# 💬 3. AI 財經顧問對話框 (解決 404，多備援模型機制)
+# 💬 AI 財經顧問對話框 (動態模型搜尋 + 防 404 崩潰)
 # ----------------------------------------------------
 def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
     api_key = os.getenv("GEMINI_API_KEY", "")
@@ -181,21 +178,21 @@ def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
 
     full_prompt = f"{system_prompt}\n\n{external_data}\n\n【使用者諮詢問題】: {query_text}"
 
-    # 若未設置 GEMINI_API_KEY 或套件無效，回傳豐富精美範例
+    # 若未設置 GEMINI_API_KEY，回傳極具質感的動態報告範例
     if not api_key or not GENAI_AVAILABLE:
         return f"""
 📊 **【AI 財經顧問 - 深度分析與崩盤風險報告】** *(備註: 未偵測到 GEMINI_API_KEY，以下為動態模擬範例)*
 
 ### 1. 📊 市場/個股總體評估
-針對您詢問的問題：**『{query_text}』**，目前全球科技股與半導體供應鏈受到聯準會利率政策、AI 企業資本支出持續創高影響，整體呈現高位震盪多頭格局。
+針對您詢問的問題：**『{query_text}』**，目前全球科技股與半導體供應鏈受聯準會利率政策與 AI 企業資本支出持續創高影響，整體呈現高位震盪多頭格局。
 
 ### 2. 📈 漲跌原因剖析
 * **🟢 核心看漲動力**：
   1. **AI 算力與先進封裝需求強勁**：台積電 (2330.TW) 與 NVIDIA (NVDA) 產能持續供不應求。
-  2. **全球降息循環開啟**：市場資金流動性增加，有利科技股與高成長股重新評價 (Re-rating)。
+  2. **全球降息循環開啟**：資金流動性增加，有利科技股與高成長股重估評價 (Re-rating)。
 * **🔴 潛在下跌壓力**：
-  1. **估值處於歷史高位區間**：短線漲幅已大，市場對財報與季報毛利率的要求極為嚴苛。
-  2. **地緣政治與供應鏈成本**：關稅政策與海外擴廠導致短期資本支出升向。
+  1. **估值處於歷史高位**：短線漲幅已大，市場對季報毛利率的要求極為嚴苛。
+  2. **地緣政治與供應鏈成本**：關稅政策與海外擴廠導致短期資本支出升高。
 
 ### 3. ⚠️ 崩盤風險評估
 * **最近大盤崩盤可能性**：**低至中等 (約 10%~15% 健康技術性修正機率)**。
@@ -212,28 +209,42 @@ def ask_stock_ai_advisor(query_text, lang="繁體中文", symbol=""):
   * **AVGO (博通)**：受益客製化 AI 晶片 (ASIC) 與網通晶片需求暴增。
 """
 
-    # 🟢 萬無一失的模型名稱備援清單 (不帶 models/ 前綴以相容 v1beta 與 v1)
-    candidate_models = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-2.0-flash",
-        "gemini-pro"
-    ]
-
-    genai.configure(api_key=api_key)
-    
-    last_error = ""
-    for model_name in candidate_models:
+    try:
+        genai.configure(api_key=api_key)
+        
+        # 🟢 1. 自動動態搜尋該 API Key 可用的模型清單
+        available_models = []
         try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(full_prompt)
-            if response and response.text:
-                return response.text
-        except Exception as err:
-            last_error = str(err)
-            continue
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    name = m.name.replace('models/', '')
+                    available_models.append(name)
+        except Exception:
+            pass
 
-    return f"❌ AI 回應異常 (已嘗試多個 API 模型但皆無法連線): {last_error}"
+        # 🟢 2. 優先測試常用模型
+        priority_models = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-flash"]
+        test_queue = [m for m in priority_models if m in available_models] + available_models
+        
+        if not test_queue:
+            test_queue = ["gemini-1.5-flash", "gemini-1.5-pro"]
+
+        # 🟢 3. 逐一呼叫測試，成功即返回
+        last_err = ""
+        for model_name in test_queue:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(full_prompt)
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                last_err = str(e)
+                continue
+
+        return f"❌ AI 回應異常 (無可用模型連線): {last_err}"
+
+    except Exception as main_err:
+        return f"❌ Gemini API 設定失敗: {str(main_err)}"
 
 # ----------------------------------------------------
 # 📊 1. 股票與市場看板 (Metric Cards)
@@ -529,7 +540,7 @@ def render_executive_dashboard_page(sub_option="🌐 全部市場 (All Markets)"
 
         st.divider()
 
-        # 💬 AI 個股與市場諮詢區 (支援輸入問題與代碼)
+        # 💬 AI 個股與市場諮詢區
         st.markdown(f"### {L['stock_chat_title']}")
         st.caption(L["stock_chat_caption"])
         
