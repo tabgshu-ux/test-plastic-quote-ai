@@ -57,8 +57,6 @@ def query_multinational_tax_ai(country, user_query):
 
     try:
         genai.configure(api_key=api_key)
-        
-        # 相容最新與多模型備援機制
         candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash']
         full_prompt = f"{system_prompt}\n\n使用者財務問題：{user_query}"
         
@@ -120,135 +118,217 @@ def render_cross_border_wht_calculator():
         st.caption("📄 法規依據：Thông tư 103/2014/TT-BTC (Hướng dẫn thực hiện nghĩa vụ thuế áp dụng đối với tổ chức, cá nhân nước ngoài kinh doanh tại Việt Nam)")
 
 # ----------------------------------------------------
-# 3. 🆕 各國銷售稅率 (Sales Tax/VAT) 統計與試算模組
+# 3. 🆕 公司跨國企業稅與報稅金額統計中心 (新功能)
 # ----------------------------------------------------
-def render_global_sales_tax_module():
-    st.markdown("### 🌐 全球各國銷售稅率統計與銷項試算")
-    st.caption("即時管理全球各銷售目標國之銷售稅/增值稅 (VAT/GST/Sales Tax) 標準率與優惠稅率，並支援開票銷項稅額自動精算。")
+def render_corporate_tax_summary_module():
+    st.markdown("### 🏢 公司跨國企業報稅與應繳稅額統計看板")
+    st.caption("自動彙總公司各廠區與子公司之「銷項營業稅/增值稅」、「可扣抵進項稅額」、「淨應納稅額」與「企業所得稅 (CIT) 預留」。")
 
-    # 初始化 Session State
-    if "global_tax_rates" not in st.session_state:
-        st.session_state.global_tax_rates = [
-            {"country_code": "TW", "country_name": "🇹🇼 台灣 (Taiwan)", "tax_type": "加值型營業稅 (VAT)", "standard_rate": 5.0, "reduced_rate": 0.0, "currency": "TWD", "note": "出口貨物適用 0% 零稅率；國內銷售 5%"},
-            {"country_code": "VN", "country_name": "🇻🇳 越南 (Vietnam)", "tax_type": "增值稅 (Thuế GTGT / VAT)", "standard_rate": 10.0, "reduced_rate": 8.0, "currency": "VND", "note": "標準稅率 10%，指定製造業可享 8% 優惠"},
-            {"country_code": "CN", "country_name": "🇨🇳 中國大陸 (China)", "tax_type": "增值稅 (VAT)", "standard_rate": 13.0, "reduced_rate": 9.0, "currency": "RMB", "note": "製造業標準稅率 13%，交通運輸為 9%"},
-            {"country_code": "US-CA", "country_name": "🇺🇸 美國 - 加州 (USA - California)", "tax_type": "州與地方銷售稅 (Sales Tax)", "standard_rate": 7.25, "reduced_rate": 0.0, "currency": "USD", "note": "依地區加算地方附加稅，平均約 7.25% ~ 10.25%"},
-            {"country_code": "US-TX", "country_name": "🇺🇸 美國 - 德州 (USA - Texas)", "tax_type": "州銷售稅 (Sales Tax)", "standard_rate": 6.25, "reduced_rate": 0.0, "currency": "USD", "note": "州稅 6.25%，地方稅上限 8.25%"},
-            {"country_code": "EU-DE", "country_name": "🇩🇪 德國 / 歐盟 (Germany / EU)", "tax_type": "增值稅 (MwSt / VAT)", "standard_rate": 19.0, "reduced_rate": 7.0, "currency": "EUR", "note": "歐盟跨國 B2B 適用 Reverse Charge 逆向徵稅"},
-            {"country_code": "JP", "country_name": "🇯🇵 日本 (Japan)", "tax_type": "消費稅 (Consumption Tax)", "standard_rate": 10.0, "reduced_rate": 8.0, "currency": "JPY", "note": "標準消費稅率 10%，食品生鮮 8%"}
+    # 初始化 Session State - 公司稅務紀錄主檔
+    if "company_tax_summary" not in st.session_state:
+        st.session_state.company_tax_summary = [
+            {
+                "tax_period": "2026-Q3",
+                "entity_name": "🇹🇼 台灣總部 (Taiwan HQ)",
+                "tax_type": "加值型營業稅 (VAT 5%)",
+                "sales_untaxed": 25000000.0, # TWD
+                "output_tax": 1250000.0,    # 銷項稅額
+                "input_tax": 850000.0,      # 進項抵扣稅額
+                "net_tax_payable": 400000.0,# 淨應納稅額 (銷項 - 進項)
+                "currency": "TWD",
+                "due_date": "2026-11-15",
+                "status": "🟡 待申報繳納"
+            },
+            {
+                "tax_period": "2026-Q3",
+                "entity_name": "🇻🇳 越南平陽廠 (Binh Duong Plant)",
+                "tax_type": "增值稅 (Thuế GTGT 10%)",
+                "sales_untaxed": 12500000000.0, # VND
+                "output_tax": 1250000000.0,
+                "input_tax": 980000000.0,
+                "net_tax_payable": 270000000.0,
+                "currency": "VND",
+                "due_date": "2026-10-30",
+                "status": "🟡 待申報繳納"
+            },
+            {
+                "tax_period": "2026-Q3",
+                "entity_name": "🇨🇳 中國東莞廠 (Dongguan Plant)",
+                "tax_type": "增值稅 (VAT 13%)",
+                "sales_untaxed": 3400000.0, # RMB
+                "output_tax": 442000.0,
+                "input_tax": 310000.0,
+                "net_tax_payable": 132000.0,
+                "currency": "RMB",
+                "due_date": "2026-10-15",
+                "status": "🟢 已申報預留"
+            }
         ]
 
-    if "sales_tax_records" not in st.session_state:
-        st.session_state.sales_tax_records = [
-            {"doc_no": "INV-202609-001", "date": "2026-09-20", "country": "🇻🇳 越南 (Vietnam)", "customer": "Samsung Electronics VN", "sales_amount_untaxed": 50000.0, "tax_rate": 10.0, "tax_amount": 5000.0, "total_amount": 55000.0, "currency": "USD", "status": "🟢 已申報預留"},
-            {"doc_no": "INV-202609-002", "date": "2026-09-22", "country": "🇹🇼 台灣 (Taiwan)", "customer": "鴻海精密工業", "sales_amount_untaxed": 1200000.0, "tax_rate": 5.0, "tax_amount": 60000.0, "total_amount": 1260000.0, "currency": "TWD", "status": "🟢 已申報預留"}
+    if "company_cit_records" not in st.session_state:
+        st.session_state.company_cit_records = [
+            {
+                "tax_period": "2026 全年預估",
+                "entity_name": "🇹🇼 台灣總部",
+                "taxable_income": 8500000.0, # TWD
+                "cit_rate": 20.0,
+                "estimated_cit": 1700000.0,
+                "currency": "TWD",
+                "status": "🟢 已提列備付金"
+            },
+            {
+                "tax_period": "2026 全年預估",
+                "entity_name": "🇻🇳 越南平陽廠",
+                "taxable_income": 3200000000.0, # VND
+                "cit_rate": 20.0,
+                "estimated_cit": 640000000.0,
+                "currency": "VND",
+                "status": "🟢 享工業區優惠稅率 10%"
+            }
         ]
 
-    sub_tab1, sub_tab2, sub_tab3 = st.tabs([
-        "📊 各國銷售稅率對照矩陣",
-        "🧮 銷項稅額自動試算與登記",
-        "⚙️ 各國銷售稅率維護設定"
+    tax_tab1, tax_tab2, tax_tab3 = st.tabs([
+        "📊 公司各廠區應繳稅額總覽",
+        "🧮 填報/計算本期營業稅(VAT)",
+        "🏛️ 企業所得稅 (CIT) 預估試算"
     ])
 
-    with sub_tab1:
-        df_rates = pd.DataFrame(st.session_state.global_tax_rates)
-        col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("🌍 已監控銷售國家/地區", f"{len(df_rates)} 個")
-        col_m2.metric("💵 本期銷項預留總稅額 (USD 約當)", "$8,886 USD", "+12.5%")
-        col_m3.metric("🧾 跨國報稅合規狀態", "🟢 100% 符合規範")
+    # ----------------------------------------------------
+    # TAB 1: 跨國廠區應繳稅額總覽
+    # ----------------------------------------------------
+    with tax_tab1:
+        st.markdown("#### 🌍 集團各子公司/廠區 營業稅(VAT)與所得稅繳納統計")
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("🇹🇼 台灣總部待繳營業稅", "NT$ 400,000", "申報截止: 11/15")
+        col2.metric("🇻🇳 越南廠待繳增值稅 (VAT)", "₫ 2.7 億", "申報截止: 10/30")
+        col3.metric("🇨🇳 東莞廠應繳增值稅", "¥ 13.2 萬", "已完成預算撥付")
+        col4.metric("💵 全球預估應繳稅額 (約當 USD)", "$28,450 USD", "🟢 現金流充足")
 
         st.markdown("---")
-        st.markdown("#### 📋 各國銷售稅率對照清單 (Tax Rate Matrix)")
+        st.markdown("#### 📋 各廠區本期加值稅 / 營業稅 (VAT) 申報統計表")
+        df_vat = pd.DataFrame(st.session_state.company_tax_summary)
         st.dataframe(
-            df_rates[["country_name", "tax_type", "standard_rate", "reduced_rate", "currency", "note"]].rename(columns={
-                "country_name": "銷售國家/地區", "tax_type": "稅制類型", "standard_rate": "標準稅率 (%)",
-                "reduced_rate": "優惠/減免稅率 (%)", "currency": "當地幣別", "note": "跨國報稅說明"
-            }), use_container_width=True
+            df_vat.rename(columns={
+                "tax_period": "申報期間", "entity_name": "廠區/子公司", "tax_type": "適用稅制",
+                "sales_untaxed": "營業收入 (未稅)", "output_tax": "銷項稅額", "input_tax": "可扣抵進項稅",
+                "net_tax_payable": "💡 淨應繳稅額", "currency": "幣別", "due_date": "申報截止日", "status": "狀態"
+            }),
+            use_container_width=True
         )
 
         st.markdown("---")
-        st.markdown("#### 📜 跨國銷售開票與應繳稅額紀錄")
-        if st.session_state.sales_tax_records:
-            st.dataframe(pd.DataFrame(st.session_state.sales_tax_records), use_container_width=True)
+        st.markdown("#### 🏛️ 各廠區年度企業所得稅 (CIT) 提列統計")
+        df_cit = pd.DataFrame(st.session_state.company_cit_records)
+        st.dataframe(
+            df_cit.rename(columns={
+                "tax_period": "年度期間", "entity_name": "廠區/子公司", "taxable_income": "預估課稅所得",
+                "cit_rate": "法定/優惠稅率 (%)", "estimated_cit": "💡 預估應繳所得稅", "currency": "幣別", "status": "備註/優惠說明"
+            }),
+            use_container_width=True
+        )
 
-    with sub_tab2:
-        st.markdown("#### 🧮 銷售訂單銷項稅額自動精算")
-        country_options = [r["country_name"] for r in st.session_state.global_tax_rates]
+    # ----------------------------------------------------
+    # TAB 2: 填報/計算本期營業稅(VAT)
+    # ----------------------------------------------------
+    with tax_tab2:
+        st.markdown("#### 🧮 錄入/計算公司本期申報銷項稅、進項稅與淨應繳稅額")
+        st.caption("填入本期公司銷售開票與進貨費用進項憑證，系統將自動計算淨應繳稅額 (Net Tax Payable = 銷項稅額 - 進項稅額)。")
 
-        with st.form("form_calculate_sales_tax"):
-            col_c1, col_c2 = st.columns(2)
-            with col_c1:
-                selected_country = st.selectbox("1️⃣ 選擇銷售目標國家/地區 *", country_options)
-                matched_rate_info = next((r for r in st.session_state.global_tax_rates if r["country_name"] == selected_country), None)
-                default_tax_rate = matched_rate_info["standard_rate"] if matched_rate_info else 5.0
-                
-                tax_rate_input = st.number_input("適用銷售稅率 (%) *", min_value=0.0, max_value=50.0, value=default_tax_rate, step=0.5)
-                doc_no = st.text_input("銷售單據/發票號碼 *", "INV-202609-003")
+        with st.form("form_add_company_vat"):
+            col_f1, col_f2, col_f3 = st.columns(3)
+            with col_f1:
+                period_input = st.text_input("申報期間 (例如 2026-Q3 或 2026-09)", "2026-Q3")
+                entity_input = st.selectbox("公司廠區/子公司 *", ["🇹🇼 台灣總部 (Taiwan HQ)", "🇻🇳 越南平陽廠 (Binh Duong Plant)", "🇨🇳 中國東莞廠 (Dongguan Plant)", "🇺🇸 美國子公司 (US Inc)"])
+                tax_type_input = st.selectbox("稅制名稱", ["加值型營業稅 (5%)", "越南增值稅 (VAT 10%)", "中國增值稅 (13%)", "銷售稅 (Sales Tax 7.25%)"])
 
-            with col_c2:
-                cust_name = st.text_input("客戶名稱 *", "Apple Inc. (USA)")
-                sales_amt = st.number_input("未稅銷售金額 *", min_value=0.0, value=10000.0, step=1000.0)
-                curr_type = st.selectbox("結算幣別", ["USD", "TWD", "VND", "RMB", "EUR", "JPY"])
+            with col_f2:
+                sales_untaxed_input = st.number_input("本期未稅銷售總額 (Revenue) *", min_value=0.0, value=1000000.0, step=10000.0)
+                output_tax_input = st.number_input("銷項稅額 (Output Tax) *", min_value=0.0, value=50000.0, step=1000.0)
+                input_tax_input = st.number_input("進項可扣抵稅額 (Input Tax) *", min_value=0.0, value=30000.0, step=1000.0)
 
-            btn_calc = st.form_submit_button("🚀 計算銷項稅額並登記", type="primary")
+            with col_f3:
+                currency_input = st.selectbox("結算幣別 *", ["TWD", "VND", "RMB", "USD", "EUR"])
+                due_date_input = st.date_input("申報/繳納截止日期", datetime.date(2026, 11, 15))
+                status_input = st.selectbox("目前申報狀態", ["🟡 待申報繳納", "🟢 已完成申報與繳款", "🔵 申請退稅中"])
 
-            if btn_calc:
-                calculated_tax = sales_amt * (tax_rate_input / 100.0)
-                total_with_tax = sales_amt + calculated_tax
+            btn_submit_vat = st.form_submit_button("🚀 計算並存入公司稅務帳冊", type="primary")
 
-                st.session_state.sales_tax_records.append({
-                    "doc_no": doc_no, "date": str(datetime.date.today()), "country": selected_country,
-                    "customer": cust_name, "sales_amount_untaxed": sales_amt, "tax_rate": tax_rate_input,
-                    "tax_amount": calculated_tax, "total_amount": total_with_tax, "currency": curr_type, "status": "🟢 已申報預留"
+            if btn_submit_vat:
+                net_tax = output_tax_input - input_tax_input
+                st.session_state.company_tax_summary.append({
+                    "tax_period": period_input,
+                    "entity_name": entity_input,
+                    "tax_type": tax_type_input,
+                    "sales_untaxed": sales_untaxed_input,
+                    "output_tax": output_tax_input,
+                    "input_tax": input_tax_input,
+                    "net_tax_payable": net_tax,
+                    "currency": currency_input,
+                    "due_date": str(due_date_input),
+                    "status": status_input
                 })
-
-                st.success(f"✅ 計算成功！未稅: {sales_amt:,.2f} {curr_type} | 應繳稅額 ({tax_rate_input}%): **{calculated_tax:,.2f} {curr_type}** | 含稅總額: {total_with_tax:,.2f} {curr_type}")
+                
+                if net_tax >= 0:
+                    st.success(f"✅ 計算完成！銷項稅額 `{output_tax_input:,.2f}` - 進項稅額 `{input_tax_input:,.2f}` = 淨應繳稅額: **`{net_tax:,.2f} {currency_input}`**")
+                else:
+                    st.info(f"💡 本期進項大於銷項，留抵稅額 (溢繳/可申請退稅): **`{abs(net_tax):,.2f} {currency_input}`**")
                 st.rerun()
 
-    with sub_tab3:
-        st.markdown("#### ⚙️ 新增 / 修改各國銷售稅率主檔")
-        with st.form("form_add_new_country_tax"):
-            col_s1, col_s2, col_s3 = st.columns(3)
-            with col_s1:
-                c_code = st.text_input("國家/地區代碼 *", "MX")
-                c_name = st.text_input("國家/地區名稱 *", "🇲🇽 墨西哥 (Mexico)")
-            with col_s2:
-                t_type = st.text_input("稅制名稱 *", "增值稅 (IVA)")
-                std_rate = st.number_input("標準稅率 (%) *", min_value=0.0, value=16.0, step=0.5)
-            with col_s3:
-                curr = st.selectbox("當地幣別 *", ["MXN", "USD", "TWD", "VND", "EUR", "RMB"])
-                red_rate = st.number_input("優惠/減免稅率 (%)", min_value=0.0, value=0.0, step=0.5)
+    # ----------------------------------------------------
+    # TAB 3: 企業所得稅 (CIT) 預估試算
+    # ----------------------------------------------------
+    with tax_tab3:
+        st.markdown("#### 🏛️ 跨國廠區企業所得稅 (CIT / Profit Tax) 預算試算器")
+        st.caption("依據各國所得稅法與廠區優惠稅率，預估本年度企業所得稅提列額度。")
 
-            t_note = st.text_input("報稅與合規備註說明", "邊境特區可能適用 8% 優惠稅率")
+        with st.form("form_add_company_cit"):
+            col_i1, col_i2, col_i3 = st.columns(3)
+            with col_i1:
+                cit_period = st.text_input("試算年度/期間", "2026 全年預估")
+                cit_entity = st.selectbox("試算廠區", ["🇹🇼 台灣總部", "🇻🇳 越南平陽廠", "🇨🇳 中國東莞廠"])
+            with col_i2:
+                income_amt = st.number_input("課稅所得額 (Taxable Income) *", min_value=0.0, value=5000000.0, step=100000.0)
+                tax_rate_pct = st.number_input("適用所得稅率 (%) *", min_value=0.0, max_value=50.0, value=20.0, step=1.0)
+            with col_i3:
+                cit_curr = st.selectbox("幣別", ["TWD", "VND", "RMB", "USD"])
+                cit_note = st.text_input("備註/優惠稅率說明", "標準營利事業所得稅 20%")
 
-            btn_save_tax = st.form_submit_button("💾 儲存並更新全球稅率表", type="primary")
+            btn_submit_cit = st.form_submit_button("🧮 試算企業所得稅", type="primary")
 
-            if btn_save_tax:
-                if not c_code or not c_name:
-                    st.error("❌ 請填寫國家代碼與名稱！")
-                else:
-                    st.session_state.global_tax_rates.append({
-                        "country_code": c_code, "country_name": c_name, "tax_type": t_type,
-                        "standard_rate": std_rate, "reduced_rate": red_rate, "currency": curr, "note": t_note
-                    })
-                    st.success(f"🎉 成功新增 [{c_name}] 銷售稅率 {std_rate}%！")
-                    st.rerun()
+            if btn_submit_cit:
+                estimated_tax = income_amt * (tax_rate_pct / 100.0)
+                st.session_state.company_cit_records.append({
+                    "tax_period": cit_period,
+                    "entity_name": cit_entity,
+                    "taxable_income": income_amt,
+                    "cit_rate": tax_rate_pct,
+                    "estimated_cit": estimated_tax,
+                    "currency": cit_curr,
+                    "status": cit_note
+                })
+                st.success(f"🎉 課稅所得 `{income_amt:,.2f}` × 稅率 `{tax_rate_pct}%` = 預估應繳企業所得稅 (CIT): **`{estimated_tax:,.2f} {cit_curr}`**")
+                st.rerun()
 
 # ----------------------------------------------------
-# 4. 主介面渲染與頁籤路由 (完整保留 3 大分頁 + 整合新模組)
+# 4. 主介面渲染與頁籤路由
 # ----------------------------------------------------
 def render_finance_tax_page(*args, **kwargs):
     st.title("💰 財務與跨國稅務法規 AI 智慧系統 (Global Tax & Finance)")
-    st.caption("專為跨國營運與外設廠企業設計，支援全球各國稅法中文智慧解答、合規憑證建議、扣繳稅試算與各國銷售稅率統計。")
+    st.caption("專為跨國營運與外設廠企業設計，支援公司各廠區報稅金額統計、扣繳稅試算與全球稅法中文解答。")
 
-    tab_qa, tab_sales_tax, tab_calc, tab_db = st.tabs([
+    tab_summary, tab_qa, tab_calc, tab_db = st.tabs([
+        "🏢 公司各廠區報稅金額統計",
         "🤖 全球稅務 AI 中文智慧問答", 
-        "📈 全球銷售稅率 (Sales Tax) 統計",
         "📊 跨境扣繳稅 (WHT/FCT) 試算器",
         "📖 各國核心稅法憑證檢核庫"
     ])
 
-    # Tab 1: AI 智慧問答
+    # Tab 1: 🆕 公司各廠區報稅金額統計 (您指定的重心功能)
+    with tab_summary:
+        render_corporate_tax_summary_module()
+
+    # Tab 2: AI 智慧問答 (完全保留)
     with tab_qa:
         st.markdown("### 🌐 全球稅務法規 AI 智慧諮詢")
         
@@ -283,10 +363,6 @@ def render_finance_tax_page(*args, **kwargs):
                 answer = query_multinational_tax_ai(country, user_tax_query)
                 st.markdown("#### 📝 AI 稅務顧問解析報告：")
                 st.markdown(answer)
-
-    # Tab 2: 🆕 各國銷售稅率統計與銷項試算
-    with tab_sales_tax:
-        render_global_sales_tax_module()
 
     # Tab 3: 跨境扣繳稅試算器 (完全保留)
     with tab_calc:
