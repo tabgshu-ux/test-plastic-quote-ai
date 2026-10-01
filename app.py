@@ -2,7 +2,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 import sqlalchemy
-from sqlalchemy import create_engine, Column, String, Float, Boolean, Date, DateTime, Text
+from sqlalchemy import create_engine, Column, String, Float, Boolean, Date, DateTime, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # ==========================================
@@ -44,7 +44,7 @@ if "current_lang" not in st.session_state:
     st.session_state.current_lang = detect_user_language()
 
 # ==========================================
-# 3. Supabase 雲端資料庫連線設定 (Port 5432 Direct Session)
+# 3. Supabase 雲端資料庫連線設定
 # ==========================================
 # ⚠️ 請將 Reetech2026 替換為您在 Supabase 設定的新密碼
 DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
@@ -81,21 +81,20 @@ class InventoryDB(Base):
     unit_cost = Column(Float, default=0.0)
     safety_stock = Column(Float, default=0.0)
 
-# 升級後的應收/應付帳款模型 (新增工程詳細資訊與未收款原因)
 class InvoiceDB(Base):
     __tablename__ = 'invoices'
     invoice_id = Column(String, primary_key=True)
     entity_name = Column(String, nullable=False)          # 客戶/廠商名稱
     project_name = Column(String, default="")              # 工程名稱
-    project_period = Column(String, default="")            # 工程時間 (如 2026/01 - 2026/06)
-    quoted_amount = Column(Float, default=0.0)             # 工程報價 (USD)
+    project_period = Column(String, default="")            # 工程時間
+    quoted_amount = Column(Float, default=0.0)             # 工程報價
     quoter_name = Column(String, default="")               # 報價人姓名
-    payment_terms = Column(String, default="")             # 收款條件 (如 30% 訂金, 70% 完工)
-    uncollected_reason = Column(Text, default="")          # 未能收款的原因 (使用者自訂)
+    payment_terms = Column(String, default="")             # 收款條件
+    uncollected_reason = Column(Text, default="")          # 未能收款的原因
     amount = Column(Float, default=0.0)                    # 當期應收金額
     due_date = Column(Date, nullable=False)
     is_paid = Column(Boolean, default=False)               # 是否已收款
-    invoice_type = Column(String, default="AR")            # AR (應收) 或 AP (應付)
+    invoice_type = Column(String, default="AR")            # AR 或 AP
 
 class ProjectDB(Base):
     __tablename__ = 'projects'
@@ -106,12 +105,26 @@ class ProjectDB(Base):
     actual_labor_cost = Column(Float, default=0.0)
     actual_overhead = Column(Float, default=0.0)
 
-# 初始化雲端資料庫與完整應收帳款數據
+# 初始化雲端資料庫並自動自動補齊缺失欄位
 def init_db_data():
     try:
         engine = get_db_engine()
         Base.metadata.create_all(engine)
         
+        # 自動補充舊資料表缺少的欄位 (Migration Helper)
+        with engine.connect() as conn:
+            alter_queries = [
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_name VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_period VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS quoted_amount FLOAT DEFAULT 0.0;",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS quoter_name VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS uncollected_reason TEXT DEFAULT '';"
+            ]
+            for q in alter_queries:
+                conn.execute(text(q))
+            conn.commit()
+
         Session = sessionmaker(bind=engine)
         session = Session()
         today = datetime.date.today()
@@ -135,7 +148,6 @@ def init_db_data():
                 InventoryDB(item_code="CB-MCCB-100A", name="塑殼斷路器 100A", category="開關元件", quantity=350, unit="pcs", unit_cost=45.0, safety_stock=100)
             ])
             
-        # 建立預設的完整應收帳款 (AR) Demo 數據
         if not session.query(InvoiceDB).first():
             session.add_all([
                 InvoiceDB(
@@ -221,7 +233,7 @@ i18n = {
         "login_btn": "🔑 Đăng nhập",
         "logout_btn": "🚪 Đăng xuất",
         "menu_exec": "📊 Báo cáo Giám đốc",
-        "menu_approval": "✍️ Hệ thống Phê duyệt",
+        "menu_approval": "✍️️ Hệ thống Phê duyệt",
         "menu_finance": "💰 Tài chính & Công nợ (AR/AP)",
         "menu_warehouse": "📦 Quản lý Kho vật tư",
         "company_sub": "REETECH INDUSTRIAL"
@@ -311,8 +323,6 @@ menu_choice = st.sidebar.radio("Menu", menu_options)
 # ==========================================
 # 7. 模組渲染邏輯
 # ==========================================
-
-# ---------------- A. 財務與應收帳款模組 ----------------
 def render_finance_module():
     st.title("💰 財務 – 應收 (AR) 與 應付 (AP) 帳款管理")
     engine = get_db_engine()
@@ -321,13 +331,10 @@ def render_finance_module():
 
     tab_ar, tab_ap, tab_edit = st.tabs(["📋 應收帳款 (AR) 監控", "💳 應付帳款 (AP) 明細", "✏️ 填寫 / 更新未收款原因"])
 
-    # 分頁 1: 應收帳款 (AR)
     with tab_ar:
         ar_invoices = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
-        
-        # 統計卡片
-        total_quoted = sum(i.quoted_amount for i in ar_invoices)
-        total_unpaid = sum(i.amount for i in ar_invoices if not i.is_paid)
+        total_quoted = sum(i.quoted_amount or 0.0 for i in ar_invoices)
+        total_unpaid = sum(i.amount or 0.0 for i in ar_invoices if not i.is_paid)
         
         c1, c2 = st.columns(2)
         c1.metric("工程報價總額 (USD)", f"${total_quoted:,.2f}")
@@ -339,47 +346,45 @@ def render_finance_module():
         df_ar = pd.DataFrame([{
             "發票/單號": i.invoice_id,
             "客戶名稱": i.entity_name,
-            "工程名稱": i.project_name,
-            "工程時間": i.project_period,
-            "工程報價 (USD)": i.quoted_amount,
-            "當期應收 (USD)": i.amount,
-            "報價人姓名": i.quoter_name,
-            "收款條件": i.payment_terms,
+            "工程名稱": i.project_name or "-",
+            "工程時間": i.project_period or "-",
+            "工程報價 (USD)": i.quoted_amount or 0.0,
+            "當期應收 (USD)": i.amount or 0.0,
+            "報價人姓名": i.quoter_name or "-",
+            "收款條件": i.payment_terms or "-",
             "到期日": i.due_date,
             "狀態": "已收款" if i.is_paid else "⏳ 未收款",
-            "未能收款的原因 (備註)": i.uncollected_reason
+            "未能收款的原因 (備註)": i.uncollected_reason or "-"
         } for i in ar_invoices])
 
         st.dataframe(df_ar, use_container_width=True)
 
-    # 分頁 2: 應付帳款 (AP)
     with tab_ap:
         ap_invoices = session.query(InvoiceDB).filter_by(invoice_type="AP").all()
         df_ap = pd.DataFrame([{
             "請款單號": i.invoice_id,
             "供應商名稱": i.entity_name,
-            "採購項目": i.project_name,
-            "應付金額 (USD)": i.amount,
-            "付款條件": i.payment_terms,
+            "採購項目": i.project_name or "-",
+            "應付金額 (USD)": i.amount or 0.0,
+            "付款條件": i.payment_terms or "-",
             "到期日": i.due_date,
             "狀態": "已付款" if i.is_paid else "⏳ 待付款"
         } for i in ap_invoices])
         st.dataframe(df_ap, use_container_width=True)
 
-    # 分頁 3: 填寫 / 更新未收款原因
     with tab_edit:
         st.subheader("✍️ 填寫與維護應收帳款未收款原因")
         ar_pending = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
-        pending_options = {f"{i.invoice_id} - {i.entity_name} ({i.project_name})": i.invoice_id for i in ar_pending}
+        pending_options = {f"{i.invoice_id} - {i.entity_name} ({i.project_name or '無工程名'})": i.invoice_id for i in ar_pending}
         
         if pending_options:
             selected_label = st.selectbox("選擇工程應收單號", list(pending_options.keys()))
             target_id = pending_options[selected_label]
             target_inv = session.query(InvoiceDB).filter_by(invoice_id=target_id).first()
             
-            st.info(f"**當前工程：** {target_inv.project_name} | **金額：** USD ${target_inv.amount:,.2f}")
+            st.info(f"**當前工程：** {target_inv.project_name or '-'} | **當期應收：** USD ${target_inv.amount:,.2f}")
             
-            new_reason = st.text_area("輸入未能收款的原因：", value=target_inv.uncollected_reason, height=120)
+            new_reason = st.text_area("輸入未能收款的原因：", value=target_inv.uncollected_reason or "", height=120)
             is_paid_status = st.checkbox("標記為已完成收款", value=target_inv.is_paid)
 
             if st.button("💾 儲存並更新至 Supabase 雲端", use_container_width=True):
@@ -393,7 +398,6 @@ def render_finance_module():
 
     session.close()
 
-# ---------------- B. 其他模組 ----------------
 def render_approval_module():
     st.title(t["menu_approval"])
     engine = get_db_engine()
@@ -413,8 +417,8 @@ def render_exec_dashboard():
     df_invc = pd.read_sql("SELECT * FROM invoices", engine)
     df_prj = pd.read_sql("SELECT * FROM projects", engine)
 
-    total_ar = df_invc[df_invc['invoice_type'] == 'AR']['amount'].sum()
-    total_ap = df_invc[df_invc['invoice_type'] == 'AP']['amount'].sum()
+    total_ar = df_invc[df_invc['invoice_type'] == 'AR']['amount'].sum() if 'invoice_type' in df_invc.columns else 0.0
+    total_ap = df_invc[df_invc['invoice_type'] == 'AP']['amount'].sum() if 'invoice_type' in df_invc.columns else 0.0
     
     c1, c2, c3 = st.columns(3)
     c1.metric("AR (應收帳款)", f"USD ${total_ar:,.2f}")
