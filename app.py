@@ -80,23 +80,29 @@ class InventoryDB(Base):
     unit_cost = Column(Float, default=0.0)
     safety_stock = Column(Float, default=0.0)
 
-# 支援採購與工程雙軌制的 應收/應付帳款模型
+# 符合越南 TT200 會計制度與銀行轉帳審計紀錄之帳款模型
 class InvoiceDB(Base):
     __tablename__ = 'invoices'
     invoice_id = Column(String, primary_key=True)
-    entity_name = Column(String, nullable=False)          # 客戶名稱 (AR) 或 供應商名稱 (AP)
-    category_type = Column(String, default="資材採購")    # 採購類別 (如: 銅材/斷路器採購, 外包工程, 運費等)
-    project_name = Column(String, default="")              # 工程名稱 或 採購品名與規格
-    project_period = Column(String, default="")            # 工程時間 或 採購週期/批號
-    quoted_amount = Column(Float, default=0.0)             # 工程報價 或 採購總採購金額
-    quoter_name = Column(String, default="")               # 報價人 或 採購經辦人
-    payment_terms = Column(String, default="")             # 收款/付款條件 (例: 月結30天, 30%預付)
-    uncollected_reason = Column(Text, default="")          # 未能收款原因 或 未付款備註說明
-    contract_file_name = Column(String, default="")        # 合約/送貨單/發票檔名
+    entity_name = Column(String, nullable=False)          # 客戶/廠商名稱
+    account_code = Column(String, default="3311")          # 越南會計科目 (TK 131 / TK 331)
+    category_type = Column(String, default="資材採購")    # 詳細說明
+    project_name = Column(String, default="")              # 工程名稱 或 採購品名規格
+    project_period = Column(String, default="")            # 合約/PO單號
+    quoted_amount = Column(Float, default=0.0)             # 總報價/總採購金額
+    quoter_name = Column(String, default="")               # 經辦人員
+    payment_terms = Column(String, default="")             # 付款條件
+    uncollected_reason = Column(Text, default="")          # 備註/未付款原因
+    contract_file_name = Column(String, default="")        # 合約/發票/水單檔名
     amount = Column(Float, default=0.0)                    # 當期金額 (USD)
     due_date = Column(Date, nullable=False)
     is_paid = Column(Boolean, default=False)               # 是否已結清
-    invoice_type = Column(String, default="AR")            # AR (應收) 或 AP (應付)
+    invoice_type = Column(String, default="AR")            # AR 或 AP
+    
+    # 越南銀行轉帳審計專用欄位 (UNC & Audit Trail)
+    bank_name = Column(String, default="")                 # 匯款銀行 (Vietcombank, BIDV, etc.)
+    bank_transfer_ref = Column(String, default="")         # 銀行轉帳水單單號 (Số UNC / Transaction Ref)
+    payment_date = Column(Date, nullable=True)             # 實際銀行轉帳日期
 
 class ProjectDB(Base):
     __tablename__ = 'projects'
@@ -107,7 +113,7 @@ class ProjectDB(Base):
     actual_labor_cost = Column(Float, default=0.0)
     actual_overhead = Column(Float, default=0.0)
 
-# 初始化雲端資料庫並自動補充採購相關欄位
+# 初始化資料庫並自動擴充越南會計與銀行轉帳欄位
 def init_db_data():
     try:
         engine = get_db_engine()
@@ -115,6 +121,7 @@ def init_db_data():
         
         with engine.connect() as conn:
             alter_queries = [
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS account_code VARCHAR DEFAULT '3311';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category_type VARCHAR DEFAULT '資材採購';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_name VARCHAR DEFAULT '';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_period VARCHAR DEFAULT '';",
@@ -122,7 +129,10 @@ def init_db_data():
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS quoter_name VARCHAR DEFAULT '';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms VARCHAR DEFAULT '';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS uncollected_reason TEXT DEFAULT '';",
-                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_file_name VARCHAR DEFAULT '';"
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_file_name VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS bank_name VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS bank_transfer_ref VARCHAR DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_date DATE NULL;"
             ]
             for q in alter_queries:
                 conn.execute(text(q))
@@ -153,13 +163,14 @@ def init_db_data():
             
         if not session.query(InvoiceDB).first():
             session.add_all([
-                # 應收帳款 (AR) - 專案工程
+                # AR 範例
                 InvoiceDB(
                     invoice_id="INV-2026-001",
-                    entity_name="越南樟榜工業區 A 廠",
-                    category_type="工程專案",
+                    entity_name="CÔNG TY TNHH A-Z TÂY NINH",
+                    account_code="1311 - TK 1311 (Hợp đồng thi công)",
+                    category_type="專案工程合約款",
                     project_name="西寧紡織廠配電盤新建工程",
-                    project_period="2026/01 - 2026/05",
+                    project_period="HD-2026-TN01",
                     quoted_amount=250000.0,
                     quoter_name="張經理 (工程部)",
                     payment_terms="30% 訂金 / 60% 進場 / 10% 驗收",
@@ -170,38 +181,26 @@ def init_db_data():
                     is_paid=False,
                     invoice_type="AR"
                 ),
-                # 應付帳款 (AP) - 資材與零組件採購
+                # AP 範例 (含轉帳單號與水單)
                 InvoiceDB(
                     invoice_id="AP-2026-001",
-                    entity_name="施耐德電氣越南分公司 (Schneider Electric)",
-                    category_type="開關零組件採購",
+                    entity_name="SCHNEIDER ELECTRIC VIỆT NAM",
+                    account_code="3311 - TK 3311 (Mua NVL/Linh kiện)",
+                    category_type="原材料與零組件採購",
                     project_name="高壓斷路器 (MCCB 100A / ACB 2000A) 批次進貨",
                     project_period="PO-2026-0315",
                     quoted_amount=45000.0,
                     quoter_name="李採購員",
                     payment_terms="月結 30 天 (Net 30)",
-                    uncollected_reason="待本月底對帳完成後由財務統一撥款",
-                    contract_file_name="PO_Schneider_20260315.pdf",
+                    uncollected_reason="已於 2026/03/25 經 VCB 完成全額轉帳",
+                    contract_file_name="UNC_Schneider_VCB_20260325.pdf",
                     amount=45000.0,
-                    due_date=today + datetime.timedelta(days=20),
-                    is_paid=False,
-                    invoice_type="AP"
-                ),
-                InvoiceDB(
-                    invoice_id="AP-2026-002",
-                    entity_name="東亞銅業 (East Asia Copper Ltd.)",
-                    category_type="銅材資材採購",
-                    project_name="高純度導電銅排 (10x100mm / 8x80mm) 5噸",
-                    project_period="PO-2026-0320",
-                    quoted_amount=62500.0,
-                    quoter_name="李採購員",
-                    payment_terms="貨到付款 (COD / 驗收無誤)",
-                    uncollected_reason="已交貨至西寧廠，品管檢驗中",
-                    contract_file_name="Invoice_Copper_0320.pdf",
-                    amount=62500.0,
-                    due_date=today + datetime.timedelta(days=5),
-                    is_paid=False,
-                    invoice_type="AP"
+                    due_date=today - datetime.timedelta(days=5),
+                    is_paid=True,
+                    invoice_type="AP",
+                    bank_name="Vietcombank (VCB)",
+                    bank_transfer_ref="UNC-20260325-88921",
+                    payment_date=today - datetime.timedelta(days=5)
                 )
             ])
             
@@ -214,7 +213,7 @@ def init_db_data():
         session.close()
         return True
     except Exception as e:
-        st.error(f"⚠️️ 雲端資料庫連線失敗：{e}")
+        st.error(f"⚠️ 雲端資料庫連線失敗：{e}")
         return False
 
 db_connected = init_db_data()
@@ -232,7 +231,7 @@ i18n = {
         "logout_btn": "🚪 登出系統",
         "menu_exec": "📊 老闆營運決策看板",
         "menu_approval": "✍️ 電子請款與簽核系統",
-        "menu_finance": "💰 財務與應收/應付帳款",
+        "menu_finance": "💰 財務應收/應付 (TT200 標準)",
         "menu_warehouse": "📦 倉庫資材管理",
         "company_sub": "REETECH INDUSTRIAL"
     },
@@ -245,7 +244,7 @@ i18n = {
         "logout_btn": "🚪 Đăng xuất",
         "menu_exec": "📊 Báo cáo Giám đốc",
         "menu_approval": "✍️ Hệ thống Phê duyệt",
-        "menu_finance": "💰 Tài chính & Công nợ (AR/AP)",
+        "menu_finance": "💰 Tài chính & Công nợ (TT200)",
         "menu_warehouse": "📦 Quản lý Kho vật tư",
         "company_sub": "REETECH INDUSTRIAL"
     },
@@ -257,8 +256,8 @@ i18n = {
         "login_btn": "🔑 Login",
         "logout_btn": "🚪 Logout",
         "menu_exec": "📊 Executive Dashboard",
-        "menu_approval": "✍️ Approval Workflow",
-        "menu_finance": "💰 Finance & AR/AP",
+        "menu_approval": "✍️️ Approval Workflow",
+        "menu_finance": "💰 Finance & AR/AP (TT200)",
         "menu_warehouse": "📦 Warehouse & Inventory",
         "company_sub": "REETECH INDUSTRIAL"
     }
@@ -337,10 +336,11 @@ menu_choice = st.sidebar.radio("Menu", menu_options)
 
 def translate_vi_to_zh(text_content):
     if not text_content:
-        return "請輸入或上傳越南文合約文字內容。"
+        return "請輸入或上傳越南文合約或銀行 UNC 內容。"
     
     dictionary = {
         "Hợp đồng": "合約",
+        "Ủy nhiệm chi": "銀行轉帳單 (UNC)",
         "Giá trị hợp đồng": "合約金額",
         "Thanh toán": "付款",
         "Tạm ứng": "預付/訂金",
@@ -348,10 +348,11 @@ def translate_vi_to_zh(text_content):
         "Bảo hành": "保固",
         "Thời hạn": "期限",
         "Bên A": "甲方 (業主/買方)",
-        "Bên B": "乙方 (REETECH INDUSTRIAL / 供應商)",
+        "Bên B": "乙方 (REETECH / 供應商)",
         "Điều khoản": "條款",
         "Phạt vi phạm": "違約罰則",
-        "Đơn đặt hàng": "採購單 (PO)"
+        "Đơn đặt hàng": "採購單 (PO)",
+        "Số tài khoản": "銀行帳號"
     }
     
     translated = text_content
@@ -361,19 +362,22 @@ def translate_vi_to_zh(text_content):
     return translated
 
 def render_finance_module():
-    st.title("💰 財務 – 應收 (AR) 與 應付採購貨款 (AP) 管理")
+    st.title("💰 財務 – 應收 (TK 131) 與 應付採購貨款 (TK 331) 管理")
+    st.caption("符合越南 Thông tư 200/2014/TT-BTC 會計制度標準，具備銀行轉帳單號 (UNC) 審計紀錄功能。")
+    
     engine = get_db_engine()
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    tab_ar, tab_ap, tab_add, tab_translate = st.tabs([
-        "📋 工程應收帳款 (AR) 監控", 
-        "💳 採購資材應付帳款 (AP) 明細", 
-        "➕ 新增應收/應付(採購)與合約單據", 
-        "🌐 越南文合約/PO AI 翻譯對照 (老闆專用)"
+    tab_ar, tab_ap, tab_pay, tab_add, tab_translate = st.tabs([
+        "📋 TK 131 應收帳款 (AR)", 
+        "💳 TK 331 應付帳款 (AP) 明細", 
+        "🏦 紀錄銀行轉帳 (UNC)",
+        "➕ 新增會計帳款單據", 
+        "🌐 越南合約/UNC AI 翻譯對照"
     ])
 
-    # 1. 工程應收帳款 (AR)
+    # 1. 應收帳款 (TK 131)
     with tab_ar:
         ar_invoices = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
         total_quoted = sum(i.quoted_amount or 0.0 for i in ar_invoices)
@@ -381,79 +385,138 @@ def render_finance_module():
         
         c1, c2 = st.columns(2)
         c1.metric("工程報價總額 (USD)", f"${total_quoted:,.2f}")
-        c2.metric("未收應收帳款餘額 (USD)", f"${total_unpaid:,.2f}", delta="-待收金額")
+        c2.metric("TK 131 未收帳款餘額 (USD)", f"${total_unpaid:,.2f}", delta="-待收金額")
         
         st.markdown("---")
-        st.subheader("📑 工程應收帳款 (AR) 明細表")
+        st.subheader("📑 TK 131 應收帳款 (AR) 會計明細表")
         
         df_ar = pd.DataFrame([{
-            "發票/單號": i.invoice_id,
+            "單號": i.invoice_id,
+            "會計科目": i.account_code or "1311",
             "客戶名稱": i.entity_name,
             "工程名稱": i.project_name or "-",
-            "工程時間": i.project_period or "-",
+            "合約/PO號": i.project_period or "-",
             "工程報價 (USD)": i.quoted_amount or 0.0,
             "當期應收 (USD)": i.amount or 0.0,
-            "報價人": i.quoter_name or "-",
+            "經辦人": i.quoter_name or "-",
             "收款條件": i.payment_terms or "-",
-            "合約附件": i.contract_file_name or "未上傳",
+            "合約/單據": i.contract_file_name or "未上傳",
             "約定到期日": i.due_date,
             "狀態": "已收款" if i.is_paid else "⏳ 未收款",
-            "未能收款原因 (備註)": i.uncollected_reason or "-"
+            "未能收款原因": i.uncollected_reason or "-"
         } for i in ar_invoices])
 
         st.dataframe(df_ar, use_container_width=True)
 
-    # 2. 採購資材應付帳款 (AP)
+    # 2. 應付帳款 (TK 331) 含轉帳單號
     with tab_ap:
         ap_invoices = session.query(InvoiceDB).filter_by(invoice_type="AP").all()
         total_ap_amount = sum(i.amount or 0.0 for i in ap_invoices if not i.is_paid)
         
         c1, c2 = st.columns(2)
-        c1.metric("待付採購總貨款 (AP Unpaid)", f"${total_ap_amount:,.2f}", delta="-待付金額")
-        c2.metric("採購貨款筆數", f"{len(ap_invoices)} 筆")
+        c1.metric("TK 331 待付採購總貨款 (USD)", f"${total_ap_amount:,.2f}", delta="-待付金額")
+        c2.metric("應付筆數", f"{len(ap_invoices)} 筆")
 
         st.markdown("---")
-        st.subheader("🛒 採購資材與零組件應付帳款 (AP) 明細表")
+        st.subheader("🛒 TK 331 採購與資材應付帳款 (AP) 明細表")
         
         df_ap = pd.DataFrame([{
-            "採購單/發票號": i.invoice_id,
+            "請款單號": i.invoice_id,
+            "會計科目": i.account_code or "3311",
             "供應商名稱": i.entity_name,
-            "採購類別": i.category_type or "資材採購",
             "採購品名與規格": i.project_name or "-",
-            "採購批號/PO": i.project_period or "-",
+            "採購單/PO": i.project_period or "-",
             "應付貨款 (USD)": i.amount or 0.0,
-            "採購經辦": i.quoter_name or "-",
             "付款條件": i.payment_terms or "-",
-            "PO/發票附件": i.contract_file_name or "未上傳",
-            "付款到期日": i.due_date,
-            "狀態": "已結清" if i.is_paid else "⏳ 待付款",
-            "備註說明": i.uncollected_reason or "-"
+            "付款狀態": "✅ 已轉帳付清" if i.is_paid else "⏳ 待轉帳",
+            "實際轉帳日期": i.payment_date or "-",
+            "付款銀行": i.bank_name or "-",
+            "越南銀行轉帳單號 (UNC / Ref)": i.bank_transfer_ref or "-",
+            "水單/單據": i.contract_file_name or "未上傳",
+            "備註": i.uncollected_reason or "-"
         } for i in ap_invoices])
         
         st.dataframe(df_ap, use_container_width=True)
 
-    # 3. 線上新增應收帳款 / 採購應付貨款
+    # 3. 紀錄銀行轉帳 (UNC) 與日期
+    with tab_pay:
+        st.subheader("🏦 紀錄越南銀行轉帳資訊 (Lập Ủy Nhiệm Chi)")
+        st.caption("當財務完成銀行付款後，請在此輸入轉帳水單單號與日期，維護稽核軌跡。")
+
+        ap_unpaid = session.query(InvoiceDB).filter_by(invoice_type="AP", is_paid=False).all()
+        ap_options = {f"{i.invoice_id} - {i.entity_name} (${i.amount:,.2f})": i.invoice_id for i in ap_unpaid}
+
+        if ap_options:
+            selected_ap_label = st.selectbox("選擇要核銷付款的應付單號", list(ap_options.keys()))
+            target_ap_id = ap_options[selected_ap_label]
+            target_ap = session.query(InvoiceDB).filter_by(invoice_id=target_ap_id).first()
+
+            with st.form("bank_pay_form"):
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    bank_name = st.selectbox("付款銀行 (Ngân hàng)", ["Vietcombank (VCB)", "BIDV", "MB Bank", "ViettinBank", "ACB", "其他 Bank"])
+                    bank_transfer_ref = st.text_input("銀行轉帳水單單號 (Số UNC / Mã GD) *", placeholder="例: UNC-20260326-9901")
+                with col_p2:
+                    payment_date = st.date_input("實際轉帳日期 (Ngày chuyển khoản)", datetime.date.today())
+                    unc_file = st.file_uploader("📎 上傳銀行轉帳水單 (Ủy nhiệm chi - PDF/Image)", type=["pdf", "png", "jpg"])
+
+                pay_notes = st.text_area("付款備註", value=f"已於 {payment_date} 經 {bank_name} 完成匯款。")
+
+                submit_pay = st.form_submit_button("💾 儲存轉帳紀錄並標記為已付清", use_container_width=True)
+
+                if submit_pay:
+                    if not bank_transfer_ref:
+                        st.error("請輸入銀行轉帳水單單號 (UNC)！")
+                    else:
+                        target_ap.is_paid = True
+                        target_ap.bank_name = bank_name
+                        target_ap.bank_transfer_ref = bank_transfer_ref
+                        target_ap.payment_date = payment_date
+                        target_ap.uncollected_reason = pay_notes
+                        if unc_file:
+                            target_ap.contract_file_name = unc_file.name
+                        session.commit()
+                        st.success(f"單號 {target_ap_id} 之轉帳水單 {bank_transfer_ref} 已順利寫入！")
+                        st.rerun()
+        else:
+            st.info("目前所有應付帳款皆已付款結清！")
+
+    # 4. 線上新增會計帳款單據
     with tab_add:
-        st.subheader("➕ 線上新增帳款與單據上傳")
+        st.subheader("➕ 新增會計帳款單據 (依照越南 TT200 科目分類)")
         
         with st.form("add_invoice_form"):
             col_a, col_b = st.columns(2)
             
             with col_a:
-                inv_type = st.selectbox("帳款性質", ["AR - 專案工程應收帳款", "AP - 採購資材/零組件應付貨款"])
-                category_type = st.selectbox("分類類別", ["資材與零組件採購 (銅材/斷路器/線材等)", "工程專案 (配電盤工程)", "外包加工與施工", "日常營運與雜項費用"])
+                inv_type = st.selectbox("帳款性質", ["AR - 應收帳款 (TK 131)", "AP - 應付帳款 (TK 331)"])
+                
+                # 越南 TT200 標準會計科目選單
+                account_code = st.selectbox(
+                    "越南 TT200 標準會計科目 (Tài khoản kế toán)",
+                    [
+                        "3311 - Mua nguyên vật liệu/linh kiện (資材與零組件採購)",
+                        "3312 - Chi phí gia công/thầu phụ (外包工程與加工費)",
+                        "3313 - Mua sắm máy móc/TSCĐ (機器設備與固定資產)",
+                        "3318 - Chi phí vận chuyển/điện nước (運費/水電/廠務雜支)",
+                        "1311 - Hợp đồng thi công (專案工程合約款)",
+                        "1312 - Bán hàng thiết bị/tủ điện (配電盤/設備銷售款)",
+                        "1318 - Phải thu khác (其他應收款)"
+                    ]
+                )
+                
                 entity_name = st.text_input("客戶名稱 (AR) 或 供應商名稱 (AP) *")
-                project_name = st.text_input("工程名稱 (AR) 或 採購品名與規格 (AP) *")
-                project_period = st.text_input("工程週期 (AR) 或 採購單號/PO (AP)")
-                quoted_amount = st.number_input("總報價金額 / 採購總額 (USD)", min_value=0.0)
+                project_name = st.text_input("工程名稱 (AR) 或 採購品名規格 (AP) *")
+                project_period = st.text_input("合約編號 (AR) 或 採購 PO 單號 (AP)")
 
             with col_b:
-                quoter_name = st.text_input("工程報價人 (AR) 或 採購經辦員 (AP)")
+                quoted_amount = st.number_input("總報價金額 / 總採購金額 (USD)", min_value=0.0)
+                quoter_name = st.text_input("業務/工程報價員 (AR) 或 採購經辦員 (AP)")
                 amount = st.number_input("當期應收 / 應付款項 (USD) *", min_value=0.0)
-                payment_terms = st.text_input("付款條件 (例: 月結 30 天 / 30% 訂金 / 驗收後付款)")
+                payment_terms = st.text_input("付款條件 (例: Net 30 / 30% 預付 / 驗收後付款)")
                 due_date = st.date_input("約定到期日期", datetime.date.today() + datetime.timedelta(days=30))
                 uncollected_reason = st.text_area("未收款原因 (AR) 或 付款備註說明 (AP)")
-                uploaded_file = st.file_uploader("📎 上傳工程合約 / 採購 PO / 送貨單據 (PDF/圖片)", type=["pdf", "txt", "png", "jpg"])
+                uploaded_file = st.file_uploader("📎 上傳工程合約 / 採購 PO / 銀行水單", type=["pdf", "txt", "png", "jpg"])
 
             submit_btn = st.form_submit_button("💾 儲存並寫入 Supabase 雲端資料庫", use_container_width=True)
 
@@ -468,7 +531,8 @@ def render_finance_module():
                     new_invoice = InvoiceDB(
                         invoice_id=new_inv_id,
                         entity_name=entity_name,
-                        category_type=category_type,
+                        account_code=account_code,
+                        category_type=account_code.split(" - ")[1] if " - " in account_code else account_code,
                         project_name=project_name,
                         project_period=project_period,
                         quoted_amount=quoted_amount,
@@ -486,18 +550,16 @@ def render_finance_module():
                     st.success(f"帳款單號 {new_inv_id} 已成功建立並同步至雲端資料庫！")
                     st.rerun()
 
-    # 4. 越南文合約/PO AI 翻譯與比對
+    # 5. 越南文合約/UNC AI 翻譯與比對
     with tab_translate:
-        st.subheader("🌐 越南文合約 / 採購單 (PO) AI 翻譯對照")
-        st.caption("協助老闆與管理者快速審閱越南在地採購單 (PO) 與合約條款。")
-
+        st.subheader("🌐 越南文合約 / 銀行水單 (UNC) AI 翻譯對照")
         col_left, col_right = st.columns(2)
 
         with col_left:
-            st.markdown("#### 🇻🇳 越南文合約 / PO 內容 (Input)")
+            st.markdown("#### 🇻🇳 越南文內文 (Input)")
             vi_contract_text = st.text_area(
-                "貼上越南文採購單或合約條款：",
-                value="Đơn đặt hàng (PO): Bên A đặt mua 5 tấn đồng thanh cái. Thanh toán: Tạm ứng 30% khi ký PO, 70% còn lại thanh toán sau khi giao hàng và kiểm tra nghiệm thu.",
+                "貼上越南文條款或 UNC 內容：",
+                value="Ủy nhiệm chi (UNC): Bên A chuyển khoản thanh toán 45,000 USD cho Bên B (SCHNEIDER ELECTRIC VIỆT NAM) qua ngân hàng Vietcombank. Số GD: UNC-20260325-88921.",
                 height=220
             )
 
