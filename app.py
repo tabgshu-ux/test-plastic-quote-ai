@@ -37,7 +37,7 @@ if "current_lang" not in st.session_state:
 # ==========================================
 # 2. Supabase 雲端資料庫連線設定
 # ==========================================
-DB_URL = "postgresql+psycopg2://postgres:RECH2026erp@db.wvsqbefyeykmueffcbwd.supabase.co:5432/postgres"
+DB_URL = "postgresql+psycopg2://postgres:Reetech2026@db.wvsqbefyeykmueffcbwd.supabase.co:5432/postgres"
 
 @st.cache_resource
 def get_db_engine():
