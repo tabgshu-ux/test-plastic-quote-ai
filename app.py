@@ -9,7 +9,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # 頁面基礎設定 (Streamlit Page Config)
 # ==========================================
 st.set_page_config(
-    page_title="裕豐電機 REETECH INDUSTRIAL - AI ERP 系統",
+    page_title="REETECH INDUSTRIAL - AI ERP 系統",
     page_icon="⚡",
     layout="wide"
 )
@@ -25,7 +25,7 @@ if st.sidebar.button("🧹 清除舊連線快取 (Clear Cache)"):
     st.rerun()
 
 # ==========================================
-# 2. 瀏覽器與系統語系自動偵測 (Auto Language Detection)
+# 2. 瀏覽器與系統語系自動偵測
 # ==========================================
 def detect_user_language():
     try:
@@ -46,7 +46,6 @@ if "current_lang" not in st.session_state:
 # ==========================================
 # 3. Supabase 雲端資料庫連線設定
 # ==========================================
-# ⚠️ 請將 Reetech2026 替換為您在 Supabase 設定的新密碼
 DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
 def get_db_engine():
@@ -91,9 +90,10 @@ class InvoiceDB(Base):
     quoter_name = Column(String, default="")               # 報價人姓名
     payment_terms = Column(String, default="")             # 收款條件
     uncollected_reason = Column(Text, default="")          # 未能收款的原因
-    amount = Column(Float, default=0.0)                    # 當期應收金額
+    contract_file_name = Column(String, default="")        # 合約檔名
+    amount = Column(Float, default=0.0)                    # 當期金額
     due_date = Column(Date, nullable=False)
-    is_paid = Column(Boolean, default=False)               # 是否已收款
+    is_paid = Column(Boolean, default=False)               # 是否已結清
     invoice_type = Column(String, default="AR")            # AR 或 AP
 
 class ProjectDB(Base):
@@ -111,7 +111,6 @@ def init_db_data():
         engine = get_db_engine()
         Base.metadata.create_all(engine)
         
-        # 自動補充舊資料表缺少的欄位 (Migration Helper)
         with engine.connect() as conn:
             alter_queries = [
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_name VARCHAR DEFAULT '';",
@@ -119,7 +118,8 @@ def init_db_data():
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS quoted_amount FLOAT DEFAULT 0.0;",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS quoter_name VARCHAR DEFAULT '';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_terms VARCHAR DEFAULT '';",
-                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS uncollected_reason TEXT DEFAULT '';"
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS uncollected_reason TEXT DEFAULT '';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_file_name VARCHAR DEFAULT '';"
             ]
             for q in alter_queries:
                 conn.execute(text(q))
@@ -159,38 +159,11 @@ def init_db_data():
                     quoter_name="張經理 (工程部)",
                     payment_terms="30% 訂金 / 60% 進場 / 10% 驗收",
                     uncollected_reason="客戶建廠進度延遲，等待第二期驗收文件簽核中",
+                    contract_file_name="Hop_Dong_TayNinh_2026.pdf",
                     amount=150000.0,
                     due_date=today + datetime.timedelta(days=15),
                     is_paid=False,
                     invoice_type="AR"
-                ),
-                InvoiceDB(
-                    invoice_id="INV-2026-002",
-                    entity_name="平陽神浪工業區 B 廠",
-                    project_name="高壓變壓器櫃擴建工程",
-                    project_period="2026/02 - 2026/04",
-                    quoted_amount=88000.0,
-                    quoter_name="陳工程師",
-                    payment_terms="50% 訂金 / 50% 完工",
-                    uncollected_reason="業主財務審核發票中，預計下週撥款",
-                    amount=44000.0,
-                    due_date=today + datetime.timedelta(days=5),
-                    is_paid=False,
-                    invoice_type="AR"
-                ),
-                InvoiceDB(
-                    invoice_id="AP-2026-888",
-                    entity_name="施耐德電氣越南分公司",
-                    project_name="資材採購 - 高壓斷路器批次進貨",
-                    project_period="2026/03",
-                    quoted_amount=45000.0,
-                    quoter_name="李採購",
-                    payment_terms="月結 30 天",
-                    uncollected_reason="-",
-                    amount=45000.0,
-                    due_date=today + datetime.timedelta(days=10),
-                    is_paid=False,
-                    invoice_type="AP"
                 )
             ])
             
@@ -213,8 +186,8 @@ db_connected = init_db_data()
 # ==========================================
 i18n = {
     "繁體中文": {
-        "title": "⚡ 裕豐電機 AI ERP",
-        "login_title": "⚡ 裕豐電機 - 系統登入",
+        "title": "⚡ REETECH INDUSTRIAL AI ERP",
+        "login_title": "⚡ REETECH INDUSTRIAL - 系統登入",
         "username": "帳號",
         "password": "密碼",
         "login_btn": "🔑 登入系統",
@@ -233,7 +206,7 @@ i18n = {
         "login_btn": "🔑 Đăng nhập",
         "logout_btn": "🚪 Đăng xuất",
         "menu_exec": "📊 Báo cáo Giám đốc",
-        "menu_approval": "✍️️ Hệ thống Phê duyệt",
+        "menu_approval": "✍️ Hệ thống Phê duyệt",
         "menu_finance": "💰 Tài chính & Công nợ (AR/AP)",
         "menu_warehouse": "📦 Quản lý Kho vật tư",
         "company_sub": "REETECH INDUSTRIAL"
@@ -289,8 +262,8 @@ if not st.session_state.logged_in:
 # ==========================================
 # 6. 側邊欄與選單
 # ==========================================
-st.sidebar.title("⚡ 裕豐電機 AI ERP")
-st.sidebar.caption("REETECH INDUSTRIAL")
+st.sidebar.title("⚡ REETECH INDUSTRIAL")
+st.sidebar.caption("AI ERP 企業管理系統")
 
 lang_list = ["繁體中文", "Tiếng Việt", "English"]
 selected_lang = st.sidebar.selectbox(
@@ -323,14 +296,46 @@ menu_choice = st.sidebar.radio("Menu", menu_options)
 # ==========================================
 # 7. 模組渲染邏輯
 # ==========================================
+
+# 簡單的越南文 ➔ 中文對照翻譯輔助函式
+def translate_vi_to_zh(text_content):
+    if not text_content:
+        return "請輸入或上傳越南文合約文字內容。"
+    
+    dictionary = {
+        "Hợp đồng": "合約",
+        "Giá trị hợp đồng": "合約金額",
+        "Thanh toán": "付款",
+        "Tạm ứng": "預付/訂金",
+        "Nghiệm thu": "驗收",
+        "Bảo hành": "保固",
+        "Thời hạn": "期限",
+        "Bên A": "甲方 (業主)",
+        "Bên B": "乙方 (REETECH INDUSTRIAL)",
+        "Điều khoản": "條款",
+        "Phạt vi phạm": "違約罰則"
+    }
+    
+    translated = text_content
+    for vi, zh in dictionary.items():
+        translated = translated.replace(vi, f"**{zh} ({vi})**")
+    
+    return translated
+
 def render_finance_module():
     st.title("💰 財務 – 應收 (AR) 與 應付 (AP) 帳款管理")
     engine = get_db_engine()
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    tab_ar, tab_ap, tab_edit = st.tabs(["📋 應收帳款 (AR) 監控", "💳 應付帳款 (AP) 明細", "✏️ 填寫 / 更新未收款原因"])
+    tab_ar, tab_ap, tab_add, tab_translate = st.tabs([
+        "📋 應收帳款 (AR) 監控", 
+        "💳 應付帳款 (AP) 明細", 
+        "➕ 新增帳款 / 上傳合約", 
+        "🌐 越南文合約 AI 翻譯對照 (老闆專用)"
+    ])
 
+    # 1. 應收帳款 (AR)
     with tab_ar:
         ar_invoices = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
         total_quoted = sum(i.quoted_amount or 0.0 for i in ar_invoices)
@@ -352,6 +357,7 @@ def render_finance_module():
             "當期應收 (USD)": i.amount or 0.0,
             "報價人姓名": i.quoter_name or "-",
             "收款條件": i.payment_terms or "-",
+            "合約附件": i.contract_file_name or "未上傳",
             "到期日": i.due_date,
             "狀態": "已收款" if i.is_paid else "⏳ 未收款",
             "未能收款的原因 (備註)": i.uncollected_reason or "-"
@@ -359,6 +365,7 @@ def render_finance_module():
 
         st.dataframe(df_ar, use_container_width=True)
 
+    # 2. 應付帳款 (AP)
     with tab_ap:
         ap_invoices = session.query(InvoiceDB).filter_by(invoice_type="AP").all()
         df_ap = pd.DataFrame([{
@@ -367,37 +374,87 @@ def render_finance_module():
             "採購項目": i.project_name or "-",
             "應付金額 (USD)": i.amount or 0.0,
             "付款條件": i.payment_terms or "-",
+            "合約/單據": i.contract_file_name or "未上傳",
             "到期日": i.due_date,
             "狀態": "已付款" if i.is_paid else "⏳ 待付款"
         } for i in ap_invoices])
         st.dataframe(df_ap, use_container_width=True)
 
-    with tab_edit:
-        st.subheader("✍️ 填寫與維護應收帳款未收款原因")
-        ar_pending = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
-        pending_options = {f"{i.invoice_id} - {i.entity_name} ({i.project_name or '無工程名'})": i.invoice_id for i in ar_pending}
+    # 3. 線上新增帳款與上傳合約
+    with tab_add:
+        st.subheader("➕ 線上新增應收 / 應付帳款與合約上傳")
         
-        if pending_options:
-            selected_label = st.selectbox("選擇工程應收單號", list(pending_options.keys()))
-            target_id = pending_options[selected_label]
-            target_inv = session.query(InvoiceDB).filter_by(invoice_id=target_id).first()
+        with st.form("add_invoice_form"):
+            col_a, col_b = st.columns(2)
             
-            st.info(f"**當前工程：** {target_inv.project_name or '-'} | **當期應收：** USD ${target_inv.amount:,.2f}")
-            
-            new_reason = st.text_area("輸入未能收款的原因：", value=target_inv.uncollected_reason or "", height=120)
-            is_paid_status = st.checkbox("標記為已完成收款", value=target_inv.is_paid)
+            with col_a:
+                inv_type = st.selectbox("帳款類別", ["AR (應收帳款)", "AP (應付帳款)"])
+                entity_name = st.text_input("客戶 / 廠商名稱 *")
+                project_name = st.text_input("工程名稱 / 採購項目 *")
+                project_period = st.text_input("工程時間 (例: 2026/01 - 2026/06)")
+                quoted_amount = st.number_input("工程報價總額 (USD)", min_value=0.0)
+                quoter_name = st.text_input("報價人 / 經辦人姓名")
 
-            if st.button("💾 儲存並更新至 Supabase 雲端", use_container_width=True):
-                target_inv.uncollected_reason = new_reason
-                target_inv.is_paid = is_paid_status
-                session.commit()
-                st.success(f"單號 {target_id} 之未收款原因已順利更新！")
-                st.rerun()
-        else:
-            st.info("目前沒有應收帳款單號。")
+            with col_b:
+                amount = st.number_input("當期應收 / 應付金額 (USD) *", min_value=0.0)
+                payment_terms = st.text_input("付款 / 收款條件 (例: 30% 訂金, 70% 驗收)")
+                due_date = st.date_input("約定付款 / 到期日期", datetime.date.today() + datetime.timedelta(days=30))
+                uncollected_reason = st.text_area("未能收款原因 / 備註說明")
+                uploaded_file = st.file_uploader("📎 上傳工程合約 / 報價單文件 (PDF / TXT)", type=["pdf", "txt", "png", "jpg"])
+
+            submit_btn = st.form_submit_button("💾 儲存並寫入 Supabase 雲端資料庫", use_container_width=True)
+
+            if submit_btn:
+                if not entity_name or not project_name:
+                    st.error("請填寫客戶名稱與工程名稱！")
+                else:
+                    type_code = "AR" if "AR" in inv_type else "AP"
+                    new_inv_id = f"{type_code}-2026-{datetime.datetime.now().strftime('%m%d%H%M')}"
+                    file_name = uploaded_file.name if uploaded_file else ""
+
+                    new_invoice = InvoiceDB(
+                        invoice_id=new_inv_id,
+                        entity_name=entity_name,
+                        project_name=project_name,
+                        project_period=project_period,
+                        quoted_amount=quoted_amount,
+                        quoter_name=quoter_name,
+                        payment_terms=payment_terms,
+                        uncollected_reason=uncollected_reason,
+                        contract_file_name=file_name,
+                        amount=amount,
+                        due_date=due_date,
+                        is_paid=False,
+                        invoice_type=type_code
+                    )
+                    session.add(new_invoice)
+                    session.commit()
+                    st.success(f"帳款單號 {new_inv_id} 已成功建立並同步至雲端資料庫！")
+                    st.rerun()
+
+    # 4. 越南文合約 AI 翻譯與比對 (老闆專用)
+    with tab_translate:
+        st.subheader("🌐 越南文合約中越條款對照與 AI 翻譯輔助")
+        st.caption("專為管理層設計：快速對照越南文合約關鍵條款、付款方式與違約責任。")
+
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            st.markdown("#### 🇻🇳 越南文合約條款原文 (Input)")
+            vi_contract_text = st.text_area(
+                "貼上越南文合約內文或關鍵條款：",
+                value="Hợp đồng kinh tế: Bên A tạm ứng 30% giá trị hợp đồng sau khi ký. Bên B nghiệm thu và bàn giao sau 60 ngày. Điều khoản phạt vi phạm: 0.05% mỗi ngày chậm tiến độ.",
+                height=220
+            )
+
+        with col_right:
+            st.markdown("#### 🇹🇼 中文條款即時對照 (Translation)")
+            translated_result = translate_vi_to_zh(vi_contract_text)
+            st.markdown(translated_result)
 
     session.close()
 
+# ---------------- 其他模組 ----------------
 def render_approval_module():
     st.title(t["menu_approval"])
     engine = get_db_engine()
