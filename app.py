@@ -47,7 +47,7 @@ if "current_lang" not in st.session_state:
 # 3. Supabase 雲端資料庫連線設定 (Port 5432 直連)
 # ==========================================
 # ⚠️ 請將 Reetech2026 替換為您在 Supabase 設定的新密碼
-DB_URL = "postgresql+psycopg2://postgres:Reetech2026@db.wvsqbefyeykmueffcbwd.supabase.co:5432/postgres"
+DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
 # 取消裝飾器 @st.cache_resource 以防止快取舊連線，確保每次改寫即時生效
 def get_db_engine():
