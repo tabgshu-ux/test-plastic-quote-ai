@@ -18,7 +18,7 @@ st.set_page_config(
 # 1. Supabase 雲端資料庫連線設定
 # ==========================================
 # ⚠️ 請將 [YOUR-PASSWORD] 替換為您的 Supabase 資料庫實際密碼
-DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:[m4z/ 2u04ru ej/ u,4]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:[REEDm4z/2u04ru]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 @st.cache_resource
 def get_db_engine():
