@@ -650,7 +650,7 @@ def render_approval_module():
 # 路由控制
 if menu_choice == "👑 董事長/總經理 - 營運戰情看板":
     render_exec_dashboard()
-elif menu_choice == "🏢 管理部 - 財務會計 (TT200/多幣別/UNC)":
+elif menu_choice == "🏢 管理部 - 財務會計":
     render_finance_module()
 elif menu_choice == "👥 管理部 - 人事與行政管理":
     st.title("👥 管理部 - 人事與行政管理")
