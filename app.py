@@ -56,9 +56,9 @@ Base = declarative_base()
 # ---------------- 參考匯率定義 (美金基準) ----------------
 EXCHANGE_RATES = {
     "USD": 1.0,
-    "VND": 25400.0,  # 1 USD ≈ 25,400 VND
-    "TWD": 32.0,     # 1 USD ≈ 32 TWD
-    "CNY": 7.23      # 1 USD ≈ 7.23 CNY
+    "VND": 25400.0,
+    "TWD": 32.0,
+    "CNY": 7.23
 }
 
 def convert_to_usd(amount, currency):
@@ -94,13 +94,12 @@ class InventoryDB(Base):
     currency = Column(String, default="USD")
     safety_stock = Column(Float, default=0.0)
 
-# 多幣別支援之帳款模型
 class InvoiceDB(Base):
     __tablename__ = 'invoices'
     invoice_id = Column(String, primary_key=True)
     entity_name = Column(String, nullable=False)          # 客戶/廠商名稱
-    account_code = Column(String, default="3311")          # 越南會計科目 (TK 131 / TK 331)
-    category_type = Column(String, default="資材採購")    # 詳細說明
+    account_code = Column(String, default="3311")          # 越南會計科目
+    category_type = Column(String, default="資材採購")    
     project_name = Column(String, default="")              # 工程名稱 或 採購品名規格
     project_period = Column(String, default="")            # 合約/PO單號
     quoted_amount = Column(Float, default=0.0)             # 總報價/總採購金額 (原幣)
@@ -109,18 +108,26 @@ class InvoiceDB(Base):
     uncollected_reason = Column(Text, default="")          # 備註/未付款原因
     contract_file_name = Column(String, default="")        # 合約/發票/水單檔名
     amount = Column(Float, default=0.0)                    # 當期金額 (原幣)
-    currency = Column(String, default="USD")               # 幣別: USD, VND, TWD, CNY
-    amount_usd = Column(Float, default=0.0)                # 自動換算之美金金額 (用於跨國統計)
+    currency = Column(String, default="USD")               # 幣別
+    amount_usd = Column(Float, default=0.0)                # 自動換算美金
     due_date = Column(Date, nullable=False)
-    is_paid = Column(Boolean, default=False)               # 是否已結清
-    invoice_type = Column(String, default="AR")            # AR 或 AP
+    is_paid = Column(Boolean, default=False)               
+    invoice_type = Column(String, default="AR")            
     
-    # 越南銀行轉帳審計專用欄位
-    bank_name = Column(String, default="")                 # 匯款銀行
-    bank_transfer_ref = Column(String, default="")         # 轉帳水單號 (UNC)
-    payment_date = Column(Date, nullable=True)             # 實際轉帳日期
+    bank_name = Column(String, default="")                 
+    bank_transfer_ref = Column(String, default="")         
+    payment_date = Column(Date, nullable=True)             
 
-# 初始化資料庫並自動補充多幣別欄位
+class ProjectDB(Base):
+    __tablename__ = 'projects'
+    project_id = Column(String, primary_key=True)
+    project_name = Column(String, nullable=False)
+    budget = Column(Float, default=0.0)
+    actual_material_cost = Column(Float, default=0.0)
+    actual_labor_cost = Column(Float, default=0.0)
+    actual_overhead = Column(Float, default=0.0)
+
+# 初始化資料庫並自動自動補齊所有表缺少的欄位 (Migration Helper)
 def init_db_data():
     try:
         engine = get_db_engine()
@@ -128,6 +135,8 @@ def init_db_data():
         
         with engine.connect() as conn:
             alter_queries = [
+                "ALTER TABLE approval_workflows ADD COLUMN IF NOT EXISTS currency VARCHAR DEFAULT 'USD';",
+                "ALTER TABLE inventory ADD COLUMN IF NOT EXISTS currency VARCHAR DEFAULT 'USD';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency VARCHAR DEFAULT 'USD';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS amount_usd FLOAT DEFAULT 0.0;",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS account_code VARCHAR DEFAULT '3311';",
@@ -153,9 +162,9 @@ def init_db_data():
         
         if not session.query(UserDB).first():
             session.add_all([
-                UserDB(username="admin", password="123", role="admin", full_name="老闆 / 總經理"),
-                UserDB(username="manager", password="123", role="manager", full_name="工程部主管"),
-                UserDB(username="staff", password="123", role="staff", full_name="廠務採購員")
+                UserDB(username="admin", password="123", role="admin", full_name="董事長 / 總經理"),
+                UserDB(username="manager", password="123", role="manager", full_name="管理部主管"),
+                UserDB(username="staff", password="123", role="staff", full_name="生產線人員")
             ])
 
         if not session.query(ApprovalDB).first():
@@ -172,7 +181,6 @@ def init_db_data():
             
         if not session.query(InvoiceDB).first():
             session.add_all([
-                # VND 越南盾應收帳款
                 InvoiceDB(
                     invoice_id="INV-2026-001",
                     entity_name="CÔNG TY TNHH A-Z TÂY NINH",
@@ -192,7 +200,6 @@ def init_db_data():
                     is_paid=False,
                     invoice_type="AR"
                 ),
-                # CNY 人民幣應付資材貨款
                 InvoiceDB(
                     invoice_id="AP-2026-001",
                     entity_name="正泰電器股份有限公司 (CHINT)",
@@ -242,10 +249,6 @@ i18n = {
         "password": "密碼",
         "login_btn": "🔑 登入系統",
         "logout_btn": "🚪 登出系統",
-        "menu_exec": "📊 老闆營運決策看板",
-        "menu_approval": "✍️ 電子請款與簽核系統",
-        "menu_finance": "💰 財務多幣別應收/應付 (TT200)",
-        "menu_warehouse": "📦 倉庫資材管理",
         "company_sub": "REETECH INDUSTRIAL"
     },
     "Tiếng Việt": {
@@ -255,10 +258,6 @@ i18n = {
         "password": "Mật khẩu",
         "login_btn": "🔑 Đăng nhập",
         "logout_btn": "🚪 Đăng xuất",
-        "menu_exec": "📊 Báo cáo Giám đốc",
-        "menu_approval": "✍️ Hệ thống Phê duyệt",
-        "menu_finance": "💰 Tài chính Đa tiền tệ (TT200)",
-        "menu_warehouse": "📦 Quản lý Kho vật tư",
         "company_sub": "REETECH INDUSTRIAL"
     },
     "English": {
@@ -268,10 +267,6 @@ i18n = {
         "password": "Password",
         "login_btn": "🔑 Login",
         "logout_btn": "🚪 Logout",
-        "menu_exec": "📊 Executive Dashboard",
-        "menu_approval": "✍️ Approval Workflow",
-        "menu_finance": "💰 Multi-Currency Finance (TT200)",
-        "menu_warehouse": "📦 Warehouse & Inventory",
         "company_sub": "REETECH INDUSTRIAL"
     }
 }
@@ -310,14 +305,14 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ==========================================
-# 6. 側邊欄與選單
+# 6. 側邊欄與部門組織選單
 # ==========================================
 st.sidebar.title("⚡ REETECH INDUSTRIAL")
 st.sidebar.caption("AI ERP 企業管理系統")
 
 lang_list = ["繁體中文", "Tiếng Việt", "English"]
 selected_lang = st.sidebar.selectbox(
-    "🌐 語言設定 / Language / Ngôn ngữ",
+    "🌐 語言設定 / Language",
     lang_list,
     index=lang_list.index(st.session_state.current_lang)
 )
@@ -331,25 +326,51 @@ if st.sidebar.button(t["logout_btn"]):
 
 st.sidebar.markdown("---")
 
+# 依公司部門組織架構劃分選單
 menu_options = []
-if st.session_state.user_role == "admin":
-    menu_options.append(t["menu_exec"])
 
+# 1. 董事長 / 總經理
+if st.session_state.user_role == "admin":
+    menu_options.append("👑 董事長/總經理 - 營運戰情看板")
+
+# 2. 管理部 (財務、人事/行政、總務)
 menu_options.extend([
-    t["menu_approval"],
-    t["menu_finance"],
-    t["menu_warehouse"]
+    "🏢 管理部 - 財務會計 (TT200/多幣別/UNC)",
+    "👥 管理部 - 人事與行政管理",
+    "📦 管理部 - 總務與資產管理"
 ])
 
-menu_choice = st.sidebar.radio("Menu", menu_options)
+# 3. 生產部 (板金、烤漆、組裝、倉庫)
+menu_options.extend([
+    "✂️ 生產部 - 板金加工組",
+    "🎨 生產部 - 烤漆塗裝組",
+    "⚡ 生產部 - 配電盤組裝與配線組",
+    "🏭 生產部 - 倉庫與資材管理"
+])
+
+# 4. 簽核系統
+menu_options.append("✍️ 電子簽核與請款流程")
+
+menu_choice = st.sidebar.radio("公司組織部門選單", menu_options)
 
 # ==========================================
 # 7. 模組渲染邏輯
 # ==========================================
 
+def format_currency_display(amount, curr):
+    if curr == "VND":
+        return f"₫ {amount:,.0f} VND"
+    elif curr == "USD":
+        return f"$ {amount:,.2f} USD"
+    elif curr == "TWD":
+        return f"NT$ {amount:,.0f} TWD"
+    elif curr == "CNY":
+        return f"¥ {amount:,.2f} CNY"
+    return f"{amount:,.2f} {curr}"
+
 def translate_vi_to_zh(text_content):
     if not text_content:
-        return "請輸入或上傳越南文合約或銀行 UNC 內容。"
+        return "請輸入或上傳越南文內文。"
     
     dictionary = {
         "Hợp đồng": "合約",
@@ -364,8 +385,7 @@ def translate_vi_to_zh(text_content):
         "Bên B": "乙方 (REETECH / 供應商)",
         "Điều khoản": "條款",
         "Phạt vi phạm": "違約罰則",
-        "Đơn đặt hàng": "採購單 (PO)",
-        "Số tài khoản": "銀行帳號"
+        "Đơn đặt hàng": "採購單 (PO)"
     }
     
     translated = text_content
@@ -374,20 +394,30 @@ def translate_vi_to_zh(text_content):
     
     return translated
 
-def format_currency_display(amount, curr):
-    if curr == "VND":
-        return f"₫ {amount:,.0f} VND"
-    elif curr == "USD":
-        return f"$ {amount:,.2f} USD"
-    elif curr == "TWD":
-        return f"NT$ {amount:,.0f} TWD"
-    elif curr == "CNY":
-        return f"¥ {amount:,.2f} CNY"
-    return f"{amount:,.2f} {curr}"
+# ---------------- A. 董事長/總經理 營運戰情 ----------------
+def render_exec_dashboard():
+    st.title("👑 董事長 / 總經理 - 即時營運戰情看板")
+    st.caption("即時匯總公司跨國財務、專案工程毛利與資材庫存健康度。")
+    engine = get_db_engine()
+    df_invc = pd.read_sql("SELECT * FROM invoices", engine)
+    df_prj = pd.read_sql("SELECT * FROM projects", engine)
 
+    total_ar = df_invc[df_invc['invoice_type'] == 'AR']['amount_usd'].sum() if 'amount_usd' in df_invc.columns else 0.0
+    total_ap = df_invc[df_invc['invoice_type'] == 'AP']['amount_usd'].sum() if 'amount_usd' in df_invc.columns else 0.0
+    
+    c1, c2, c3 = st.columns(3)
+    c1.metric("全廠應收帳款 (折合 USD)", f"USD ${total_ar:,.2f}")
+    c2.metric("全廠應付貨款 (折合 USD)", f"USD ${total_ap:,.2f}")
+    c3.metric("在手工程項目數", f"{len(df_prj)} 項")
+    
+    st.markdown("---")
+    st.subheader("🏗️ 配電盤工程項目成本與利潤監控")
+    st.dataframe(df_prj, use_container_width=True)
+
+# ---------------- B. 管理部 - 財務會計 ----------------
 def render_finance_module():
-    st.title("💰 財務 – 多幣別應收 (TK 131) 與 應付 (TK 331) 管理")
-    st.caption("支援 VND (越南盾)、USD (美金)、TWD (台幣)、CNY (人民幣) 多幣別交易與銀行 UNC 審計。")
+    st.title("💰 管理部 - 財務會計管理 (TT200 標準 & 多幣別)")
+    st.caption("支援 VND (越南盾)、USD (美金)、TWD (台幣)、CNY (人民幣) 與銀行 UNC 轉帳單號審計。")
     
     engine = get_db_engine()
     Session = sessionmaker(bind=engine)
@@ -395,13 +425,13 @@ def render_finance_module():
 
     tab_ar, tab_ap, tab_pay, tab_add, tab_translate = st.tabs([
         "📋 TK 131 應收帳款 (AR)", 
-        "💳 TK 331 應付帳款 (AP) 明細", 
-        "🏦 紀錄銀行轉帳 (UNC)",
-        "➕ 新增多幣別帳款", 
+        "💳 TK 331 應付帳款 (AP)", 
+        "🏦 銀行轉帳 (UNC)",
+        "會計帳款與單據登記", 
         "🌐 越南合約/UNC AI 翻譯對照"
     ])
 
-    # 1. 應收帳款 (TK 131)
+    # 1. AR
     with tab_ar:
         ar_invoices = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
         total_unpaid_usd = sum(i.amount_usd or convert_to_usd(i.amount, i.currency) for i in ar_invoices if not i.is_paid)
@@ -430,7 +460,7 @@ def render_finance_module():
 
         st.dataframe(df_ar, use_container_width=True)
 
-    # 2. 應付帳款 (TK 331)
+    # 2. AP
     with tab_ap:
         ap_invoices = session.query(InvoiceDB).filter_by(invoice_type="AP").all()
         total_ap_usd = sum(i.amount_usd or convert_to_usd(i.amount, i.currency) for i in ap_invoices if not i.is_paid)
@@ -460,9 +490,9 @@ def render_finance_module():
         
         st.dataframe(df_ap, use_container_width=True)
 
-    # 3. 紀錄銀行轉帳 (UNC)
+    # 3. 銀行轉帳 (UNC)
     with tab_pay:
-        st.subheader("🏦 紀錄銀行轉帳水單 (Lập Ủy Nhiệm Chi)")
+        st.subheader("🏦 銀行轉帳與水單登記 (Ủy Nhiệm Chi)")
         ap_unpaid = session.query(InvoiceDB).filter_by(invoice_type="AP", is_paid=False).all()
         ap_options = {f"{i.invoice_id} - {i.entity_name} ({format_currency_display(i.amount, i.currency)})": i.invoice_id for i in ap_unpaid}
 
@@ -475,7 +505,7 @@ def render_finance_module():
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
                     bank_name = st.selectbox("付款銀行", ["Vietcombank (VCB)", "BIDV", "MB Bank", "ViettinBank", "ACB", "第一銀行 (First Bank)", "兆豐銀行", "其他 Bank"])
-                    bank_transfer_ref = st.text_input("銀行轉帳水單單號 (Số UNC / Transaction Ref) *", placeholder="例: UNC-20260326-9901")
+                    bank_transfer_ref = st.text_input("銀行轉帳水單單號 (Số UNC) *", placeholder="例: UNC-20260326-9901")
                 with col_p2:
                     payment_date = st.date_input("實際轉帳日期", datetime.date.today())
                     unc_file = st.file_uploader("📎 上傳銀行轉帳水單 (UNC)", type=["pdf", "png", "jpg"])
@@ -501,9 +531,9 @@ def render_finance_module():
         else:
             st.info("目前所有應付帳款皆已付款結清！")
 
-    # 4. 新增多幣別帳款
+    # 4. 會計帳款與單據登記
     with tab_add:
-        st.subheader("➕ 新增多幣別會計帳款 (VND / USD / TWD / CNY)")
+        st.subheader("會計帳款與單據登記 (VND / USD / TWD / CNY)")
         
         with st.form("add_invoice_form"):
             col_a, col_b = st.columns(2)
@@ -575,7 +605,7 @@ def render_finance_module():
                     st.success(f"帳款單號 {new_inv_id} ({curr_code}) 已成功建立並同步至雲端資料庫！")
                     st.rerun()
 
-    # 5. 翻譯對照
+    # 5. AI 翻譯
     with tab_translate:
         st.subheader("🌐 越南文合約 / 銀行水單 (UNC) AI 翻譯對照")
         col_left, col_right = st.columns(2)
@@ -595,45 +625,49 @@ def render_finance_module():
 
     session.close()
 
-# ---------------- 其他模組 ----------------
+# ---------------- C. 生產部 - 倉庫與資材管理 ----------------
+def render_warehouse_module():
+    st.title("🏭 生產部 - 倉庫與資材管理")
+    st.caption("即時控管配電盤用銅排、斷路器與機構件庫存水準與安全庫存預警。")
+    engine = get_db_engine()
+    df_inv = pd.read_sql("SELECT * FROM inventory", engine)
+    st.dataframe(df_inv, use_container_width=True)
+
+# ---------------- D. 簽核系統 ----------------
 def render_approval_module():
-    st.title(t["menu_approval"])
+    st.title("✍️ 電子簽核與請款流程")
     engine = get_db_engine()
     Session = sessionmaker(bind=engine)
     session = Session()
     
     approvals = session.query(ApprovalDB).all()
     df_appr = pd.DataFrame([{
-        "ID": a.id, "Title": a.title, "Applicant": a.applicant, 
-        "Amount": format_currency_display(a.amount, a.currency or "USD"), "Status": a.status, "Date": a.created_at
+        "ID": a.id, "主題": a.title, "申請人": a.applicant, 
+        "金額": format_currency_display(a.amount, a.currency or "USD"), "狀態": a.status, "申請日期": a.created_at
     } for a in approvals])
     st.dataframe(df_appr, use_container_width=True)
 
-def render_exec_dashboard():
-    st.title(t["menu_exec"])
-    engine = get_db_engine()
-    df_invc = pd.read_sql("SELECT * FROM invoices", engine)
-    df_prj = pd.read_sql("SELECT * FROM projects", engine)
-
-    total_ar = df_invc[df_invc['invoice_type'] == 'AR']['amount_usd'].sum() if 'amount_usd' in df_invc.columns else 0.0
-    total_ap = df_invc[df_invc['invoice_type'] == 'AP']['amount_usd'].sum() if 'amount_usd' in df_invc.columns else 0.0
-    
-    c1, c2, c3 = st.columns(3)
-    c1.metric("AR (應收總額 折合USD)", f"USD ${total_ar:,.2f}")
-    c2.metric("AP (應付總額 折合USD)", f"USD ${total_ap:,.2f}")
-    c3.metric("Projects (工程數)", f"{len(df_prj)}")
-    
-    st.markdown("---")
-    st.subheader("🏗️ 配電盤工程項目監控 / Project Monitoring")
-    st.dataframe(df_prj, use_container_width=True)
-
 # 路由控制
-if menu_choice == t.get("menu_exec"):
+if menu_choice == "👑 董事長/總經理 - 營運戰情看板":
     render_exec_dashboard()
-elif menu_choice == t["menu_approval"]:
-    render_approval_module()
-elif menu_choice == t["menu_finance"]:
+elif menu_choice == "🏢 管理部 - 財務會計 (TT200/多幣別/UNC)":
     render_finance_module()
-elif menu_choice == t["menu_warehouse"]:
-    st.title(t["menu_warehouse"])
-    st.dataframe(pd.read_sql("SELECT * FROM inventory", get_db_engine()), use_container_width=True)
+elif menu_choice == "👥 管理部 - 人事與行政管理":
+    st.title("👥 管理部 - 人事與行政管理")
+    st.info("出勤統計、越南員工勞動合約管理與薪資試算。")
+elif menu_choice == "📦 管理部 - 總務與資產管理":
+    st.title("📦 管理部 - 總務與資產管理")
+    st.info("廠房固定資產、車輛管理與日常總務採購。")
+elif menu_choice == "✂️ 生產部 - 板金加工組":
+    st.title("✂️ 生產部 - 板金加工組")
+    st.info("配電盤外殼激光切割、沖壓與折彎派工監控。")
+elif menu_choice == "🎨 生產部 - 烤漆塗裝組":
+    st.title("🎨 生產部 - 烤漆塗裝組")
+    st.info("粉體烤漆膜厚、前處理槽液管理與塗装進度。")
+elif menu_choice == "⚡ 生產部 - 配電盤組裝與配線組":
+    st.title("⚡ 生產部 - 配電盤組裝與配線組")
+    st.info("母線銅排彎折、斷路器安裝與二次回路配線進度。")
+elif menu_choice == "🏭 生產部 - 倉庫與資材管理":
+    render_warehouse_module()
+elif menu_choice == "✍️ 電子簽核與請款流程":
+    render_approval_module()
