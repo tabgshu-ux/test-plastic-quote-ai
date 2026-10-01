@@ -80,21 +80,23 @@ class InventoryDB(Base):
     unit_cost = Column(Float, default=0.0)
     safety_stock = Column(Float, default=0.0)
 
+# 支援採購與工程雙軌制的 應收/應付帳款模型
 class InvoiceDB(Base):
     __tablename__ = 'invoices'
     invoice_id = Column(String, primary_key=True)
-    entity_name = Column(String, nullable=False)          # 客戶/廠商名稱
-    project_name = Column(String, default="")              # 工程名稱
-    project_period = Column(String, default="")            # 工程時間
-    quoted_amount = Column(Float, default=0.0)             # 工程報價
-    quoter_name = Column(String, default="")               # 報價人姓名
-    payment_terms = Column(String, default="")             # 收款條件
-    uncollected_reason = Column(Text, default="")          # 未能收款的原因
-    contract_file_name = Column(String, default="")        # 合約檔名
-    amount = Column(Float, default=0.0)                    # 當期金額
+    entity_name = Column(String, nullable=False)          # 客戶名稱 (AR) 或 供應商名稱 (AP)
+    category_type = Column(String, default="資材採購")    # 採購類別 (如: 銅材/斷路器採購, 外包工程, 運費等)
+    project_name = Column(String, default="")              # 工程名稱 或 採購品名與規格
+    project_period = Column(String, default="")            # 工程時間 或 採購週期/批號
+    quoted_amount = Column(Float, default=0.0)             # 工程報價 或 採購總採購金額
+    quoter_name = Column(String, default="")               # 報價人 或 採購經辦人
+    payment_terms = Column(String, default="")             # 收款/付款條件 (例: 月結30天, 30%預付)
+    uncollected_reason = Column(Text, default="")          # 未能收款原因 或 未付款備註說明
+    contract_file_name = Column(String, default="")        # 合約/送貨單/發票檔名
+    amount = Column(Float, default=0.0)                    # 當期金額 (USD)
     due_date = Column(Date, nullable=False)
     is_paid = Column(Boolean, default=False)               # 是否已結清
-    invoice_type = Column(String, default="AR")            # AR 或 AP
+    invoice_type = Column(String, default="AR")            # AR (應收) 或 AP (應付)
 
 class ProjectDB(Base):
     __tablename__ = 'projects'
@@ -105,7 +107,7 @@ class ProjectDB(Base):
     actual_labor_cost = Column(Float, default=0.0)
     actual_overhead = Column(Float, default=0.0)
 
-# 初始化雲端資料庫並自動自動補齊缺失欄位
+# 初始化雲端資料庫並自動補充採購相關欄位
 def init_db_data():
     try:
         engine = get_db_engine()
@@ -113,6 +115,7 @@ def init_db_data():
         
         with engine.connect() as conn:
             alter_queries = [
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category_type VARCHAR DEFAULT '資材採購';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_name VARCHAR DEFAULT '';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_period VARCHAR DEFAULT '';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS quoted_amount FLOAT DEFAULT 0.0;",
@@ -150,9 +153,11 @@ def init_db_data():
             
         if not session.query(InvoiceDB).first():
             session.add_all([
+                # 應收帳款 (AR) - 專案工程
                 InvoiceDB(
                     invoice_id="INV-2026-001",
                     entity_name="越南樟榜工業區 A 廠",
+                    category_type="工程專案",
                     project_name="西寧紡織廠配電盤新建工程",
                     project_period="2026/01 - 2026/05",
                     quoted_amount=250000.0,
@@ -164,6 +169,39 @@ def init_db_data():
                     due_date=today + datetime.timedelta(days=15),
                     is_paid=False,
                     invoice_type="AR"
+                ),
+                # 應付帳款 (AP) - 資材與零組件採購
+                InvoiceDB(
+                    invoice_id="AP-2026-001",
+                    entity_name="施耐德電氣越南分公司 (Schneider Electric)",
+                    category_type="開關零組件採購",
+                    project_name="高壓斷路器 (MCCB 100A / ACB 2000A) 批次進貨",
+                    project_period="PO-2026-0315",
+                    quoted_amount=45000.0,
+                    quoter_name="李採購員",
+                    payment_terms="月結 30 天 (Net 30)",
+                    uncollected_reason="待本月底對帳完成後由財務統一撥款",
+                    contract_file_name="PO_Schneider_20260315.pdf",
+                    amount=45000.0,
+                    due_date=today + datetime.timedelta(days=20),
+                    is_paid=False,
+                    invoice_type="AP"
+                ),
+                InvoiceDB(
+                    invoice_id="AP-2026-002",
+                    entity_name="東亞銅業 (East Asia Copper Ltd.)",
+                    category_type="銅材資材採購",
+                    project_name="高純度導電銅排 (10x100mm / 8x80mm) 5噸",
+                    project_period="PO-2026-0320",
+                    quoted_amount=62500.0,
+                    quoter_name="李採購員",
+                    payment_terms="貨到付款 (COD / 驗收無誤)",
+                    uncollected_reason="已交貨至西寧廠，品管檢驗中",
+                    contract_file_name="Invoice_Copper_0320.pdf",
+                    amount=62500.0,
+                    due_date=today + datetime.timedelta(days=5),
+                    is_paid=False,
+                    invoice_type="AP"
                 )
             ])
             
@@ -176,7 +214,7 @@ def init_db_data():
         session.close()
         return True
     except Exception as e:
-        st.error(f"⚠️ 雲端資料庫連線失敗：{e}")
+        st.error(f"⚠️️ 雲端資料庫連線失敗：{e}")
         return False
 
 db_connected = init_db_data()
@@ -297,7 +335,6 @@ menu_choice = st.sidebar.radio("Menu", menu_options)
 # 7. 模組渲染邏輯
 # ==========================================
 
-# 簡單的越南文 ➔ 中文對照翻譯輔助函式
 def translate_vi_to_zh(text_content):
     if not text_content:
         return "請輸入或上傳越南文合約文字內容。"
@@ -310,10 +347,11 @@ def translate_vi_to_zh(text_content):
         "Nghiệm thu": "驗收",
         "Bảo hành": "保固",
         "Thời hạn": "期限",
-        "Bên A": "甲方 (業主)",
-        "Bên B": "乙方 (REETECH INDUSTRIAL)",
+        "Bên A": "甲方 (業主/買方)",
+        "Bên B": "乙方 (REETECH INDUSTRIAL / 供應商)",
         "Điều khoản": "條款",
-        "Phạt vi phạm": "違約罰則"
+        "Phạt vi phạm": "違約罰則",
+        "Đơn đặt hàng": "採購單 (PO)"
     }
     
     translated = text_content
@@ -323,19 +361,19 @@ def translate_vi_to_zh(text_content):
     return translated
 
 def render_finance_module():
-    st.title("💰 財務 – 應收 (AR) 與 應付 (AP) 帳款管理")
+    st.title("💰 財務 – 應收 (AR) 與 應付採購貨款 (AP) 管理")
     engine = get_db_engine()
     Session = sessionmaker(bind=engine)
     session = Session()
 
     tab_ar, tab_ap, tab_add, tab_translate = st.tabs([
-        "📋 應收帳款 (AR) 監控", 
-        "💳 應付帳款 (AP) 明細", 
-        "➕ 新增帳款 / 上傳合約", 
-        "🌐 越南文合約 AI 翻譯對照 (老闆專用)"
+        "📋 工程應收帳款 (AR) 監控", 
+        "💳 採購資材應付帳款 (AP) 明細", 
+        "➕ 新增應收/應付(採購)與合約單據", 
+        "🌐 越南文合約/PO AI 翻譯對照 (老闆專用)"
     ])
 
-    # 1. 應收帳款 (AR)
+    # 1. 工程應收帳款 (AR)
     with tab_ar:
         ar_invoices = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
         total_quoted = sum(i.quoted_amount or 0.0 for i in ar_invoices)
@@ -346,7 +384,7 @@ def render_finance_module():
         c2.metric("未收應收帳款餘額 (USD)", f"${total_unpaid:,.2f}", delta="-待收金額")
         
         st.markdown("---")
-        st.subheader("📑 工程應收帳款明細表")
+        st.subheader("📑 工程應收帳款 (AR) 明細表")
         
         df_ar = pd.DataFrame([{
             "發票/單號": i.invoice_id,
@@ -355,58 +393,73 @@ def render_finance_module():
             "工程時間": i.project_period or "-",
             "工程報價 (USD)": i.quoted_amount or 0.0,
             "當期應收 (USD)": i.amount or 0.0,
-            "報價人姓名": i.quoter_name or "-",
+            "報價人": i.quoter_name or "-",
             "收款條件": i.payment_terms or "-",
             "合約附件": i.contract_file_name or "未上傳",
-            "到期日": i.due_date,
+            "約定到期日": i.due_date,
             "狀態": "已收款" if i.is_paid else "⏳ 未收款",
-            "未能收款的原因 (備註)": i.uncollected_reason or "-"
+            "未能收款原因 (備註)": i.uncollected_reason or "-"
         } for i in ar_invoices])
 
         st.dataframe(df_ar, use_container_width=True)
 
-    # 2. 應付帳款 (AP)
+    # 2. 採購資材應付帳款 (AP)
     with tab_ap:
         ap_invoices = session.query(InvoiceDB).filter_by(invoice_type="AP").all()
+        total_ap_amount = sum(i.amount or 0.0 for i in ap_invoices if not i.is_paid)
+        
+        c1, c2 = st.columns(2)
+        c1.metric("待付採購總貨款 (AP Unpaid)", f"${total_ap_amount:,.2f}", delta="-待付金額")
+        c2.metric("採購貨款筆數", f"{len(ap_invoices)} 筆")
+
+        st.markdown("---")
+        st.subheader("🛒 採購資材與零組件應付帳款 (AP) 明細表")
+        
         df_ap = pd.DataFrame([{
-            "請款單號": i.invoice_id,
+            "採購單/發票號": i.invoice_id,
             "供應商名稱": i.entity_name,
-            "採購項目": i.project_name or "-",
-            "應付金額 (USD)": i.amount or 0.0,
+            "採購類別": i.category_type or "資材採購",
+            "採購品名與規格": i.project_name or "-",
+            "採購批號/PO": i.project_period or "-",
+            "應付貨款 (USD)": i.amount or 0.0,
+            "採購經辦": i.quoter_name or "-",
             "付款條件": i.payment_terms or "-",
-            "合約/單據": i.contract_file_name or "未上傳",
-            "到期日": i.due_date,
-            "狀態": "已付款" if i.is_paid else "⏳ 待付款"
+            "PO/發票附件": i.contract_file_name or "未上傳",
+            "付款到期日": i.due_date,
+            "狀態": "已結清" if i.is_paid else "⏳ 待付款",
+            "備註說明": i.uncollected_reason or "-"
         } for i in ap_invoices])
+        
         st.dataframe(df_ap, use_container_width=True)
 
-    # 3. 線上新增帳款與上傳合約
+    # 3. 線上新增應收帳款 / 採購應付貨款
     with tab_add:
-        st.subheader("➕ 線上新增應收 / 應付帳款與合約上傳")
+        st.subheader("➕ 線上新增帳款與單據上傳")
         
         with st.form("add_invoice_form"):
             col_a, col_b = st.columns(2)
             
             with col_a:
-                inv_type = st.selectbox("帳款類別", ["AR (應收帳款)", "AP (應付帳款)"])
-                entity_name = st.text_input("客戶 / 廠商名稱 *")
-                project_name = st.text_input("工程名稱 / 採購項目 *")
-                project_period = st.text_input("工程時間 (例: 2026/01 - 2026/06)")
-                quoted_amount = st.number_input("工程報價總額 (USD)", min_value=0.0)
-                quoter_name = st.text_input("報價人 / 經辦人姓名")
+                inv_type = st.selectbox("帳款性質", ["AR - 專案工程應收帳款", "AP - 採購資材/零組件應付貨款"])
+                category_type = st.selectbox("分類類別", ["資材與零組件採購 (銅材/斷路器/線材等)", "工程專案 (配電盤工程)", "外包加工與施工", "日常營運與雜項費用"])
+                entity_name = st.text_input("客戶名稱 (AR) 或 供應商名稱 (AP) *")
+                project_name = st.text_input("工程名稱 (AR) 或 採購品名與規格 (AP) *")
+                project_period = st.text_input("工程週期 (AR) 或 採購單號/PO (AP)")
+                quoted_amount = st.number_input("總報價金額 / 採購總額 (USD)", min_value=0.0)
 
             with col_b:
-                amount = st.number_input("當期應收 / 應付金額 (USD) *", min_value=0.0)
-                payment_terms = st.text_input("付款 / 收款條件 (例: 30% 訂金, 70% 驗收)")
-                due_date = st.date_input("約定付款 / 到期日期", datetime.date.today() + datetime.timedelta(days=30))
-                uncollected_reason = st.text_area("未能收款原因 / 備註說明")
-                uploaded_file = st.file_uploader("📎 上傳工程合約 / 報價單文件 (PDF / TXT)", type=["pdf", "txt", "png", "jpg"])
+                quoter_name = st.text_input("工程報價人 (AR) 或 採購經辦員 (AP)")
+                amount = st.number_input("當期應收 / 應付款項 (USD) *", min_value=0.0)
+                payment_terms = st.text_input("付款條件 (例: 月結 30 天 / 30% 訂金 / 驗收後付款)")
+                due_date = st.date_input("約定到期日期", datetime.date.today() + datetime.timedelta(days=30))
+                uncollected_reason = st.text_area("未收款原因 (AR) 或 付款備註說明 (AP)")
+                uploaded_file = st.file_uploader("📎 上傳工程合約 / 採購 PO / 送貨單據 (PDF/圖片)", type=["pdf", "txt", "png", "jpg"])
 
             submit_btn = st.form_submit_button("💾 儲存並寫入 Supabase 雲端資料庫", use_container_width=True)
 
             if submit_btn:
                 if not entity_name or not project_name:
-                    st.error("請填寫客戶名稱與工程名稱！")
+                    st.error("請填寫對象名稱與工程/採購品名！")
                 else:
                     type_code = "AR" if "AR" in inv_type else "AP"
                     new_inv_id = f"{type_code}-2026-{datetime.datetime.now().strftime('%m%d%H%M')}"
@@ -415,6 +468,7 @@ def render_finance_module():
                     new_invoice = InvoiceDB(
                         invoice_id=new_inv_id,
                         entity_name=entity_name,
+                        category_type=category_type,
                         project_name=project_name,
                         project_period=project_period,
                         quoted_amount=quoted_amount,
@@ -432,18 +486,18 @@ def render_finance_module():
                     st.success(f"帳款單號 {new_inv_id} 已成功建立並同步至雲端資料庫！")
                     st.rerun()
 
-    # 4. 越南文合約 AI 翻譯與比對 (老闆專用)
+    # 4. 越南文合約/PO AI 翻譯與比對
     with tab_translate:
-        st.subheader("🌐 越南文合約中越條款對照與 AI 翻譯輔助")
-        st.caption("專為管理層設計：快速對照越南文合約關鍵條款、付款方式與違約責任。")
+        st.subheader("🌐 越南文合約 / 採購單 (PO) AI 翻譯對照")
+        st.caption("協助老闆與管理者快速審閱越南在地採購單 (PO) 與合約條款。")
 
         col_left, col_right = st.columns(2)
 
         with col_left:
-            st.markdown("#### 🇻🇳 越南文合約條款原文 (Input)")
+            st.markdown("#### 🇻🇳 越南文合約 / PO 內容 (Input)")
             vi_contract_text = st.text_area(
-                "貼上越南文合約內文或關鍵條款：",
-                value="Hợp đồng kinh tế: Bên A tạm ứng 30% giá trị hợp đồng sau khi ký. Bên B nghiệm thu và bàn giao sau 60 ngày. Điều khoản phạt vi phạm: 0.05% mỗi ngày chậm tiến độ.",
+                "貼上越南文採購單或合約條款：",
+                value="Đơn đặt hàng (PO): Bên A đặt mua 5 tấn đồng thanh cái. Thanh toán: Tạm ứng 30% khi ký PO, 70% còn lại thanh toán sau khi giao hàng và kiểm tra nghiệm thu.",
                 height=220
             )
 
