@@ -53,6 +53,18 @@ def get_db_engine():
 
 Base = declarative_base()
 
+# ---------------- 參考匯率定義 (美金基準) ----------------
+EXCHANGE_RATES = {
+    "USD": 1.0,
+    "VND": 25400.0,  # 1 USD ≈ 25,400 VND
+    "TWD": 32.0,     # 1 USD ≈ 32 TWD
+    "CNY": 7.23      # 1 USD ≈ 7.23 CNY
+}
+
+def convert_to_usd(amount, currency):
+    rate = EXCHANGE_RATES.get(currency, 1.0)
+    return amount / rate if rate > 0 else amount
+
 # ---------------- 資料庫 ORM 模型 ----------------
 class UserDB(Base):
     __tablename__ = 'users'
@@ -67,6 +79,7 @@ class ApprovalDB(Base):
     title = Column(String, nullable=False)
     applicant = Column(String, nullable=False)
     amount = Column(Float, default=0.0)
+    currency = Column(String, default="USD")
     status = Column(String, default="待簽核")
     created_at = Column(DateTime, default=datetime.datetime.now)
 
@@ -78,9 +91,10 @@ class InventoryDB(Base):
     quantity = Column(Float, default=0.0)
     unit = Column(String)
     unit_cost = Column(Float, default=0.0)
+    currency = Column(String, default="USD")
     safety_stock = Column(Float, default=0.0)
 
-# 符合越南 TT200 會計制度與銀行轉帳審計紀錄之帳款模型
+# 多幣別支援之帳款模型
 class InvoiceDB(Base):
     __tablename__ = 'invoices'
     invoice_id = Column(String, primary_key=True)
@@ -89,31 +103,24 @@ class InvoiceDB(Base):
     category_type = Column(String, default="資材採購")    # 詳細說明
     project_name = Column(String, default="")              # 工程名稱 或 採購品名規格
     project_period = Column(String, default="")            # 合約/PO單號
-    quoted_amount = Column(Float, default=0.0)             # 總報價/總採購金額
+    quoted_amount = Column(Float, default=0.0)             # 總報價/總採購金額 (原幣)
     quoter_name = Column(String, default="")               # 經辦人員
     payment_terms = Column(String, default="")             # 付款條件
     uncollected_reason = Column(Text, default="")          # 備註/未付款原因
     contract_file_name = Column(String, default="")        # 合約/發票/水單檔名
-    amount = Column(Float, default=0.0)                    # 當期金額 (USD)
+    amount = Column(Float, default=0.0)                    # 當期金額 (原幣)
+    currency = Column(String, default="USD")               # 幣別: USD, VND, TWD, CNY
+    amount_usd = Column(Float, default=0.0)                # 自動換算之美金金額 (用於跨國統計)
     due_date = Column(Date, nullable=False)
     is_paid = Column(Boolean, default=False)               # 是否已結清
     invoice_type = Column(String, default="AR")            # AR 或 AP
     
-    # 越南銀行轉帳審計專用欄位 (UNC & Audit Trail)
-    bank_name = Column(String, default="")                 # 匯款銀行 (Vietcombank, BIDV, etc.)
-    bank_transfer_ref = Column(String, default="")         # 銀行轉帳水單單號 (Số UNC / Transaction Ref)
-    payment_date = Column(Date, nullable=True)             # 實際銀行轉帳日期
+    # 越南銀行轉帳審計專用欄位
+    bank_name = Column(String, default="")                 # 匯款銀行
+    bank_transfer_ref = Column(String, default="")         # 轉帳水單號 (UNC)
+    payment_date = Column(Date, nullable=True)             # 實際轉帳日期
 
-class ProjectDB(Base):
-    __tablename__ = 'projects'
-    project_id = Column(String, primary_key=True)
-    project_name = Column(String, nullable=False)
-    budget = Column(Float, default=0.0)
-    actual_material_cost = Column(Float, default=0.0)
-    actual_labor_cost = Column(Float, default=0.0)
-    actual_overhead = Column(Float, default=0.0)
-
-# 初始化資料庫並自動擴充越南會計與銀行轉帳欄位
+# 初始化資料庫並自動補充多幣別欄位
 def init_db_data():
     try:
         engine = get_db_engine()
@@ -121,6 +128,8 @@ def init_db_data():
         
         with engine.connect() as conn:
             alter_queries = [
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency VARCHAR DEFAULT 'USD';",
+                "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS amount_usd FLOAT DEFAULT 0.0;",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS account_code VARCHAR DEFAULT '3311';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS category_type VARCHAR DEFAULT '資材採購';",
                 "ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_name VARCHAR DEFAULT '';",
@@ -151,19 +160,19 @@ def init_db_data():
 
         if not session.query(ApprovalDB).first():
             session.add_all([
-                ApprovalDB(id="APPR-2026-001", title="西寧專案 銅排採購請款單", applicant="廠務採購員", amount=12500.0, status="待簽核"),
-                ApprovalDB(id="APPR-2026-002", title="平陽高壓櫃 施耐德斷路器請款", applicant="工程部主管", amount=8400.0, status="已核准")
+                ApprovalDB(id="APPR-2026-001", title="西寧專案 銅排採購請款單", applicant="廠務採購員", amount=12500.0, currency="USD", status="待簽核"),
+                ApprovalDB(id="APPR-2026-002", title="平陽高壓櫃 施耐德斷路器請款", applicant="工程部主管", amount=213360000.0, currency="VND", status="已核准")
             ])
             
         if not session.query(InventoryDB).first():
             session.add_all([
-                InventoryDB(item_code="CU-BUS-001", name="高純度銅排 10x100mm", category="銅材", quantity=1500, unit="kg", unit_cost=12.5, safety_stock=2000),
-                InventoryDB(item_code="CB-MCCB-100A", name="塑殼斷路器 100A", category="開關元件", quantity=350, unit="pcs", unit_cost=45.0, safety_stock=100)
+                InventoryDB(item_code="CU-BUS-001", name="高純度銅排 10x100mm", category="銅材", quantity=1500, unit="kg", unit_cost=12.5, currency="USD", safety_stock=2000),
+                InventoryDB(item_code="CB-MCCB-100A", name="塑殼斷路器 100A", category="開關元件", quantity=350, unit="pcs", unit_cost=1143000.0, currency="VND", safety_stock=100)
             ])
             
         if not session.query(InvoiceDB).first():
             session.add_all([
-                # AR 範例
+                # VND 越南盾應收帳款
                 InvoiceDB(
                     invoice_id="INV-2026-001",
                     entity_name="CÔNG TY TNHH A-Z TÂY NINH",
@@ -171,30 +180,34 @@ def init_db_data():
                     category_type="專案工程合約款",
                     project_name="西寧紡織廠配電盤新建工程",
                     project_period="HD-2026-TN01",
-                    quoted_amount=250000.0,
+                    quoted_amount=6350000000.0,
                     quoter_name="張經理 (工程部)",
                     payment_terms="30% 訂金 / 60% 進場 / 10% 驗收",
                     uncollected_reason="客戶建廠進度延遲，等待第二期驗收文件簽核中",
                     contract_file_name="Hop_Dong_TayNinh_2026.pdf",
-                    amount=150000.0,
+                    amount=3810000000.0,
+                    currency="VND",
+                    amount_usd=150000.0,
                     due_date=today + datetime.timedelta(days=15),
                     is_paid=False,
                     invoice_type="AR"
                 ),
-                # AP 範例 (含轉帳單號與水單)
+                # CNY 人民幣應付資材貨款
                 InvoiceDB(
                     invoice_id="AP-2026-001",
-                    entity_name="SCHNEIDER ELECTRIC VIỆT NAM",
+                    entity_name="正泰電器股份有限公司 (CHINT)",
                     account_code="3311 - TK 3311 (Mua NVL/Linh kiện)",
                     category_type="原材料與零組件採購",
                     project_name="高壓斷路器 (MCCB 100A / ACB 2000A) 批次進貨",
                     project_period="PO-2026-0315",
-                    quoted_amount=45000.0,
+                    quoted_amount=325350.0,
                     quoter_name="李採購員",
                     payment_terms="月結 30 天 (Net 30)",
-                    uncollected_reason="已於 2026/03/25 經 VCB 完成全額轉帳",
-                    contract_file_name="UNC_Schneider_VCB_20260325.pdf",
-                    amount=45000.0,
+                    uncollected_reason="已於 2026/03/25 經 VCB 完成全額匯款",
+                    contract_file_name="UNC_Chint_VCB_20260325.pdf",
+                    amount=325350.0,
+                    currency="CNY",
+                    amount_usd=45000.0,
                     due_date=today - datetime.timedelta(days=5),
                     is_paid=True,
                     invoice_type="AP",
@@ -231,7 +244,7 @@ i18n = {
         "logout_btn": "🚪 登出系統",
         "menu_exec": "📊 老闆營運決策看板",
         "menu_approval": "✍️ 電子請款與簽核系統",
-        "menu_finance": "💰 財務應收/應付 (TT200 標準)",
+        "menu_finance": "💰 財務多幣別應收/應付 (TT200)",
         "menu_warehouse": "📦 倉庫資材管理",
         "company_sub": "REETECH INDUSTRIAL"
     },
@@ -244,7 +257,7 @@ i18n = {
         "logout_btn": "🚪 Đăng xuất",
         "menu_exec": "📊 Báo cáo Giám đốc",
         "menu_approval": "✍️ Hệ thống Phê duyệt",
-        "menu_finance": "💰 Tài chính & Công nợ (TT200)",
+        "menu_finance": "💰 Tài chính Đa tiền tệ (TT200)",
         "menu_warehouse": "📦 Quản lý Kho vật tư",
         "company_sub": "REETECH INDUSTRIAL"
     },
@@ -256,8 +269,8 @@ i18n = {
         "login_btn": "🔑 Login",
         "logout_btn": "🚪 Logout",
         "menu_exec": "📊 Executive Dashboard",
-        "menu_approval": "✍️️ Approval Workflow",
-        "menu_finance": "💰 Finance & AR/AP (TT200)",
+        "menu_approval": "✍️ Approval Workflow",
+        "menu_finance": "💰 Multi-Currency Finance (TT200)",
         "menu_warehouse": "📦 Warehouse & Inventory",
         "company_sub": "REETECH INDUSTRIAL"
     }
@@ -361,9 +374,20 @@ def translate_vi_to_zh(text_content):
     
     return translated
 
+def format_currency_display(amount, curr):
+    if curr == "VND":
+        return f"₫ {amount:,.0f} VND"
+    elif curr == "USD":
+        return f"$ {amount:,.2f} USD"
+    elif curr == "TWD":
+        return f"NT$ {amount:,.0f} TWD"
+    elif curr == "CNY":
+        return f"¥ {amount:,.2f} CNY"
+    return f"{amount:,.2f} {curr}"
+
 def render_finance_module():
-    st.title("💰 財務 – 應收 (TK 131) 與 應付採購貨款 (TK 331) 管理")
-    st.caption("符合越南 Thông tư 200/2014/TT-BTC 會計制度標準，具備銀行轉帳單號 (UNC) 審計紀錄功能。")
+    st.title("💰 財務 – 多幣別應收 (TK 131) 與 應付 (TK 331) 管理")
+    st.caption("支援 VND (越南盾)、USD (美金)、TWD (台幣)、CNY (人民幣) 多幣別交易與銀行 UNC 審計。")
     
     engine = get_db_engine()
     Session = sessionmaker(bind=engine)
@@ -373,33 +397,31 @@ def render_finance_module():
         "📋 TK 131 應收帳款 (AR)", 
         "💳 TK 331 應付帳款 (AP) 明細", 
         "🏦 紀錄銀行轉帳 (UNC)",
-        "➕ 新增會計帳款單據", 
+        "➕ 新增多幣別帳款", 
         "🌐 越南合約/UNC AI 翻譯對照"
     ])
 
     # 1. 應收帳款 (TK 131)
     with tab_ar:
         ar_invoices = session.query(InvoiceDB).filter_by(invoice_type="AR").all()
-        total_quoted = sum(i.quoted_amount or 0.0 for i in ar_invoices)
-        total_unpaid = sum(i.amount or 0.0 for i in ar_invoices if not i.is_paid)
+        total_unpaid_usd = sum(i.amount_usd or convert_to_usd(i.amount, i.currency) for i in ar_invoices if not i.is_paid)
         
         c1, c2 = st.columns(2)
-        c1.metric("工程報價總額 (USD)", f"${total_quoted:,.2f}")
-        c2.metric("TK 131 未收帳款餘額 (USD)", f"${total_unpaid:,.2f}", delta="-待收金額")
+        c1.metric("TK 131 待收總額 (折合美金 USD)", f"${total_unpaid_usd:,.2f}", delta="-待收金額")
+        c2.metric("應收筆數", f"{len(ar_invoices)} 筆")
         
         st.markdown("---")
-        st.subheader("📑 TK 131 應收帳款 (AR) 會計明細表")
+        st.subheader("📑 TK 131 應收帳款 (AR) 多幣別明細表")
         
         df_ar = pd.DataFrame([{
             "單號": i.invoice_id,
             "會計科目": i.account_code or "1311",
             "客戶名稱": i.entity_name,
-            "工程名稱": i.project_name or "-",
-            "合約/PO號": i.project_period or "-",
-            "工程報價 (USD)": i.quoted_amount or 0.0,
-            "當期應收 (USD)": i.amount or 0.0,
+            "工程/項目": i.project_name or "-",
+            "交易幣別": i.currency or "USD",
+            "原幣當期應收": format_currency_display(i.amount or 0.0, i.currency or "USD"),
+            "折合美金 (USD)": f"${(i.amount_usd or convert_to_usd(i.amount, i.currency)):,.2f}",
             "經辦人": i.quoter_name or "-",
-            "收款條件": i.payment_terms or "-",
             "合約/單據": i.contract_file_name or "未上傳",
             "約定到期日": i.due_date,
             "狀態": "已收款" if i.is_paid else "⏳ 未收款",
@@ -408,43 +430,41 @@ def render_finance_module():
 
         st.dataframe(df_ar, use_container_width=True)
 
-    # 2. 應付帳款 (TK 331) 含轉帳單號
+    # 2. 應付帳款 (TK 331)
     with tab_ap:
         ap_invoices = session.query(InvoiceDB).filter_by(invoice_type="AP").all()
-        total_ap_amount = sum(i.amount or 0.0 for i in ap_invoices if not i.is_paid)
+        total_ap_usd = sum(i.amount_usd or convert_to_usd(i.amount, i.currency) for i in ap_invoices if not i.is_paid)
         
         c1, c2 = st.columns(2)
-        c1.metric("TK 331 待付採購總貨款 (USD)", f"${total_ap_amount:,.2f}", delta="-待付金額")
+        c1.metric("TK 331 待付採購總額 (折合美金 USD)", f"${total_ap_usd:,.2f}", delta="-待付金額")
         c2.metric("應付筆數", f"{len(ap_invoices)} 筆")
 
         st.markdown("---")
-        st.subheader("🛒 TK 331 採購與資材應付帳款 (AP) 明細表")
+        st.subheader("🛒 TK 331 採購資材應付帳款 (AP) 明細表")
         
         df_ap = pd.DataFrame([{
             "請款單號": i.invoice_id,
             "會計科目": i.account_code or "3311",
             "供應商名稱": i.entity_name,
-            "採購品名與規格": i.project_name or "-",
-            "採購單/PO": i.project_period or "-",
-            "應付貨款 (USD)": i.amount or 0.0,
-            "付款條件": i.payment_terms or "-",
+            "採購品名規格": i.project_name or "-",
+            "交易幣別": i.currency or "USD",
+            "原幣應付金額": format_currency_display(i.amount or 0.0, i.currency or "USD"),
+            "折合美金 (USD)": f"${(i.amount_usd or convert_to_usd(i.amount, i.currency)):,.2f}",
             "付款狀態": "✅ 已轉帳付清" if i.is_paid else "⏳ 待轉帳",
             "實際轉帳日期": i.payment_date or "-",
             "付款銀行": i.bank_name or "-",
-            "越南銀行轉帳單號 (UNC / Ref)": i.bank_transfer_ref or "-",
+            "轉帳單號 (UNC)": i.bank_transfer_ref or "-",
             "水單/單據": i.contract_file_name or "未上傳",
             "備註": i.uncollected_reason or "-"
         } for i in ap_invoices])
         
         st.dataframe(df_ap, use_container_width=True)
 
-    # 3. 紀錄銀行轉帳 (UNC) 與日期
+    # 3. 紀錄銀行轉帳 (UNC)
     with tab_pay:
-        st.subheader("🏦 紀錄越南銀行轉帳資訊 (Lập Ủy Nhiệm Chi)")
-        st.caption("當財務完成銀行付款後，請在此輸入轉帳水單單號與日期，維護稽核軌跡。")
-
+        st.subheader("🏦 紀錄銀行轉帳水單 (Lập Ủy Nhiệm Chi)")
         ap_unpaid = session.query(InvoiceDB).filter_by(invoice_type="AP", is_paid=False).all()
-        ap_options = {f"{i.invoice_id} - {i.entity_name} (${i.amount:,.2f})": i.invoice_id for i in ap_unpaid}
+        ap_options = {f"{i.invoice_id} - {i.entity_name} ({format_currency_display(i.amount, i.currency)})": i.invoice_id for i in ap_unpaid}
 
         if ap_options:
             selected_ap_label = st.selectbox("選擇要核銷付款的應付單號", list(ap_options.keys()))
@@ -454,13 +474,13 @@ def render_finance_module():
             with st.form("bank_pay_form"):
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
-                    bank_name = st.selectbox("付款銀行 (Ngân hàng)", ["Vietcombank (VCB)", "BIDV", "MB Bank", "ViettinBank", "ACB", "其他 Bank"])
-                    bank_transfer_ref = st.text_input("銀行轉帳水單單號 (Số UNC / Mã GD) *", placeholder="例: UNC-20260326-9901")
+                    bank_name = st.selectbox("付款銀行", ["Vietcombank (VCB)", "BIDV", "MB Bank", "ViettinBank", "ACB", "第一銀行 (First Bank)", "兆豐銀行", "其他 Bank"])
+                    bank_transfer_ref = st.text_input("銀行轉帳水單單號 (Số UNC / Transaction Ref) *", placeholder="例: UNC-20260326-9901")
                 with col_p2:
-                    payment_date = st.date_input("實際轉帳日期 (Ngày chuyển khoản)", datetime.date.today())
-                    unc_file = st.file_uploader("📎 上傳銀行轉帳水單 (Ủy nhiệm chi - PDF/Image)", type=["pdf", "png", "jpg"])
+                    payment_date = st.date_input("實際轉帳日期", datetime.date.today())
+                    unc_file = st.file_uploader("📎 上傳銀行轉帳水單 (UNC)", type=["pdf", "png", "jpg"])
 
-                pay_notes = st.text_area("付款備註", value=f"已於 {payment_date} 經 {bank_name} 完成匯款。")
+                pay_notes = st.text_area("付款備註", value=f"已於 {payment_date} 經 {bank_name} 完成匯款 {format_currency_display(target_ap.amount, target_ap.currency)}。")
 
                 submit_pay = st.form_submit_button("💾 儲存轉帳紀錄並標記為已付清", use_container_width=True)
 
@@ -481,19 +501,17 @@ def render_finance_module():
         else:
             st.info("目前所有應付帳款皆已付款結清！")
 
-    # 4. 線上新增會計帳款單據
+    # 4. 新增多幣別帳款
     with tab_add:
-        st.subheader("➕ 新增會計帳款單據 (依照越南 TT200 科目分類)")
+        st.subheader("➕ 新增多幣別會計帳款 (VND / USD / TWD / CNY)")
         
         with st.form("add_invoice_form"):
             col_a, col_b = st.columns(2)
             
             with col_a:
                 inv_type = st.selectbox("帳款性質", ["AR - 應收帳款 (TK 131)", "AP - 應付帳款 (TK 331)"])
-                
-                # 越南 TT200 標準會計科目選單
                 account_code = st.selectbox(
-                    "越南 TT200 標準會計科目 (Tài khoản kế toán)",
+                    "越南 TT200 標準會計科目",
                     [
                         "3311 - Mua nguyên vật liệu/linh kiện (資材與零組件採購)",
                         "3312 - Chi phí gia công/thầu phụ (外包工程與加工費)",
@@ -504,16 +522,19 @@ def render_finance_module():
                         "1318 - Phải thu khác (其他應收款)"
                     ]
                 )
-                
                 entity_name = st.text_input("客戶名稱 (AR) 或 供應商名稱 (AP) *")
                 project_name = st.text_input("工程名稱 (AR) 或 採購品名規格 (AP) *")
                 project_period = st.text_input("合約編號 (AR) 或 採購 PO 單號 (AP)")
 
             with col_b:
-                quoted_amount = st.number_input("總報價金額 / 總採購金額 (USD)", min_value=0.0)
-                quoter_name = st.text_input("業務/工程報價員 (AR) 或 採購經辦員 (AP)")
-                amount = st.number_input("當期應收 / 應付款項 (USD) *", min_value=0.0)
-                payment_terms = st.text_input("付款條件 (例: Net 30 / 30% 預付 / 驗收後付款)")
+                currency = st.selectbox("💱 交易幣別 (Currency) *", ["VND (越南盾)", "USD (美金)", "TWD (台幣)", "CNY (人民幣)"])
+                curr_code = currency.split(" ")[0]
+                
+                amount = st.number_input(f"當期原幣金額 ({curr_code}) *", min_value=0.0)
+                quoted_amount = st.number_input(f"總報價 / 採購原幣總額 ({curr_code})", min_value=0.0)
+                
+                quoter_name = st.text_input("經辦人員 / 業務員")
+                payment_terms = st.text_input("付款條件 (例: Net 30 / 30% 預付)")
                 due_date = st.date_input("約定到期日期", datetime.date.today() + datetime.timedelta(days=30))
                 uncollected_reason = st.text_area("未收款原因 (AR) 或 付款備註說明 (AP)")
                 uploaded_file = st.file_uploader("📎 上傳工程合約 / 採購 PO / 銀行水單", type=["pdf", "txt", "png", "jpg"])
@@ -527,6 +548,8 @@ def render_finance_module():
                     type_code = "AR" if "AR" in inv_type else "AP"
                     new_inv_id = f"{type_code}-2026-{datetime.datetime.now().strftime('%m%d%H%M')}"
                     file_name = uploaded_file.name if uploaded_file else ""
+                    
+                    calc_usd = convert_to_usd(amount, curr_code)
 
                     new_invoice = InvoiceDB(
                         invoice_id=new_inv_id,
@@ -541,16 +564,18 @@ def render_finance_module():
                         uncollected_reason=uncollected_reason,
                         contract_file_name=file_name,
                         amount=amount,
+                        currency=curr_code,
+                        amount_usd=calc_usd,
                         due_date=due_date,
                         is_paid=False,
                         invoice_type=type_code
                     )
                     session.add(new_invoice)
                     session.commit()
-                    st.success(f"帳款單號 {new_inv_id} 已成功建立並同步至雲端資料庫！")
+                    st.success(f"帳款單號 {new_inv_id} ({curr_code}) 已成功建立並同步至雲端資料庫！")
                     st.rerun()
 
-    # 5. 越南文合約/UNC AI 翻譯與比對
+    # 5. 翻譯對照
     with tab_translate:
         st.subheader("🌐 越南文合約 / 銀行水單 (UNC) AI 翻譯對照")
         col_left, col_right = st.columns(2)
@@ -559,7 +584,7 @@ def render_finance_module():
             st.markdown("#### 🇻🇳 越南文內文 (Input)")
             vi_contract_text = st.text_area(
                 "貼上越南文條款或 UNC 內容：",
-                value="Ủy nhiệm chi (UNC): Bên A chuyển khoản thanh toán 45,000 USD cho Bên B (SCHNEIDER ELECTRIC VIỆT NAM) qua ngân hàng Vietcombank. Số GD: UNC-20260325-88921.",
+                value="Ủy nhiệm chi (UNC): Bên A chuyển khoản thanh toán 381,000,000 VND cho Bên B qua ngân hàng Vietcombank. Số GD: UNC-20260325-88921.",
                 height=220
             )
 
@@ -580,7 +605,7 @@ def render_approval_module():
     approvals = session.query(ApprovalDB).all()
     df_appr = pd.DataFrame([{
         "ID": a.id, "Title": a.title, "Applicant": a.applicant, 
-        "Amount (USD)": a.amount, "Status": a.status, "Date": a.created_at
+        "Amount": format_currency_display(a.amount, a.currency or "USD"), "Status": a.status, "Date": a.created_at
     } for a in approvals])
     st.dataframe(df_appr, use_container_width=True)
 
@@ -590,12 +615,12 @@ def render_exec_dashboard():
     df_invc = pd.read_sql("SELECT * FROM invoices", engine)
     df_prj = pd.read_sql("SELECT * FROM projects", engine)
 
-    total_ar = df_invc[df_invc['invoice_type'] == 'AR']['amount'].sum() if 'invoice_type' in df_invc.columns else 0.0
-    total_ap = df_invc[df_invc['invoice_type'] == 'AP']['amount'].sum() if 'invoice_type' in df_invc.columns else 0.0
+    total_ar = df_invc[df_invc['invoice_type'] == 'AR']['amount_usd'].sum() if 'amount_usd' in df_invc.columns else 0.0
+    total_ap = df_invc[df_invc['invoice_type'] == 'AP']['amount_usd'].sum() if 'amount_usd' in df_invc.columns else 0.0
     
     c1, c2, c3 = st.columns(3)
-    c1.metric("AR (應收帳款)", f"USD ${total_ar:,.2f}")
-    c2.metric("AP (應付帳款)", f"USD ${total_ap:,.2f}")
+    c1.metric("AR (應收總額 折合USD)", f"USD ${total_ar:,.2f}")
+    c2.metric("AP (應付總額 折合USD)", f"USD ${total_ap:,.2f}")
     c3.metric("Projects (工程數)", f"{len(df_prj)}")
     
     st.markdown("---")
