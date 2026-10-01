@@ -18,7 +18,7 @@ st.set_page_config(
 # 1. Supabase 雲端資料庫連線設定
 # ==========================================
 # ⚠️ 請將 [YOUR-PASSWORD] 替換為您的 Supabase 資料庫實際密碼
-DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:[REEDm4z/2u04ru]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:[RECH2026erp]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
 
 @st.cache_resource
 def get_db_engine():
@@ -102,7 +102,7 @@ db_connected = init_db_data()
 # 2. 側邊欄選單與語系設定
 # ==========================================
 st.sidebar.title("⚡ 裕豐電機 AI ERP")
-st.sidebar.caption("Hựu Phong Electric Co., Ltd.")
+st.sidebar.caption("REETECH INDUSTRIAL Co., Ltd.")
 
 lang = st.sidebar.selectbox("🌐 語言設定 / Language / Ngôn ngữ", ["繁體中文", "Tiếng Việt", "English"])
 
