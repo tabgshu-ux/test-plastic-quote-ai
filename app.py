@@ -15,11 +15,20 @@ st.set_page_config(
 )
 
 # ==========================================
-# 1. 瀏覽器與系統語系自動偵測 (Auto Language Detection)
+# 1. 強制清除快取機制 (依據 GitHub AI 建議)
+# ==========================================
+st.sidebar.markdown("### ⚙️ 系統快取維護")
+if st.sidebar.button("🧹 清除舊連線快取 (Clear Cache)"):
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    st.sidebar.success("快取已重置！系統重新連線中...")
+    st.rerun()
+
+# ==========================================
+# 2. 瀏覽器與系統語系自動偵測 (Auto Language Detection)
 # ==========================================
 def detect_user_language():
     try:
-        # 從 Streamlit request headers 讀取瀏覽器 Accept-Language
         headers = st.context.headers
         accept_lang = headers.get("Accept-Language", "").lower()
         if "zh" in accept_lang:
@@ -35,11 +44,12 @@ if "current_lang" not in st.session_state:
     st.session_state.current_lang = detect_user_language()
 
 # ==========================================
-# 2. Supabase 雲端資料庫連線設定
+# 3. Supabase 雲端資料庫連線設定 (Port 5432 直連)
 # ==========================================
+# ⚠️ 請將 Reetech2026 替換為您在 Supabase 設定的新密碼
 DB_URL = "postgresql+psycopg2://postgres:Reetech2026@db.wvsqbefyeykmueffcbwd.supabase.co:5432/postgres"
 
-@st.cache_resource
+# 取消裝飾器 @st.cache_resource 以防止快取舊連線，確保每次改寫即時生效
 def get_db_engine():
     return create_engine(DB_URL, pool_pre_ping=True)
 
@@ -90,7 +100,7 @@ class ProjectDB(Base):
     actual_labor_cost = Column(Float, default=0.0)
     actual_overhead = Column(Float, default=0.0)
 
-# 初始化雲端資料庫
+# 初始化雲端資料庫與 Demo 數據
 def init_db_data():
     try:
         engine = get_db_engine()
@@ -140,7 +150,7 @@ def init_db_data():
 db_connected = init_db_data()
 
 # ==========================================
-# 3. 多國語言字典 (i18n)
+# 4. 多國語言字典 (i18n)
 # ==========================================
 i18n = {
     "繁體中文": {
@@ -185,7 +195,7 @@ i18n = {
 }
 
 # ==========================================
-# 4. 登入管理
+# 5. 登入管理
 # ==========================================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -218,12 +228,11 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ==========================================
-# 5. 側邊欄與選單
+# 6. 側邊欄與選單
 # ==========================================
 st.sidebar.title("⚡ 裕豐電機 AI ERP")
 st.sidebar.caption("REETECH INDUSTRIAL")
 
-# 語系切換 (自動選擇預設語系，並支援手動切換)
 lang_list = ["繁體中文", "Tiếng Việt", "English"]
 selected_lang = st.sidebar.selectbox(
     "🌐 語言設定 / Language / Ngôn ngữ",
@@ -253,7 +262,7 @@ menu_options.extend([
 menu_choice = st.sidebar.radio("Menu", menu_options)
 
 # ==========================================
-# 6. 模組渲染邏輯
+# 7. 模組渲染邏輯
 # ==========================================
 def render_approval_module():
     st.title(t["menu_approval"])
