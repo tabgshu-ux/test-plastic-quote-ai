@@ -1,67 +1,92 @@
 import streamlit as st
 import pandas as pd
+import datetime
 
-# 🌐 戰情看板三語系字典
+# 三語系字典
 EXEC_I18N = {
     "繁體中文": {
-        "title": "📈 董事長/總經理 — 戰情看板",
-        "caption": "即時監控全公司資產淨值、應收(AR)/應付(AP)現金流、原物料行情",
-        "kpi_ar": "總應收帳款 (AR)",
-        "kpi_ap": "總應付帳款 (AP)",
-        "kpi_net": "預估淨現金流",
-        "market_title": "📊 國際與越南本土原物料行情",
-        "copper_vn": "🇻🇳 越南導電銅排 (VND/kg)",
-        "copper_lme": "🇬🇧 LME 倫敦期銅 (USD/ton)",
-        "steel_vn": "🇻🇳 Hòa Phát 鋼鐵 (VND/kg)"
+        "title": "👑 裕豐電機工業 - 董事長 / 總經理 綜合營運與財務戰情看板",
+        "caption": "REETECH INDUSTRIAL Co., Ltd. - 跨國財務 (AR/AP)、原物料與股市 Gemini AI 智能分析",
+        "kpi_ar": "客戶應收帳款總額 (AR)",
+        "kpi_ap": "廠商應付帳款總額 (AP)",
+        "kpi_copper": "🇻🇳 越南國內銅排價格 (VND/kg)",
+        "kpi_vnindex": "🇻🇳 越南股市 (VN-Index)",
+        "tab_stock": "📈 原物料與跨國股市 (越/美/台/中) + AI 分析",
+        "tab_summary": "📊 綜合財務損益與現金流總報表",
+        "tab_ar": "🚨 應收帳款 (AR) 專案進度與催收稽核",
+        "tab_ap": "🛒 應付帳款 (AP) 摘要"
     },
     "Tiếng Việt": {
-        "title": "📈 Ban Giám Đốc — Báo Cáo Chiến Lược",
-        "caption": "Theo dõi thời gian thực giá trị tài sản, dòng tiền AR/AP, giá nguyên vật liệu",
-        "kpi_ar": "Tổng Phải Thu (AR)",
-        "kpi_ap": "Tổng Phải Trả (AP)",
-        "kpi_net": "Dòng Tiền Ròng Dự Kiến",
-        "market_title": "📊 Giá Nguyên Vật Liệu Quốc Tế & Việt Nam",
-        "copper_vn": "🇻🇳 Đồng Thanh Cái VN (VND/kg)",
-        "copper_lme": "🇬🇧 Đồng LME London (USD/tấn)",
-        "steel_vn": "🇻🇳 Thép Hòa Phát (VND/kg)"
+        "title": "👑 REETECH INDUSTRIAL - Báo cáo Ban Giám đốc (Chủ tịch/GM)",
+        "caption": "Công ty TNHH REETECH INDUSTRIAL - Báo cáo tài chính (AR/AP) & Phân tích thị trường.",
+        "kpi_ar": "Tổng Phải thu Khách hàng (AR)",
+        "kpi_ap": "Tổng Phải trả Nhà cung cấp (AP)",
+        "kpi_copper": "🇻🇳 Giá Đồng thanh cái VN (VND/kg)",
+        "kpi_vnindex": "🇻🇳 Chỉ số VN-Index",
+        "tab_stock": "📈 Giá Đồng/Thép & Thị trường Chứng khoán",
+        "tab_summary": "📊 Báo cáo Lợi nhuận & Dòng tiền",
+        "tab_ar": "🚨 Tiến độ Dự án & Kiểm tra Phải thu (AR)",
+        "tab_ap": "🛒 Báo cáo Khoản Phải trả (AP)"
     },
     "English": {
-        "title": "📈 Executive Dashboard — Chairman & GM",
-        "caption": "Real-time monitoring of corporate net worth, AR/AP cash flow, raw material markets",
-        "kpi_ar": "Total AR",
-        "kpi_ap": "Total AP",
-        "kpi_net": "Estimated Net Cash Flow",
-        "market_title": "📊 Raw Material & Commodity Markets",
-        "copper_vn": "🇻🇳 VN Busbar Copper (VND/kg)",
-        "copper_lme": "🇬🇧 LME Copper (USD/ton)",
-        "steel_vn": "🇻🇳 Hòa Phát Steel (VND/kg)"
+        "title": "👑 REETECH INDUSTRIAL - Executive Dashboard (Chairman/GM)",
+        "caption": "REETECH INDUSTRIAL Co., Ltd. - Financials (AR/AP) & Market Analytics",
+        "kpi_ar": "Total AR Amount",
+        "kpi_ap": "Total AP Amount",
+        "kpi_copper": "🇻🇳 VN Busbar Copper Price",
+        "kpi_vnindex": "🇻🇳 VN-Index",
+        "tab_stock": "📈 Raw Material Prices & Global Stocks",
+        "tab_summary": "📊 Financial P&L & Cashflow Summary",
+        "tab_ar": "🚨 AR Projects & Collection Audit",
+        "tab_ap": "🛒 Accounts Payable (AP) Summary"
     }
 }
 
-def render(engine=None, t=None, lang="繁體中文", *args, **kwargs):
-    """確保 render 函式名稱與傳參皆完美相容 app.py 的呼叫，防止 AttributeError"""
-    curr_lang = kwargs.get("lang", lang)
-    if curr_lang not in EXEC_I18N:
-        curr_lang = "繁體中文"
-    L = EXEC_I18N[curr_lang]
-
+def render(engine=None, t=None, lang="繁體中文", **kwargs):
+    L = EXEC_I18N.get(lang, EXEC_I18N["繁體中文"])
     st.title(L["title"])
     st.caption(L["caption"])
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric(L["kpi_ar"], "₫ 8,250,000,000", "+12.5%")
-    col2.metric(L["kpi_ap"], "₫ 3,120,000,000", "-5.2%", delta_color="inverse")
-    col3.metric(L["kpi_net"], "₫ 5,130,000,000", "+₫ 680,000,000")
+    if not engine:
+        st.warning("⚠️ 資料庫連線中...")
+        return
 
-    st.markdown("---")
-    st.subheader(L["market_title"])
-    m1, m2, m3 = st.columns(3)
-    m1.metric(L["copper_vn"], "245,000 VND", "+2,500 VND")
-    m2.metric(L["copper_lme"], "$ 9,850 USD", "+$ 120 USD")
-    m3.metric(L["steel_vn"], "16,800 VND", "-300 VND")
+    try:
+        df_inv = pd.read_sql("SELECT * FROM invoices", engine)
+        df_ar = df_inv[df_inv['invoice_type'] == 'AR'] if not df_inv.empty else pd.DataFrame()
+        df_ap = df_inv[df_inv['invoice_type'] == 'AP'] if not df_inv.empty else pd.DataFrame()
 
-def show(engine=None, t=None, lang="繁體中文", *args, **kwargs):
-    render(engine, t, lang, *args, **kwargs)
+        total_ar = df_ar['amount'].sum() if not df_ar.empty and 'amount' in df_ar.columns else 0.0
+        total_ap = df_ap['amount'].sum() if not df_ap.empty and 'amount' in df_ap.columns else 0.0
 
-def main(engine=None, t=None, lang="繁體中文", *args, **kwargs):
-    render(engine, t, lang, *args, **kwargs)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric(L["kpi_ar"], f"${total_ar:,.2f}")
+        c2.metric(L["kpi_ap"], f"${total_ap:,.2f}")
+        c3.metric(L["kpi_copper"], "₫ 245,000 / kg")
+        c4.metric(L["kpi_vnindex"], "1,288.50 pts", "+0.65%")
+
+        st.markdown("---")
+        t1, t2, t3, t4 = st.tabs([L["tab_stock"], L["tab_summary"], L["tab_ar"], L["tab_ap"]])
+
+        with t1:
+            st.info("🌐 跨國股市與銅價行情監控面板運作中。")
+        with t2:
+            st.write(f"• **預估淨資產與現金流結餘**：${(total_ar - total_ap):,.2f}")
+        with t3:
+            if not df_ar.empty:
+                st.dataframe(df_ar, use_container_width=True)
+            else:
+                st.info("無應收帳款紀錄。")
+        with t4:
+            if not df_ap.empty:
+                st.dataframe(df_ap, use_container_width=True)
+            else:
+                st.info("無應付帳款紀錄。")
+    except Exception as e:
+        st.error(f"戰情看板讀取錯誤: {e}")
+
+def show(engine=None, t=None, lang="繁體中文", **kwargs):
+    render(engine, t, lang=lang, **kwargs)
+
+def main(engine=None, t=None, lang="繁體中文", **kwargs):
+    render(engine, t, lang=lang, **kwargs)
