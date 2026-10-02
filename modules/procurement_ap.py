@@ -1,195 +1,228 @@
 import streamlit as st
 import pandas as pd
-import datetime
-import imaplib
-import email
-from email.header import decode_header
-from sqlalchemy import text
+from sqlalchemy import create_engine
 
-def format_currency_display(amount, curr):
-    if curr == "VND":
-        return f"₫ {amount:,.0f} VND"
-    elif curr == "USD":
-        return f"$ {amount:,.2f} USD"
-    elif curr == "TWD":
-        return f"NT$ {amount:,.0f} TWD"
-    elif curr == "CNY":
-        return f"¥ {amount:,.2f} CNY"
-    return f"{amount:,.2f} {curr}"
+# ----------------------------------------------------
+# 1. 載入各獨立業務模組 (Modules)
+# ----------------------------------------------------
+import modules.executive_dashboard as executive_dashboard
+import modules.procurement_ap as procurement_ap
+import modules.sales_order_ar as sales_order_ar
+import modules.approval_workflow as approval_workflow
+import modules.warehouse_management as warehouse_management
+import modules.employee_management as employee_management
+import modules.asset_management as asset_management
+import modules.user_management as user_management
 
-def render_procurement_ap_page(engine=None, **kwargs):
-    st.title("🛒 管理部 - 採購與應付帳款管理 (AP)")
-    st.caption("管理廠商編號、商品條碼關聯、比價歷史紀錄、自動讀取信箱發票與水單 (UNC) 核銷。")
+# ==========================================
+# 頁面基礎設定 (Streamlit Page Config)
+# ==========================================
+st.set_page_config(
+    page_title="裕豐電機工業 REETECH INDUSTRIAL - AI ERP",
+    page_icon="⚡",
+    layout="wide"
+)
 
-    tab_list, tab_search, tab_add, tab_email, tab_pay = st.tabs([
-        "💳 廠商應付貨款明細與發票列印",
-        "🔍 依商品條碼反查賣家與歷史報價",
-        "➕ 登記採購單 (含廠商編號與條碼)",
-        "📧 自動讀取信箱電子發票 (AI/Email)",
-        "🏦 銀行轉帳水單 (UNC) 登記"
-    ])
+# ==========================================
+# 2. 多國語言字典 (i18n) - 左側所有部門選單
+# ==========================================
+i18n = {
+    "繁體中文": {
+        "company_name": "⚡ 裕豐電機工業",
+        "company_sub": "REETECH INDUSTRIAL Co., Ltd.",
+        "login_title": "⚡ 裕豐電機工業 REETECH INDUSTRIAL - 系統登入",
+        "username": "帳號",
+        "password": "密碼",
+        "login_btn": "🔑 登入系統",
+        "logout_btn": "🚪 登出系統",
+        "lang_selector": "🌐 語言設定 / Language",
+        "menu_header": "公司組織部門選單",
+        "menu_exec": "👑 董事長/總經理 - 營運戰情看板",
+        "menu_ap": "🛒 管理部 - 採購與應付帳款 (AP & 廠商發票)",
+        "menu_ar": "📋 管理部 - 客戶應收帳款 (AR & 催收歷史)",
+        "menu_hr": "👥 管理部 - 人事與勞動合約管理",
+        "menu_ga": "📦 管理部 - 總務與資產設備管理",
+        "menu_sheet_metal": "✂️ 生產部 - 板金加工組",
+        "menu_painting": "🎨 生產部 - 烤漆塗裝組",
+        "menu_assembly": "⚡ 生產部 - 配電盤組裝與配線組",
+        "menu_warehouse": "🏭 生產部 - 倉庫與資材管理",
+        "menu_approval": "✍️ 電子簽核與請款流程",
+        "menu_it": "💻 資訊/IT - 權限與稽核管理"
+    },
+    "English": {
+        "company_name": "⚡ REETECH INDUSTRIAL",
+        "company_sub": "REETECH INDUSTRIAL Co., Ltd.",
+        "login_title": "⚡ REETECH INDUSTRIAL - System Login",
+        "username": "Username",
+        "password": "Password",
+        "login_btn": "🔑 Login",
+        "logout_btn": "🚪 Logout",
+        "lang_selector": "🌐 Select Language",
+        "menu_header": "Department Menu",
+        "menu_exec": "👑 Executive Dashboard (Chairman/GM)",
+        "menu_ap": "🛒 Admin - Accounts Payable (AP & Invoices)",
+        "menu_ar": "📋 Admin - Accounts Receivable (AR & Collections)",
+        "menu_hr": "👥 Admin - HR & Labor Contracts",
+        "menu_ga": "📦 Admin - GA & Equipment Management",
+        "menu_sheet_metal": "✂ Production - Sheet Metal Dept",
+        "menu_painting": "🎨 Production - Powder Coating Dept",
+        "menu_assembly": "⚡ Production - Assembly & Wiring Dept",
+        "menu_warehouse": "🏭 Production - Warehouse & Materials",
+        "menu_approval": "✍️ E-Approval Workflow",
+        "menu_it": "💻 IT Dept - User Permissions & Audit Logs"
+    },
+    "Tiếng Việt": {
+        "company_name": "⚡ REETECH INDUSTRIAL",
+        "company_sub": "Công ty TNHH REETECH INDUSTRIAL",
+        "login_title": "⚡ REETECH INDUSTRIAL - Đăng nhập hệ thống",
+        "username": "Tài khoản",
+        "password": "Mật khẩu",
+        "login_btn": "🔑 Đăng nhập",
+        "logout_btn": "🚪 Đăng xuất",
+        "lang_selector": "🌐 Chọn ngôn ngữ",
+        "menu_header": "Danh mục Phòng ban",
+        "menu_exec": "👑 Báo cáo Ban Giám đốc (Chủ tịch/GM)",
+        "menu_ap": "🛒 Khối Quản lý - Phải trả Nhà cung cấp (AP)",
+        "menu_ar": "📋 Khối Quản lý - Phải thu Khách hàng (AR)",
+        "menu_hr": "👥 Khối Quản lý - Nhân sự & Hợp đồng lao động",
+        "menu_ga": "📦 Khối Quản lý - Hậu cần & Quản lý thiết bị",
+        "menu_sheet_metal": "✂️ Khối Sản xuất - Tổ Gia công Cơ khí",
+        "menu_painting": "🎨 Khối Sản xuất - Tổ Sơn tĩnh điện",
+        "menu_assembly": "⚡ Khối Sản xuất - Tổ Lắp ráp Tủ điện",
+        "menu_warehouse": "🏭 Khối Sản xuất - Quản lý Kho vật tư",
+        "menu_approval": "✍️ Hệ thống Phê duyệt Điện tử",
+        "menu_it": "💻 IT - Quản lý Phân quyền & Audit Logs"
+    }
+}
 
-    # ----------------------------------------------------
-    # TAB 1: 檢視應付帳款清冊
-    # ----------------------------------------------------
-    with tab_list:
-        st.subheader("🛒 廠商應付貨款與發票檔案庫")
-        if engine:
-            try:
-                df_ap = pd.read_sql("SELECT * FROM invoices WHERE invoice_type='AP'", engine)
-                if not df_ap.empty:
-                    display_data = []
-                    for _, row in df_ap.iterrows():
-                        display_data.append({
-                            "請款/採購單號": row.get("invoice_id"),
-                            "廠商編號與名稱": f"[{row.get('vendor_code', 'V-001')}] {row.get('entity_name')}",
-                            "商品條碼": row.get("item_barcode", "-"),
-                            "採購品名與規格": row.get("project_name"),
-                            "交易幣別": row.get("currency"),
-                            "上次/本次報價金額": format_currency_display(row.get("amount", 0.0), row.get("currency", "VND")),
-                            "付款到期日": row.get("due_date"),
-                            "付款狀態": "✅ 已付清" if row.get("is_paid") else "⏳ 待付款",
-                            "發票附件檔案": row.get("contract_file_name") if row.get("contract_file_name") else "未歸檔"
-                        })
-                    st.dataframe(pd.DataFrame(display_data), use_container_width=True)
+# 自動偵測語系 (支援 URL 參數)
+def auto_detect_language():
+    query_params = st.query_params
+    if "lang" in query_params:
+        lang_code = query_params["lang"].lower()
+        if "en" in lang_code: return "English"
+        elif "vi" in lang_code: return "Tiếng Việt"
+        elif "zh" in lang_code: return "繁體中文"
+    try:
+        accept_lang = st.context.headers.get("Accept-Language", "").lower()
+        if "en" in accept_lang: return "English"
+        elif "vi" in accept_lang: return "Tiếng Việt"
+        elif "zh" in accept_lang: return "繁體中文"
+    except Exception:
+        pass
+    return "English"
 
-                    st.markdown("---")
-                    st.markdown("##### 🖨️ 快速檢視與列印紙本發票/附件 (Print / Preview Invoice)")
-                    ap_file_options = {f"{row['invoice_id']} - {row['entity_name']} (附件: {row['contract_file_name'] if row['contract_file_name'] else '無'})": row['contract_file_name'] for _, row in df_ap.iterrows()}
-                    selected_ap_file_label = st.selectbox("選擇要調閱與列印的發票單號：", list(ap_file_options.keys()))
-                    target_file_name = ap_file_options[selected_ap_file_label]
+if "current_lang" not in st.session_state:
+    st.session_state.current_lang = auto_detect_language()
 
-                    col_pv1, col_pv2 = st.columns([2, 1])
-                    with col_pv1:
-                        if target_file_name and target_file_name != "無":
-                            st.success(f"📄 已掛載發票檔案：`{target_file_name}`")
-                        else:
-                            st.warning("⚠️ 該筆單據尚未上傳發票 PDF 或圖片附件檔。")
+# ==========================================
+# 3. Supabase 資料庫連線快取
+# ==========================================
+DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
-                    with col_pv2:
-                        if target_file_name and target_file_name != "無":
-                            st.download_button(
-                                label=f"🖨️ 下載 / 開啟列印發票 (`{target_file_name}`)",
-                                data=f"VAT INVOICE - REETECH INDUSTRIAL\nFile: {target_file_name}".encode('utf-8'),
-                                file_name=target_file_name,
-                                mime="application/pdf",
-                                use_container_width=True
-                            )
-                else:
-                    st.info("目前無應付帳款紀錄。")
-            except Exception as e:
-                st.error(f"資料讀取失敗：{e}")
+@st.cache_resource
+def get_db_engine():
+    return create_engine(DB_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
 
-    # ----------------------------------------------------
-    # TAB 2: 🔍 依商品條碼反查可採購廠商與歷史報價 (核心新功能)
-    # ----------------------------------------------------
-    with tab_search:
-        st.subheader("🔍 商品歷史報價與可供應廠商反查系統")
-        st.caption("輸入商品的「條碼」或「品名關鍵字」，系統自動撈出曾經販售該商品的所有廠商與上次報價金額。")
+engine = get_db_engine()
 
-        search_kw = st.text_input("🔎 請輸入商品條碼 (Barcode) 或品名關鍵字：", placeholder="例如: 4710998800029 或 高壓斷路器").strip().lower()
+# ==========================================
+# 4. 登入頁面管理
+# ==========================================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_role = ""
+    st.session_state.user_name = ""
 
-        if search_kw and engine:
-            try:
-                df_ap_all = pd.read_sql("SELECT * FROM invoices WHERE invoice_type='AP'", engine)
-                if not df_ap_all.empty:
-                    # 篩選條碼或品名 match 的項目
-                    matched = df_ap_all[
-                        df_ap_all['item_barcode'].astype(str).str.lower().str.contains(search_kw) |
-                        df_ap_all['project_name'].astype(str).str.lower().str.contains(search_kw)
-                    ]
+def login_page():
+    t = i18n[st.session_state.current_lang]
+    st.title(t["login_title"])
+    st.caption(t["company_sub"])
+    st.markdown("---")
+    
+    col1, _ = st.columns([1, 2])
+    with col1:
+        username = st.text_input(f"{t['username']} (admin / manager / staff)")
+        password = st.text_input(f"{t['password']} (123)", type="password")
+        if st.button(t["login_btn"], use_container_width=True):
+            if password == "123":
+                st.session_state.logged_in = True
+                st.session_state.user_role = "admin" if username == "admin" else ("manager" if username == "manager" else "staff")
+                st.session_state.user_name = username
+                st.rerun()
+            else:
+                st.error("帳號或密碼錯誤 / Incorrect login / Sai tài khoản")
 
-                    if not matched.empty:
-                        st.success(f"🎉 成功找到 {len(matched)} 筆供應此商品的廠商報價紀錄！")
-                        
-                        price_compare_list = []
-                        for _, row in matched.iterrows():
-                            price_compare_list.append({
-                                "廠商編號": row.get("vendor_code", "V-001"),
-                                "廠商名稱": row.get("entity_name"),
-                                "商品條碼": row.get("item_barcode", "-"),
-                                "採購商品規格": row.get("project_name"),
-                                "上次報價金額": format_currency_display(row.get("amount", 0.0), row.get("currency", "VND")),
-                                "交易幣別": row.get("currency"),
-                                "上次採購/發票日期": row.get("due_date"),
-                                "採購單號 (PO)": row.get("project_period", "-")
-                            })
-                        
-                        st.dataframe(pd.DataFrame(price_compare_list), use_container_width=True)
-                        st.info("💡 **採購小幫手**：您可以比較上述各家廠商的上次報價金額，選擇性價比最高（或交期最快）的廠商下單。")
-                    else:
-                        st.warning(f"查無與 `{search_kw}` 相關的商品條碼或廠商報價紀錄。")
-            except Exception as e:
-                st.error(f"查詢比價資料失敗：{e}")
+if not st.session_state.logged_in:
+    login_page()
+    st.stop()
 
-    # ----------------------------------------------------
-    # TAB 3: ➕ 手動新增採購單 (增加廠商編號與商品條碼)
-    # ----------------------------------------------------
-    with tab_add:
-        st.subheader("➕ 登記新採購進貨單與廠商發票 (手動)")
-        st.caption("將商品歸類在特定的廠商編號與商品條碼下，以便建立歷次採購報價檔案庫。")
-        
-        with st.form("add_ap_form"):
-            col_v1, col_v2 = st.columns(2)
-            with col_v1:
-                vendor_code = st.text_input("廠商編號 *", value="V-001", help="例如: V-001 (正泰電器) / V-002 (施耐德)")
-                entity_name = st.text_input("廠商 / 供應商名稱 *", placeholder="例如: 正泰電器 (CHINT) 或 施耐德")
-                item_barcode = st.text_input("商品條碼 (Barcode / 料號) *", value="4710998800029", help="條碼用於日後反查哪幾家廠商有賣此商品")
-                project_name = st.text_input("採購品名與規格 *", placeholder="例如: 塑殼斷路器 (MCCB 100A / ACB 2000A)")
-            
-            with col_v2:
-                currency = st.selectbox("交易幣別", ["VND", "USD", "CNY", "TWD"])
-                amount = st.number_input("本次報價/進貨金額 *", min_value=0.0)
-                project_period = st.text_input("採購單號 (PO) / 廠商發票號碼", placeholder="例如: PO-2026-0315")
-                quoter_name = st.text_input("採購經辦人", value=st.session_state.get("user_name", "admin"))
+# ==========================================
+# 5. 側邊欄與選單路由
+# ==========================================
+t = i18n[st.session_state.current_lang]
 
-            col_d1, col_d2 = st.columns(2)
-            with col_d1:
-                due_date = st.date_input("約定付款到期日", datetime.date.today() + datetime.timedelta(days=30))
-                uncollected_reason = st.text_area("備註說明", placeholder="例如：上次報價優惠折扣 5%...")
-            with col_d2:
-                uploaded_file = st.file_uploader("📎 上傳紙本發票照片 / 電子發票 PDF *", type=["pdf", "jpg", "png"])
+st.sidebar.title(t["company_name"])
+st.sidebar.caption(t["company_sub"])
 
-            if st.form_submit_button("💾 儲存採購單並建立歷史報價檔案庫", use_container_width=True):
-                if entity_name and project_name:
-                    inv_id = f"AP-2026-{datetime.datetime.now().strftime('%m%d%H%M')}"
-                    file_name = uploaded_file.name if uploaded_file else "發票照片.pdf"
-                    
-                    if engine:
-                        with engine.connect() as conn:
-                            conn.execute(
-                                text("""
-                                    INSERT INTO invoices (invoice_id, vendor_code, entity_name, item_barcode, project_name, project_period, quoter_name, currency, amount, payment_terms, due_date, uncollected_reason, contract_file_name, invoice_type, is_paid)
-                                    VALUES (:id, :vcode, :entity, :barcode, :prj, :period, :quoter, :curr, :amt, 'Net 30', :due, :reason, :file, 'AP', false)
-                                """),
-                                {
-                                    "id": inv_id, "vcode": vendor_code, "entity": entity_name, "barcode": item_barcode,
-                                    "prj": project_name, "period": project_period, "quoter": quoter_name,
-                                    "curr": currency, "amt": amount, "due": due_date, "reason": uncollected_reason, "file": file_name
-                                }
-                            )
-                            conn.commit()
-                    st.success(f"採購單 `{inv_id}` 建立成功！廠商 `{vendor_code}` 與商品條碼 `{item_barcode}` 報價已歸檔！")
-                    st.rerun()
-                else:
-                    st.error("請填寫廠商名稱與採購品名！")
+lang_list = ["English", "繁體中文", "Tiếng Việt"]
+selected_lang = st.sidebar.selectbox(
+    t["lang_selector"],
+    lang_list,
+    index=lang_list.index(st.session_state.current_lang)
+)
 
-    # ----------------------------------------------------
-    # TAB 4: 自動讀取信箱發票
-    # ----------------------------------------------------
-    with tab_email:
-        st.subheader("📧 自動同步信箱電子發票與附件歸檔系統")
-        st.info("連線信箱讀取發票 PDF 並自動辨識金額與廠商編號。")
+if selected_lang != st.session_state.current_lang:
+    st.session_state.current_lang = selected_lang
+    st.rerun()
 
-    # ----------------------------------------------------
-    # TAB 5: 銀行轉帳水單 (UNC) 登記
-    # ----------------------------------------------------
-    with tab_pay:
-        st.subheader("🏦 銀行轉帳水單 (Ủy Nhiệm Chi - UNC) 登記")
-        st.info("出納經 Vietcombank / BIDV 轉帳後，輸入水單號碼辦理核銷。")
+st.sidebar.markdown(f"**👤 {st.session_state.user_name}** ({st.session_state.user_role.upper()})")
+if st.sidebar.button(t["logout_btn"]):
+    st.session_state.logged_in = False
+    st.rerun()
 
-def show(*args, **kwargs):
-    render_procurement_ap_page(*args, **kwargs)
+st.sidebar.markdown("---")
 
-def main(*args, **kwargs):
-    render_procurement_ap_page(*args, **kwargs)
+menu_mapping = {}
+if st.session_state.user_role == "admin":
+    menu_mapping[t["menu_exec"]] = "exec"
+
+menu_mapping[t["menu_ap"]] = "ap"
+menu_mapping[t["menu_ar"]] = "ar"
+menu_mapping[t["menu_hr"]] = "hr"
+menu_mapping[t["menu_ga"]] = "ga"
+menu_mapping[t["menu_sheet_metal"]] = "sheet_metal"
+menu_mapping[t["menu_painting"]] = "painting"
+menu_mapping[t["menu_assembly"]] = "assembly"
+menu_mapping[t["menu_warehouse"]] = "warehouse"
+menu_mapping[t["menu_approval"]] = "approval"
+menu_mapping[t["menu_it"]] = "it"
+
+selected_menu_label = st.sidebar.radio(t["menu_header"], list(menu_mapping.keys()))
+menu_choice = menu_mapping[selected_menu_label]
+
+# ==========================================
+# 6. 模組化導向 (傳遞當前語系 lang 給子模組)
+# ==========================================
+curr_lang = st.session_state.current_lang
+
+if menu_choice == "exec":
+    executive_dashboard.render(engine, t, lang=curr_lang)
+elif menu_choice == "ap":
+    procurement_ap.render_procurement_ap_page(engine=engine, lang=curr_lang)
+elif menu_choice == "ar":
+    sales_order_ar.render_sales_order_ar_page(engine=engine, lang=curr_lang)
+elif menu_choice == "hr":
+    employee_management.render_employee_management(engine=engine, t=t, lang=curr_lang)
+elif menu_choice == "ga":
+    asset_management.render_asset_management_page(lang=curr_lang)
+elif menu_choice in ["sheet_metal", "painting", "assembly"]:
+    st.title(selected_menu_label)
+    st.caption("裕豐電機工業 - 現場派工單與生產進度管理看板")
+    st.info("Hệ thống đang hoạt động bình thường / 現場工單追蹤與 QC 品質檢驗模組順利運作中。")
+elif menu_choice == "warehouse":
+    warehouse_management.render_warehouse_management(engine=engine, t=t, lang=curr_lang)
+elif menu_choice == "approval":
+    approval_workflow.render_approval_center(lang=curr_lang)
+elif menu_choice == "it":
+    user_management.render_user_management_page(lang=curr_lang)
