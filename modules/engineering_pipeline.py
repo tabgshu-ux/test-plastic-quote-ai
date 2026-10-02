@@ -1,254 +1,247 @@
 import re
-import math
+import datetime
+import pandas as pd
 import streamlit as st
 
-# ----------------------------------------------------
-# 🌐 工程與業務報價模組專屬多語系字典 (i18n)
-# ----------------------------------------------------
+# ==============================================================================
+# 🌐 1. 多語系字典 (i18n)
+# ==============================================================================
 ENGINEERING_I18N = {
     "繁體中文": {
-        "page_title": "🛠️ 工程與技術 — CAD/3D 繪圖與 AI 報價 Pipeline 系統",
-        "sub_title": "🛠️ 配電盤與工業成型件 AI 規格精算與 2D/3D 自動化繪圖",
-        "sub_caption": "提供工程主管與業務同仁輸入產品描述，由 AI 自動解析規格並生成 2D CAD、3D 結構圖與寫實成品照。",
-        "section_input": "📝 1. 輸入客戶需求與工程規格描述",
-        "input_label": "請輸入產品描述（例如：配電盤用銅排 Busbar 10x100mm 或 2000A 高壓開關櫃）：",
-        "input_default": "配電盤用高純度銅排 Busbar 10x100mm 長度 6000mm",
-        "btn_submit": "🚀 提交 AI 語意解析與全自動工程繪圖",
-        "section_ai_parse": "💡 AI 動態工程規格解析",
-        "label_prod_type": "辨識產品與工程類型",
-        "label_material": "建議選用材質",
-        "label_dimensions": "精算尺寸/規格",
-        "label_volume": "估算體積/用量",
-        "label_clamp_ton": "建議設備鎖模力/壓延噸數",
-        "section_preview": "🎨 2. 2D CAD 工程圖、3D 立體圖與 AI 寫實渲染",
-        "tab_2d": "📐 階段一：2D 幾何工程 CAD",
-        "tab_3d": "🎨 階段二：3D 立體結構圖",
-        "tab_photo": "📸 階段三：AI 成品寫實照",
-        "photo_heading": "📸 AI 寫實成品圖生成",
-        "btn_gen_photo": "🚀 呼叫 AI 生成 8K 寫實成品照",
-        "photo_toast": "AI 正在運算 8K 寫實照片...",
-        "photo_success": "🎉 已成功生成 8K 寫實成品照片！",
-        "section_3dprint": "🖨️ 階段四：工程打樣 — 3D 列印機/CNC 即時串接",
-        "section_3dprint_caption": "自動將 3D 模型匯出為 3D 列印通用檔 (.STL)，並可直接發送指令至廠區打樣中心：",
-        "download_stl_title": "📥 1. 匯出通用 3D 列印 CAD 模型檔 (.STL)",
-        "btn_download_stl": "📥 下載 3D 模型檔 (.STL)",
-        "print_connect_title": "🖨️ 2. 網路連線廠區打樣設備",
-        "select_printer_label": "選擇打樣廠區與打樣室",
-        "btn_send_printer": "🚀 即時發送 G-Code 至打樣中心啟動製作",
-        "section_quote": "📄 階段五：產出正式工程預估報價單與下載",
-        "btn_gen_quote": "🚀 生成正式預估報價單",
-        "btn_download_quote": "📥 下載正式工程預估報價單 (.txt)"
+        "page_title": "🛠️ 工程部 — 配電盤與資材工程估價系統",
+        "sub_title": "🛠️ 配電盤元件/銅排選配、工程工時估算與即時報價單總合系統",
+        "sub_caption": "專供工程主管與業務使用：自由選擇配電盤所需材料、規格數量與加工工時，系統自動動態計算小計與最終報價總金額。",
+        "sec_specs": "📝 1. 工程基本資訊與專案規格描述",
+        "lbl_project_name": "工程專案名稱 / 客戶名稱 *",
+        "lbl_spec_desc": "專案需求與規格說明",
+        "sec_materials": "📦 2. 配電盤材料與資材費用選配 (下拉選擇與動態小計)",
+        "col_item": "選擇資材品項/規格",
+        "col_unit_price": "單價",
+        "col_qty": "數量",
+        "col_subtotal": "金額小計",
+        "btn_add_row": "➕ 新增資材品項",
+        "sec_labor": "⚙️️ 3. 工程加工、組裝與現場施工費用",
+        "lbl_busbar_hours": "銅排加工與組裝工時 (小時)",
+        "lbl_assembly_hours": "配電盤配線與測試工時 (小時)",
+        "lbl_hourly_rate": "工程工時單價",
+        "sec_summary": "💰 4. 報價單金額總合與正式預估報價單",
+        "lbl_mat_total": "資材費用總合",
+        "lbl_labor_total": "工程加工/工時費用總合",
+        "lbl_grand_total": "報價總價 (Grand Total)",
+        "btn_gen_quote": "🚀 產生正式工程報價單",
+        "btn_download_quote": "📥 下載正式工程報價單 (.txt)"
     },
     "Tiếng Việt": {
-        "page_title": "🛠️ Phòng Kỹ Thuật — Hệ thống CAD/3D & Báo Giá Pipeline",
-        "sub_title": "🛠️ Tự Động Phân Tích Kỹ Thuật & Vẽ CAD 2D/3D Cho Tủ Điện",
-        "sub_caption": "Dành cho quản lý kỹ thuật và nhân viên kinh doanh nhập yêu cầu sản phẩm, AI sẽ tự động tạo bản vẽ CAD và phối cảnh 3D.",
-        "section_input": "📝 1. Yêu cầu & Thông số kỹ thuật của khách hàng",
-        "input_label": "Nhập mô tả sản phẩm (Ví dụ: Thanh cái đồng Busbar 10x100mm hoặc Tủ điện 2000A):",
-        "input_default": "Thanh cái đồng Busbar 10x100mm chiều dài 6000mm cho tủ điện",
-        "btn_submit": "🚀 Gửi phân tích AI & Tự động vẽ CAD",
-        "section_ai_parse": "💡 Phân Tích Thông Số Kỹ Thuật AI Gemini",
-        "label_prod_type": "Loại sản phẩm nhận diện",
-        "label_material": "Vật liệu đề xuất",
-        "label_dimensions": "Kích thước chính xác",
-        "label_volume": "Thể tích/Khối lượng ước tính",
-        "label_clamp_ton": "Lực kẹp/Lực ép máy đề xuất",
-        "section_preview": "🎨 2. Hiển Thị 2D CAD, 3D Render & Ảnh AI Thực Tế",
-        "tab_2d": "📐 Giai đoạn 1: Bản vẽ kỹ thuật 2D CAD",
-        "tab_3d": "🎨 Giai đoạn 2: Phối cảnh 3D",
-        "tab_photo": "📸 Giai đoạn 3: Ảnh AI thực tế",
-        "photo_heading": "📸 Tạo Ảnh Sản Phẩm Thực Tế AI",
-        "btn_gen_photo": "🚀 Gọi AI để tạo ảnh thực tế 8K",
-        "photo_toast": "AI đang xử lý ảnh thực tế 8K...",
-        "photo_success": "🎉 Đã tạo thành công ảnh sản phẩm thực tế 8K!",
-        "section_3dprint": "🖨️ Giai đoạn 4: Tạo mẫu nhanh — Kết nối máy in 3D / CNC",
-        "section_3dprint_caption": "Tự động xuất mô hình 3D sang tệp .STL và gửi lệnh trực tiếp đến máy in 3D nhà máy:",
-        "download_stl_title": "📥 1. Xuất tệp CAD in 3D (.STL)",
-        "btn_download_stl": "📥 Tải tệp mô hình 3D (.STL)",
-        "print_connect_title": "🖨️ 2. Kết nối máy in 3D / Phòng tạo mẫu nhà máy",
-        "select_printer_label": "Chọn khu vực máy in 3D",
-        "btn_send_printer": "🚀 Gửi G-Code đến máy in 3D để bắt đầu",
-        "section_quote": "📄 Giai đoạn 5: Xuất Báo Giá Bảng Dự Toán Chính Thức",
-        "btn_gen_quote": "🚀 Tạo bảng báo giá chính thức & tệp tải về",
-        "btn_download_quote": "📥 Tải bảng báo giá chính thức (.txt)"
+        "page_title": "🛠️ Khối Kỹ Thuật — Hệ thống Báo giá Tủ điện & Vật tư",
+        "sub_title": "🛠️ Dự toán Vật tư Tủ điện, Nhân công & Tổng hợp Bảng Báo giá",
+        "sub_caption": "Dành cho quản lý kỹ thuật và kinh doanh: Tự do chọn vật tư, quy cách, số lượng và giờ công để hệ thống tự động tính tổng báo giá.",
+        "sec_specs": "📝 1. Thông tin Dự án & Quy cách Kỹ thuật",
+        "lbl_project_name": "Tên Dự án / Tên Khách hàng *",
+        "lbl_spec_desc": "Mô tả yêu cầu kỹ thuật",
+        "sec_materials": "📦 2. Chọn Vật tư Tủ điện & Thành tiền (Tự động tính)",
+        "col_item": "Chọn vật tư / quy cách",
+        "col_unit_price": "Đơn giá",
+        "col_qty": "Số lượng",
+        "col_subtotal": "Thành tiền",
+        "btn_add_row": "➕ Thêm vật tư",
+        "sec_labor": "⚙️ 3. Chi phí Gia công, Lắp ráp & Thi công",
+        "lbl_busbar_hours": "Giờ công gia công thanh cái đồng (Giờ)",
+        "lbl_assembly_hours": "Giờ công đấu nối & kiểm thử (Giờ)",
+        "lbl_hourly_rate": "Đơn giá giờ công",
+        "sec_summary": "💰 4. Tổng hợp Báo giá & Xuất Bảng Báo Giá Chính Thức",
+        "lbl_mat_total": "Tổng chi phí vật tư",
+        "lbl_labor_total": "Tổng chi phí gia công / nhân công",
+        "lbl_grand_total": "TỔNG CỘNG BÁO GIÁ",
+        "btn_gen_quote": "🚀 Xuất Bảng Báo Giá Chính Thức",
+        "btn_download_quote": "📥 Tải Bảng Báo Giá (.txt)"
     },
     "English": {
-        "page_title": "🛠️ R&D Engineering — CAD/3D & Quotation Pipeline",
-        "sub_title": "🛠️ AI Engineering Quotation & Automated 2D/3D CAD Drawing",
-        "sub_caption": "Designed for Engineering Managers and Sales Reps to generate CAD designs, 3D prototypes, and quotations.",
-        "section_input": "📝 1. Customer Requirements & Specs",
-        "input_label": "Enter description (e.g., Copper Busbar 10x100mm or High Voltage 2000A Cabinet):",
-        "input_default": "High conductivity copper busbar 10x100mm length 6000mm",
-        "btn_submit": "🚀 Submit AI Analysis & Auto CAD Generation",
-        "section_ai_parse": "💡 Technical Specs Analysis",
-        "label_prod_type": "Identified Product / Engineering Type",
-        "label_material": "Recommended Material",
-        "label_dimensions": "Calculated Dimensions",
-        "label_volume": "Estimated Volume / Weight",
-        "label_clamp_ton": "Recommended Press / Clamping Force",
-        "section_preview": "🎨 2. 2D CAD, 3D Render & AI Photo Display",
-        "tab_2d": "📐 Stage 1: 2D CAD Geometry",
-        "tab_3d": "🎨 Stage 2: 3D Isometric View",
-        "tab_photo": "📸 Stage 3: AI Photo Rendering",
-        "photo_heading": "📸 AI Photorealistic Photo Generation",
-        "btn_gen_photo": "🚀 Call AI to Generate Photo",
-        "photo_toast": "AI is rendering 8K photorealistic photo...",
-        "photo_success": "🎉 Successfully generated 8K photorealistic photo!",
-        "section_3dprint": "🖨️ Stage 4: Rapid Prototyping — 3D Printer / CNC Connection",
-        "section_3dprint_caption": "Export 3D models to standard .STL and send G-Code commands directly to factory prototyping center:",
-        "download_stl_title": "📥 1. Export 3D Printing File (.STL)",
-        "btn_download_stl": "📥 Download 3D Model File (.STL)",
-        "print_connect_title": "🖨️ 2. Connect Factory Prototyping Center",
-        "select_printer_label": "Select Prototyping Site",
-        "btn_send_printer": "🚀 Send G-Code to 3D Printer",
-        "section_quote": "📄 Stage 5: Official Engineering Quotation Generation",
-        "btn_gen_quote": "🚀 Generate Official Engineering Quotation",
-        "btn_download_quote": "📥 Download Official Quotation (.txt)"
+        "page_title": "🛠️ R&D Engineering — Switchgear Quotation System",
+        "sub_title": "🛠️ Material Selection, Labor Estimation & Quotation Summary",
+        "sub_caption": "Select materials, specifications, quantities, and processing labor hours for dynamic quotation calculation.",
+        "sec_specs": "📝 1. Project Information & Specifications",
+        "lbl_project_name": "Project / Customer Name *",
+        "lbl_spec_desc": "Technical Description",
+        "sec_materials": "📦 2. Material Selection & Cost Breakdown",
+        "col_item": "Select Item / Spec",
+        "col_unit_price": "Unit Price",
+        "col_qty": "Qty",
+        "col_subtotal": "Subtotal",
+        "btn_add_row": "➕ Add Material Item",
+        "sec_labor": "⚙️ 3. Fabrication & Labor Costs",
+        "lbl_busbar_hours": "Busbar Fabrication Labor (Hours)",
+        "lbl_assembly_hours": "Wiring & Testing Labor (Hours)",
+        "lbl_hourly_rate": "Labor Hourly Rate",
+        "sec_summary": "💰 4. Quotation Grand Total & Summary",
+        "lbl_mat_total": "Total Material Cost",
+        "lbl_labor_total": "Total Labor Cost",
+        "lbl_grand_total": "Grand Total",
+        "btn_gen_quote": "🚀 Generate Official Quotation",
+        "btn_download_quote": "📥 Download Quotation (.txt)"
     }
 }
 
+# 預設材料庫下拉資料
+DEFAULT_MATERIAL_CATALOG = [
+    {"code": "CU-BUS-10100", "name": "高純度導電銅排 Busbar 10x100mm (6m/支)", "unit": "kg", "unit_price": 12.5, "currency": "USD"},
+    {"code": "CU-BUS-08080", "name": "高純度導電銅排 Busbar 8x80mm (6m/支)", "unit": "kg", "unit_price": 11.0, "currency": "USD"},
+    {"code": "CB-MCCB-100A", "name": "塑殼斷路器 MCCB 100A (Schneider Electric)", "unit": "pcs", "unit_price": 45.0, "currency": "USD"},
+    {"code": "CB-ACB-2000A", "name": "空氣斷路器 ACB 2000A (Schneider Electric)", "unit": "pcs", "unit_price": 1850.0, "currency": "USD"},
+    {"code": "CAB-SECC-001", "name": "配電盤鍍鋅鋼板外殼 RAL 7035 粉體塗裝", "unit": "套", "unit_price": 320.0, "currency": "USD"},
+    {"code": "POWDER-RAL7035", "name": "粉體塗裝烤漆粉 RAL 7035 淺灰色", "unit": "kg", "unit_price": 1.8, "currency": "USD"},
+    {"code": "WIRE-CU-35MM", "name": "耐熱電氣線材 35mm²", "unit": "米", "unit_price": 4.5, "currency": "USD"},
+    {"code": "TERMINAL-SET", "name": "絕緣壓著端子與線槽套件", "unit": "組", "unit_price": 25.0, "currency": "USD"}
+]
+
 def get_i18n():
-    lang = st.session_state.get("lang", "繁體中文")
+    lang = st.session_state.get("current_lang", "繁體中文")
     return ENGINEERING_I18N.get(lang, ENGINEERING_I18N["繁體中文"])
 
-def parse_specs(prompt_text):
-    nums = re.findall(r'\d+(?:\.\d+)?', prompt_text)
-    length, width, height = 10.0, 100.0, 6000.0
-    if len(nums) >= 3:
-        length, width, height = float(nums[0]), float(nums[1]), float(nums[2])
-    elif len(nums) == 2:
-        length, width = float(nums[0]), float(nums[1])
-
-    prompt_lower = prompt_text.lower()
-    if any(k in prompt_lower for k in ["銅排", "母線", "busbar", "đồng", "thanh cái"]):
-        category = "busbar"
-        prod_type = "⚡ 配電盤用導電銅排 (Conductive Copper Busbar)"
-        material = "高純度紫銅 (C1100 / 99.9% Cu IACS 98%)"
-        clamp_ton = math.ceil((length * width) * 0.05)
-    elif any(k in prompt_lower for k in ["櫃", "箱", "cabinet", "switchgear", "tủ điện"]):
-        category = "cabinet"
-        prod_type = "🏭 配電盤高低壓開關櫃 (Switchgear Cabinet Box)"
-        material = "熱浸鍍鋅鋼板 (SECC) / 粉體塗裝 (RAL 7035)"
-        clamp_ton = math.ceil((length * width) * 0.25)
-    else:
-        category = "general"
-        prod_type = "⚙️ 精密工業成型機構件 (Precision Industrial Component)"
-        material = "工程塑膠 (PC/ABS) / 鋁合金 AL6061"
-        clamp_ton = math.ceil((length * width) * 0.15)
-
-    vol_cm3 = (length * width * height) / 1000.0
-    return {
-        "category": category, "length": length, "width": width, "height": height,
-        "volume_cm3": round(vol_cm3, 2), "prod_type": prod_type, "material": material,
-        "clamp_ton": max(clamp_ton, 50)
-    }
-
-def draw_2d_cad(spec):
-    length, width, height = spec['length'], spec['width'], spec['height']
-    return f"""
-    <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
-        <svg width="340" height="300" viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg">
-            <rect width="340" height="300" fill="#0f172a" rx="8"/>
-            <rect x="50" y="90" width="240" height="50" fill="#b45309" stroke="#f59e0b" stroke-width="3" rx="4"/>
-            <circle cx="90" cy="115" r="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
-            <circle cx="250" cy="115" r="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
-            <line x1="50" y1="70" x2="290" y2="70" stroke="#38bdf8" stroke-width="1.5"/>
-            <text x="170" y="62" fill="#38bdf8" font-size="12" text-anchor="middle" font-weight="bold">Length: {height} mm</text>
-            <text x="170" y="260" fill="#fef08a" font-size="13" text-anchor="middle" font-weight="bold">⚡ 2D CAD Spec ({length}x{width}mm)</text>
-        </svg>
-    </div>
-    """
-
-def draw_3d_render(spec):
-    return f"""
-    <div style="background-color: #0f172a; padding: 15px; border-radius: 10px; text-align: center;">
-        <svg width="340" height="300" viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg">
-            <rect width="340" height="300" fill="#0f172a" rx="8"/>
-            <g transform="translate(30, 70)">
-                <polygon points="40,30 220,30 200,60 20,60" fill="#d97706" stroke="#f59e0b" stroke-width="2"/>
-                <polygon points="20,60 200,60 200,100 20,100" fill="#b45309" stroke="#f59e0b" stroke-width="2"/>
-                <polygon points="200,60 220,30 220,70 200,100" fill="#78350f" stroke="#f59e0b" stroke-width="2"/>
-            </g>
-            <text x="170" y="260" fill="#38bdf8" font-size="13" text-anchor="middle" font-weight="bold">⚡ 3D Isometric View</text>
-        </svg>
-    </div>
-    """
-
+# ==============================================================================
+# 🖥️ 主畫面渲染
+# ==============================================================================
 def render_engineering_page(*args, **kwargs):
     L = get_i18n()
+    
     st.title(L["page_title"])
-    st.subheader(L["sub_title"])
     st.caption(L["sub_caption"])
 
-    col_input, col_preview = st.columns([1, 1])
+    # 1. 專案基本資訊
+    st.markdown(f"### {L['sec_specs']}")
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        prj_name = st.text_input(L["lbl_project_name"], value="西寧紡織廠 2000A 主配電櫃新建工程")
+    with c2:
+        currency = st.selectbox("計價幣別", ["USD", "VND", "TWD"], index=0)
+    
+    prj_desc = st.text_area(L["lbl_spec_desc"], value="包含高純度銅排母線加工、2000A ACB 空氣斷路器組裝與現場高壓耐壓測試。")
 
-    with col_input:
-        st.markdown(f"#### {L['section_input']}")
-        user_prompt = st.text_input(
-            L["input_label"],
-            value=st.session_state.get("last_eng_prompt", L["input_default"]),
-            key="input_eng_prompt"
-        )
-        if st.button(L["btn_submit"], type="primary", key="btn_eng_submit"):
-            st.session_state["last_eng_prompt"] = user_prompt
-            st.rerun()
+    st.markdown("---")
 
-        spec = parse_specs(user_prompt)
+    # 2. 下拉式材料選配與費用小計
+    st.markdown(f"### {L['sec_materials']}")
 
-        st.markdown(f"#### {L['section_ai_parse']}")
-        st.success(f"**{L['label_prod_type']}**: {spec['prod_type']}")
-        st.write(f"• **{L['label_material']}**: `{spec['material']}`")
-        st.write(f"• **{L['label_dimensions']}**: `{spec['length']} mm × {spec['width']} mm × {spec['height']} mm`")
-        st.write(f"• **{L['label_volume']}**: `{spec['volume_cm3']} cm³`")
-        st.write(f"• **{L['label_clamp_ton']}**: `{spec['clamp_ton']} T`")
+    if "quote_items" not in st.session_state:
+        st.session_state.quote_items = [
+            {"item_code": "CU-BUS-10100", "qty": 150.0},
+            {"item_code": "CB-ACB-2000A", "qty": 2.0},
+            {"item_code": "CAB-SECC-001", "qty": 1.0}
+        ]
 
-    with col_preview:
-        st.markdown(f"#### {L['section_preview']}")
-        t1, t2, t3 = st.tabs([L["tab_2d"], L["tab_3d"], L["tab_photo"]])
-        with t1:
-            st.components.v1.html(draw_2d_cad(spec), height=310)
-        with t2:
-            st.components.v1.html(draw_3d_render(spec), height=310)
-        with t3:
-            st.markdown(f"##### {L['photo_heading']}")
-            if st.button(L["btn_gen_photo"], type="primary", key="btn_gen_photo"):
-                st.success(L["photo_success"])
-            st.image("https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80", caption=spec['prod_type'])
+    # 材料選擇對照字典
+    catalog_dict = {f"[{item['code']}] {item['name']} (${item['unit_price']} USD/{item['unit']})": item for item in DEFAULT_MATERIAL_CATALOG}
+    catalog_labels = list(catalog_dict.keys())
 
-    st.divider()
+    calculated_materials = []
+    total_material_cost = 0.0
 
-    st.markdown(f"### {L['section_3dprint']}")
-    c_p1, c_p2 = st.columns(2)
-    with c_p1:
-        st.markdown(f"#### {L['download_stl_title']}")
+    st.caption("請由下拉式選單選擇所需的配電盤資材，並填入數量：")
+    
+    # 動態材料列表顯示
+    for idx, row in enumerate(st.session_state.quote_items):
+        col_m1, col_m2, col_m3, col_m4 = st.columns([3, 1, 1, 1])
+        
+        # 尋找當前項目的預設索引
+        current_catalog_item = next((k for k, v in catalog_dict.items() if v["code"] == row["item_code"]), catalog_labels[0])
+        selected_label = col_m1.selectbox(f"資材品項 #{idx+1}", catalog_labels, index=catalog_labels.index(current_catalog_item), key=f"mat_select_{idx}")
+        
+        mat_info = catalog_dict[selected_label]
+        row["item_code"] = mat_info["code"]
+        
+        unit_p = mat_info["unit_price"]
+        qty = col_m2.number_input(f"數量 ({mat_info['unit']})", min_value=0.1, value=float(row["qty"]), step=1.0, key=f"mat_qty_{idx}")
+        row["qty"] = qty
+        
+        subtotal = unit_p * qty
+        col_m3.text_input(f"單價 (${mat_info['currency']})", value=f"${unit_p:,.2f}", disabled=True, key=f"mat_p_{idx}")
+        col_m4.text_input("小計 (USD)", value=f"${subtotal:,.2f}", disabled=True, key=f"mat_sub_{idx}")
+
+        total_material_cost += subtotal
+        calculated_materials.append({
+            "code": mat_info["code"],
+            "name": mat_info["name"],
+            "unit": mat_info["unit"],
+            "unit_price": unit_p,
+            "qty": qty,
+            "subtotal": subtotal
+        })
+
+    if st.button(L["btn_add_row"]):
+        st.session_state.quote_items.append({"item_code": "CU-BUS-10100", "qty": 10.0})
+        st.rerun()
+
+    st.markdown("---")
+
+    # 3. 加工工時與施工費用
+    st.markdown(f"### {L['sec_labor']}")
+    col_l1, col_l2, col_l3 = st.columns(3)
+    with col_l1:
+        busbar_hours = st.number_input(L["lbl_busbar_hours"], min_value=0.0, value=24.0, step=1.0)
+    with col_l2:
+        assembly_hours = st.number_input(L["lbl_assembly_hours"], min_value=0.0, value=16.0, step=1.0)
+    with col_l3:
+        hourly_rate = st.number_input(L["lbl_hourly_rate"] + " ($/hr)", min_value=0.0, value=15.0, step=1.0)
+
+    total_labor_hours = busbar_hours + assembly_hours
+    total_labor_cost = total_labor_hours * hourly_rate
+
+    # 4. 總合與報價計算
+    st.markdown("---")
+    st.markdown(f"### {L['sec_summary']}")
+
+    grand_total = total_material_cost + total_labor_cost
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric(L["lbl_mat_total"], f"${total_material_cost:,.2f} USD")
+    m2.metric(L["lbl_labor_total"], f"${total_labor_cost:,.2f} USD", f"{total_labor_hours:.1f} 工時")
+    m3.metric(L["lbl_grand_total"], f"${grand_total:,.2f} USD", delta="含稅估價", delta_color="normal")
+
+    st.markdown("---")
+
+    # 5. 產生報價單文字與下載
+    if st.button(L["btn_gen_quote"], type="primary"):
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        
+        mat_rows_txt = ""
+        for i, item in enumerate(calculated_materials, 1):
+            mat_rows_txt += f"  {i}. {item['name']} | 數量: {item['qty']} {item['unit']} | 單價: ${item['unit_price']} | 小計: ${item['subtotal']:,.2f} USD\n"
+
+        quote_txt = f"""======================================================================
+              REETECH INDUSTRIAL CO., LTD. (裕豐電機工業)
+                   OFFICIAL SWITCHGEAR ENGINEERING QUOTATION
+======================================================================
+
+Date: {today_str}
+Project Name: {prj_name}
+Currency: {currency}
+Project Description: {prj_desc}
+
+----------------------------------------------------------------------
+1. MATERIAL COSTS (配電盤資材費用明細)
+----------------------------------------------------------------------
+{mat_rows_txt}
+  • Material Subtotal: ${total_material_cost:,.2f} USD
+
+----------------------------------------------------------------------
+2. FABRICATION & ASSEMBLY LABOR (加工與配線工時費用)
+----------------------------------------------------------------------
+  • Busbar Fabrication: {busbar_hours} Hours
+  • Wiring & Testing: {assembly_hours} Hours
+  • Hourly Rate: ${hourly_rate:,.2f} USD / Hour
+  • Labor Subtotal: ${total_labor_cost:,.2f} USD
+
+======================================================================
+💰 GRAND TOTAL (工程報價總金額): ${grand_total:,.2f} USD
+======================================================================
+"""
+        st.code(quote_txt, language="text")
         st.download_button(
-            label=L["btn_download_stl"],
-            data=f"solid Part\nendsolid Part",
-            file_name=f"Part_{spec['category']}.stl",
-            mime="model/stl",
+            label=L["btn_download_quote"],
+            data=quote_txt,
+            file_name=f"Quotation_{prj_name}_{today_str}.txt",
+            mime="text/plain",
             type="primary"
         )
-    with c_p2:
-        st.markdown(f"#### {L['print_connect_title']}")
-        site = st.selectbox(L["select_printer_label"], ["🇻🇳 Tay Ninh Prototyping Room", "🇻🇳 Binh Duong R&D Room", "🇹🇼 Taiwan HQ Lab"])
-        if st.button(L["btn_send_printer"]):
-            st.success(f"✅ G-Code Sent to [{site}]!")
-
-    st.divider()
-
-    st.markdown(f"### {L['section_quote']}")
-    if st.button(L["btn_gen_quote"], type="primary"):
-        doc = f"""==================================================
-        REETECH INDUSTRIAL - ENGINEERING QUOTATION
-==================================================
-Product: {spec['prod_type']}
-Material: {spec['material']}
-Specs: {spec['length']}x{spec['width']}x{spec['height']} mm
-Tooling Cost: $2,500.00 USD
-Unit Price: $12.50 USD / KG
-=================================================="""
-        st.code(doc, language="text")
-        st.download_button(label=L["btn_download_quote"], data=doc, file_name="Quotation.txt", mime="text/plain")
 
 def show(*args, **kwargs):
     render_engineering_page(*args, **kwargs)
