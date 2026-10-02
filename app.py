@@ -13,7 +13,7 @@ import modules.warehouse_management as warehouse_management
 import modules.employee_management as employee_management
 import modules.asset_management as asset_management
 import modules.user_management as user_management
-# 🛠️ 新增：獨立工程與資材報價總合模組
+# 🛠️ 獨立工程部估價模組
 import modules.engineering_pipeline as engineering_pipeline
 
 st.set_page_config(
@@ -37,16 +37,16 @@ i18n = {
         "lang_selector": "🌐 語言設定 / Language",
         "menu_header": "公司組織部門選單",
         "menu_exec": "👑 董事長/總經理 - 營運戰情看板",
-        "menu_engineering": "🛠️️ 工程部 - 配電盤估價與資材報價總合",
+        "menu_engineering": "🛠️ 工程部 - 配電盤估價與資材報價總合",
         "menu_ap": "🛒 管理部 - 採購與應付帳款 (AP & 廠商發票)",
         "menu_ar": "📋 管理部 - 客戶應收帳款 (AR & 催收歷史)",
         "menu_hr": "👥 管理部 - 人事與勞動合約管理",
         "menu_ga": "📦 管理部 - 總務與資產設備管理",
-        "menu_sheet_metal": "✂️️ 生產部 - 板金加工組",
+        "menu_sheet_metal": "✂️ 生產部 - 板金加工組",
         "menu_painting": "🎨 生產部 - 烤漆塗裝組",
         "menu_assembly": "⚡ 生產部 - 配電盤組裝與配線組",
         "menu_warehouse": "🏭 生產部 - 倉庫與資材管理",
-        "menu_approval": "✍️ 電子簽核與請款流程",
+        "menu_approval": "✍️️ 電子簽核與請款流程",
         "menu_it": "💻 資訊/IT - 權限與稽核管理"
     },
     "English": {
@@ -69,7 +69,7 @@ i18n = {
         "menu_painting": "🎨 Production - Powder Coating Dept",
         "menu_assembly": "⚡ Production - Assembly & Wiring Dept",
         "menu_warehouse": "🏭 Production - Warehouse & Materials",
-        "menu_approval": "✍️️ E-Approval Workflow",
+        "menu_approval": "✍️ E-Approval Workflow",
         "menu_it": "💻 IT Dept - User Permissions & Audit Logs"
     },
     "Tiếng Việt": {
@@ -193,16 +193,26 @@ selected_menu_label = st.sidebar.radio(t["menu_header"], list(menu_mapping.keys(
 menu_choice = menu_mapping[selected_menu_label]
 
 # ----------------------------------------------------
-# 6. 模組安全呼叫路由
+# 6. 模組安全呼叫路由 (安全多重備援相容包裝)
 # ----------------------------------------------------
 curr_lang = st.session_state.current_lang
 
 if menu_choice == "exec":
-    # 👑 董事長營運管理看板：包含看盤、AR/AP、P&L 損益表與 OEE KPI
-    executive_dashboard.render_executive_dashboard_page(lang=curr_lang)
+    # 👑 董事長營運戰情看板：加入安全相容機制，自動相容 render / render_executive_dashboard_page / show
+    if hasattr(executive_dashboard, "render_executive_dashboard_page"):
+        executive_dashboard.render_executive_dashboard_page(lang=curr_lang)
+    elif hasattr(executive_dashboard, "render"):
+        executive_dashboard.render(engine, t=t, lang=curr_lang)
+    elif hasattr(executive_dashboard, "show"):
+        executive_dashboard.show(engine, t=t)
+        
 elif menu_choice == "engineering":
-    # 🛠️ 獨立工程部估價模組：無圖片生成，含資材下拉選單與總價動態計算
-    engineering_pipeline.render_engineering_page()
+    # 🛠️ 獨立工程部估價模組
+    if hasattr(engineering_pipeline, "render_engineering_page"):
+        engineering_pipeline.render_engineering_page()
+    elif hasattr(engineering_pipeline, "show"):
+        engineering_pipeline.show()
+
 elif menu_choice == "ap":
     procurement_ap.render_procurement_ap_page(engine=engine, lang=curr_lang)
 elif menu_choice == "ar":
