@@ -13,7 +13,7 @@ import modules.warehouse_management as warehouse_management
 import modules.employee_management as employee_management
 import modules.asset_management as asset_management
 import modules.user_management as user_management
-# 🛠️ 新增：獨立工程與 AI 報價 Pipeline 模組
+# 🛠️ 新增：獨立工程與資材報價總合模組
 import modules.engineering_pipeline as engineering_pipeline
 
 st.set_page_config(
@@ -37,12 +37,12 @@ i18n = {
         "lang_selector": "🌐 語言設定 / Language",
         "menu_header": "公司組織部門選單",
         "menu_exec": "👑 董事長/總經理 - 營運戰情看板",
-        "menu_engineering": "🛠️ 工程部 - CAD繪圖與AI報價 Pipeline",
+        "menu_engineering": "🛠️️ 工程部 - 配電盤估價與資材報價總合",
         "menu_ap": "🛒 管理部 - 採購與應付帳款 (AP & 廠商發票)",
         "menu_ar": "📋 管理部 - 客戶應收帳款 (AR & 催收歷史)",
         "menu_hr": "👥 管理部 - 人事與勞動合約管理",
         "menu_ga": "📦 管理部 - 總務與資產設備管理",
-        "menu_sheet_metal": "✂️ 生產部 - 板金加工組",
+        "menu_sheet_metal": "✂️️ 生產部 - 板金加工組",
         "menu_painting": "🎨 生產部 - 烤漆塗裝組",
         "menu_assembly": "⚡ 生產部 - 配電盤組裝與配線組",
         "menu_warehouse": "🏭 生產部 - 倉庫與資材管理",
@@ -60,7 +60,7 @@ i18n = {
         "lang_selector": "🌐 Select Language",
         "menu_header": "Department Menu",
         "menu_exec": "👑 Executive Dashboard (Chairman/GM)",
-        "menu_engineering": "🛠️ R&D Engineering - CAD & AI Quotation Pipeline",
+        "menu_engineering": "🛠️ R&D Engineering - Switchgear Quotation & Material Costing",
         "menu_ap": "🛒 Admin - Accounts Payable (AP & Invoices)",
         "menu_ar": "📋 Admin - Accounts Receivable (AR & Collections)",
         "menu_hr": "👥 Admin - HR & Labor Contracts",
@@ -69,7 +69,7 @@ i18n = {
         "menu_painting": "🎨 Production - Powder Coating Dept",
         "menu_assembly": "⚡ Production - Assembly & Wiring Dept",
         "menu_warehouse": "🏭 Production - Warehouse & Materials",
-        "menu_approval": "✍️ E-Approval Workflow",
+        "menu_approval": "✍️️ E-Approval Workflow",
         "menu_it": "💻 IT Dept - User Permissions & Audit Logs"
     },
     "Tiếng Việt": {
@@ -83,7 +83,7 @@ i18n = {
         "lang_selector": "🌐 Chọn ngôn ngữ",
         "menu_header": "Danh mục Phòng ban",
         "menu_exec": "👑 Báo cáo Ban Giám đốc (Chủ tịch/GM)",
-        "menu_engineering": "🛠️ Khối Kỹ Thuật - Bản vẽ CAD & Báo giá AI Pipeline",
+        "menu_engineering": "🛠️ Khối Kỹ Thuật - Báo giá Tủ điện & Dự toán Vật tư",
         "menu_ap": "🛒 Khối Quản lý - Phải trả Nhà cung cấp (AP)",
         "menu_ar": "📋 Khối Quản lý - Phải thu Khách hàng (AR)",
         "menu_hr": "👥 Khối Quản lý - Nhân sự & Hợp đồng lao động",
@@ -108,7 +108,6 @@ DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-
 @st.cache_resource
 def get_db_engine():
     eng = create_engine(DB_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
-    # 自動補齊應收帳款新增欄位，避免欄位不存在報錯
     try:
         with eng.connect() as conn:
             conn.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installment_ratios TEXT;"))
@@ -164,7 +163,6 @@ selected_lang = st.sidebar.selectbox(
 
 if selected_lang != st.session_state.current_lang:
     st.session_state.current_lang = selected_lang
-    # 將語系全域變數寫入 session_state，供各模組（包括工程模組）自動讀取
     st.session_state.lang = selected_lang
     st.rerun()
 
@@ -179,7 +177,6 @@ menu_mapping = {}
 if st.session_state.user_role == "admin":
     menu_mapping[t["menu_exec"]] = "exec"
 
-# 🛠️️ 將獨立工程模組擺在部門選單中
 menu_mapping[t["menu_engineering"]] = "engineering"
 menu_mapping[t["menu_ap"]] = "ap"
 menu_mapping[t["menu_ar"]] = "ar"
@@ -196,14 +193,15 @@ selected_menu_label = st.sidebar.radio(t["menu_header"], list(menu_mapping.keys(
 menu_choice = menu_mapping[selected_menu_label]
 
 # ----------------------------------------------------
-# 6. 模組安全呼叫路由 (容錯包裝，徹底防止 AttributeError)
+# 6. 模組安全呼叫路由
 # ----------------------------------------------------
 curr_lang = st.session_state.current_lang
 
 if menu_choice == "exec":
-    executive_dashboard.render(engine, t=t, lang=curr_lang)
+    # 👑 董事長營運管理看板：包含看盤、AR/AP、P&L 損益表與 OEE KPI
+    executive_dashboard.render_executive_dashboard_page(lang=curr_lang)
 elif menu_choice == "engineering":
-    # 🛠️ 呼叫獨立工程/CAD繪圖與 AI 報價模組，脫離財務權限
+    # 🛠️ 獨立工程部估價模組：無圖片生成，含資材下拉選單與總價動態計算
     engineering_pipeline.render_engineering_page()
 elif menu_choice == "ap":
     procurement_ap.render_procurement_ap_page(engine=engine, lang=curr_lang)
