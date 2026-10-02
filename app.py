@@ -3,21 +3,17 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 # ----------------------------------------------------
-# 1. 載入各獨立業務模組 (Modules)
+# 1. 載入各獨立業務模组
 # ----------------------------------------------------
 import modules.executive_dashboard as executive_dashboard
-import modules.finance_tax as finance_tax
-import modules.sales_order_ar as sales_order_ar
 import modules.procurement_ap as procurement_ap
+import modules.sales_order_ar as sales_order_ar
 import modules.approval_workflow as approval_workflow
 import modules.warehouse_management as warehouse_management
 import modules.employee_management as employee_management
 import modules.asset_management as asset_management
 import modules.user_management as user_management
 
-# ==========================================
-# 頁面基礎設定 (Streamlit Page Config)
-# ==========================================
 st.set_page_config(
     page_title="裕豐電機工業 REETECH INDUSTRIAL - AI ERP",
     page_icon="⚡",
@@ -25,7 +21,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. 多國語言字典 (i18n) - 包含左側所有部門選單
+# 2. 多國語言字典 (拆分應收與應付)
 # ==========================================
 i18n = {
     "繁體中文": {
@@ -39,14 +35,15 @@ i18n = {
         "lang_selector": "🌐 語言設定 / Language",
         "menu_header": "公司組織部門選單",
         "menu_exec": "👑 董事長/總經理 - 營運戰情看板",
-        "menu_fin": "🏢 管理部 - 財務會計與應收/應付 (TT200/UNC)",
+        "menu_ap": "🛒 管理部 - 採購應付帳款 (AP & 廠商發票)",
+        "menu_ar": "📋 管理部 - 客戶應收帳款 (AR & 報價合約)",
         "menu_hr": "👥 管理部 - 人事與勞動合約管理",
         "menu_ga": "📦 管理部 - 總務與資產設備管理",
         "menu_sheet_metal": "✂️ 生產部 - 板金加工組",
         "menu_painting": "🎨 生產部 - 烤漆塗裝組",
         "menu_assembly": "⚡ 生產部 - 配電盤組裝與配線組",
         "menu_warehouse": "🏭 生產部 - 倉庫與資材管理",
-        "menu_approval": "✍️ 電子簽核與請款流程",
+        "menu_approval": "✍️️ 電子簽核與請款流程",
         "menu_it": "💻 資訊/IT - 權限與稽核管理"
     },
     "English": {
@@ -60,7 +57,8 @@ i18n = {
         "lang_selector": "🌐 Select Language",
         "menu_header": "Department Menu",
         "menu_exec": "👑 Executive Dashboard (Chairman/GM)",
-        "menu_fin": "🏢 Admin - Finance & Accounting (TT200/UNC)",
+        "menu_ap": "🛒 Admin - Accounts Payable (AP)",
+        "menu_ar": "📋 Admin - Accounts Receivable (AR)",
         "menu_hr": "👥 Admin - HR & Labor Contracts",
         "menu_ga": "📦 Admin - GA & Equipment Management",
         "menu_sheet_metal": "✂ Production - Sheet Metal Dept",
@@ -81,7 +79,8 @@ i18n = {
         "lang_selector": "🌐 Chọn ngôn ngữ",
         "menu_header": "Danh mục Phòng ban",
         "menu_exec": "👑 Báo cáo Ban Giám đốc (Chủ tịch/GM)",
-        "menu_fin": "🏢 Khối Quản lý - Tài chính Kế toán (TT200)",
+        "menu_ap": "🛒 Khối Quản lý - Phải trả Nhà cung cấp (AP)",
+        "menu_ar": "📋 Khối Quản lý - Phải thu Khách hàng (AR)",
         "menu_hr": "👥 Khối Quản lý - Nhân sự & Hợp đồng lao động",
         "menu_ga": "📦 Khối Quản lý - Hậu cần & Quản lý thiết bị",
         "menu_sheet_metal": "✂️ Khối Sản xuất - Tổ Gia công Cơ khí",
@@ -93,27 +92,18 @@ i18n = {
     }
 }
 
-# 自動偵測語系 (支援 URL 與瀏覽器 Accept-Language)
 def auto_detect_language():
     query_params = st.query_params
     if "lang" in query_params:
         lang_code = query_params["lang"].lower()
-        if "en" in lang_code:
-            return "English"
-        elif "vi" in lang_code:
-            return "Tiếng Việt"
-        elif "zh" in lang_code:
-            return "繁體中文"
-            
+        if "en" in lang_code: return "English"
+        elif "vi" in lang_code: return "Tiếng Việt"
+        elif "zh" in lang_code: return "繁體中文"
     try:
-        headers = st.context.headers
-        accept_lang = headers.get("Accept-Language", "").lower()
-        if "en" in accept_lang:
-            return "English"
-        elif "vi" in accept_lang:
-            return "Tiếng Việt"
-        elif "zh" in accept_lang:
-            return "繁體中文"
+        accept_lang = st.context.headers.get("Accept-Language", "").lower()
+        if "en" in accept_lang: return "English"
+        elif "vi" in accept_lang: return "Tiếng Việt"
+        elif "zh" in accept_lang: return "繁體中文"
     except Exception:
         pass
     return "English"
@@ -121,9 +111,6 @@ def auto_detect_language():
 if "current_lang" not in st.session_state:
     st.session_state.current_lang = auto_detect_language()
 
-# ==========================================
-# 3. Supabase 資料庫連線快取 (防止卡頓與反白)
-# ==========================================
 DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
 @st.cache_resource
@@ -132,9 +119,6 @@ def get_db_engine():
 
 engine = get_db_engine()
 
-# ==========================================
-# 4. 登入管理
-# ==========================================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_role = ""
@@ -157,14 +141,14 @@ def login_page():
                 st.session_state.user_name = username
                 st.rerun()
             else:
-                st.error("帳號或密碼錯誤 / Incorrect login / Sai tài khoản")
+                st.error("帳號或密碼錯誤 / Incorrect login")
 
 if not st.session_state.logged_in:
     login_page()
     st.stop()
 
 # ==========================================
-# 5. 側邊欄與動態選單路由
+# 選單路由管理
 # ==========================================
 t = i18n[st.session_state.current_lang]
 
@@ -172,11 +156,7 @@ st.sidebar.title(t["company_name"])
 st.sidebar.caption(t["company_sub"])
 
 lang_list = ["English", "繁體中文", "Tiếng Việt"]
-selected_lang = st.sidebar.selectbox(
-    t["lang_selector"],
-    lang_list,
-    index=lang_list.index(st.session_state.current_lang)
-)
+selected_lang = st.sidebar.selectbox(t["lang_selector"], lang_list, index=lang_list.index(st.session_state.current_lang))
 
 if selected_lang != st.session_state.current_lang:
     st.session_state.current_lang = selected_lang
@@ -193,7 +173,9 @@ menu_mapping = {}
 if st.session_state.user_role == "admin":
     menu_mapping[t["menu_exec"]] = "exec"
 
-menu_mapping[t["menu_fin"]] = "fin"
+# 拆分為 AP 與 AR 兩個側邊欄按鈕
+menu_mapping[t["menu_ap"]] = "ap"
+menu_mapping[t["menu_ar"]] = "ar"
 menu_mapping[t["menu_hr"]] = "hr"
 menu_mapping[t["menu_ga"]] = "ga"
 menu_mapping[t["menu_sheet_metal"]] = "sheet_metal"
@@ -206,20 +188,18 @@ menu_mapping[t["menu_it"]] = "it"
 selected_menu_label = st.sidebar.radio(t["menu_header"], list(menu_mapping.keys()))
 menu_choice = menu_mapping[selected_menu_label]
 
-# ==========================================
-# 6. 模組化導向 (分流呼叫各獨立模組)
-# ==========================================
 if menu_choice == "exec":
     executive_dashboard.render(engine, t)
-elif menu_choice == "fin":
-    finance_tax.render(engine, t)
+elif menu_choice == "ap":
+    procurement_ap.render_procurement_ap_page(engine=engine)
+elif menu_choice == "ar":
+    sales_order_ar.render_sales_order_ar_page(engine=engine)
 elif menu_choice == "hr":
     employee_management.render_employee_management(engine=engine, t=t)
 elif menu_choice == "ga":
     asset_management.render_asset_management_page()
 elif menu_choice in ["sheet_metal", "painting", "assembly"]:
     st.title(selected_menu_label)
-    st.caption("裕豐電機工業 - 現場派工單與生產進度管理看板")
     st.info("現場工單追蹤與 QC 品質檢驗模組順利運作中。")
 elif menu_choice == "warehouse":
     warehouse_management.render_warehouse_management(engine=engine, t=t)
