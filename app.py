@@ -13,6 +13,8 @@ import modules.warehouse_management as warehouse_management
 import modules.employee_management as employee_management
 import modules.asset_management as asset_management
 import modules.user_management as user_management
+# 🛠️ 新增：獨立工程與 AI 報價 Pipeline 模組
+import modules.engineering_pipeline as engineering_pipeline
 
 st.set_page_config(
     page_title="裕豐電機工業 REETECH INDUSTRIAL - AI ERP",
@@ -35,6 +37,7 @@ i18n = {
         "lang_selector": "🌐 語言設定 / Language",
         "menu_header": "公司組織部門選單",
         "menu_exec": "👑 董事長/總經理 - 營運戰情看板",
+        "menu_engineering": "🛠️ 工程部 - CAD繪圖與AI報價 Pipeline",
         "menu_ap": "🛒 管理部 - 採購與應付帳款 (AP & 廠商發票)",
         "menu_ar": "📋 管理部 - 客戶應收帳款 (AR & 催收歷史)",
         "menu_hr": "👥 管理部 - 人事與勞動合約管理",
@@ -57,6 +60,7 @@ i18n = {
         "lang_selector": "🌐 Select Language",
         "menu_header": "Department Menu",
         "menu_exec": "👑 Executive Dashboard (Chairman/GM)",
+        "menu_engineering": "🛠️ R&D Engineering - CAD & AI Quotation Pipeline",
         "menu_ap": "🛒 Admin - Accounts Payable (AP & Invoices)",
         "menu_ar": "📋 Admin - Accounts Receivable (AR & Collections)",
         "menu_hr": "👥 Admin - HR & Labor Contracts",
@@ -79,6 +83,7 @@ i18n = {
         "lang_selector": "🌐 Chọn ngôn ngữ",
         "menu_header": "Danh mục Phòng ban",
         "menu_exec": "👑 Báo cáo Ban Giám đốc (Chủ tịch/GM)",
+        "menu_engineering": "🛠️ Khối Kỹ Thuật - Bản vẽ CAD & Báo giá AI Pipeline",
         "menu_ap": "🛒 Khối Quản lý - Phải trả Nhà cung cấp (AP)",
         "menu_ar": "📋 Khối Quản lý - Phải thu Khách hàng (AR)",
         "menu_hr": "👥 Khối Quản lý - Nhân sự & Hợp đồng lao động",
@@ -159,6 +164,8 @@ selected_lang = st.sidebar.selectbox(
 
 if selected_lang != st.session_state.current_lang:
     st.session_state.current_lang = selected_lang
+    # 將語系全域變數寫入 session_state，供各模組（包括工程模組）自動讀取
+    st.session_state.lang = selected_lang
     st.rerun()
 
 st.sidebar.markdown(f"**👤 {st.session_state.user_name}** ({st.session_state.user_role.upper()})")
@@ -172,6 +179,8 @@ menu_mapping = {}
 if st.session_state.user_role == "admin":
     menu_mapping[t["menu_exec"]] = "exec"
 
+# 🛠️️ 將獨立工程模組擺在部門選單中
+menu_mapping[t["menu_engineering"]] = "engineering"
 menu_mapping[t["menu_ap"]] = "ap"
 menu_mapping[t["menu_ar"]] = "ar"
 menu_mapping[t["menu_hr"]] = "hr"
@@ -193,6 +202,9 @@ curr_lang = st.session_state.current_lang
 
 if menu_choice == "exec":
     executive_dashboard.render(engine, t=t, lang=curr_lang)
+elif menu_choice == "engineering":
+    # 🛠️ 呼叫獨立工程/CAD繪圖與 AI 報價模組，脫離財務權限
+    engineering_pipeline.render_engineering_page()
 elif menu_choice == "ap":
     procurement_ap.render_procurement_ap_page(engine=engine, lang=curr_lang)
 elif menu_choice == "ar":
