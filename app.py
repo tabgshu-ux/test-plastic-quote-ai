@@ -212,7 +212,7 @@ menu_choice = menu_mapping[selected_menu_label]
 if menu_choice == "exec":
     executive_dashboard.render(engine, t)
 elif menu_choice == "fin":
-    sales_order_ar.render_sales_order_ar_page(lang=st.session_state.current_lang)
+    finance_tax.render(engine, t)
 elif menu_choice == "hr":
     employee_management.render_employee_management(engine=engine, t=t)
 elif menu_choice == "ga":
