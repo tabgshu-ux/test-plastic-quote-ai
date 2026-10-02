@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # ----------------------------------------------------
 # 1. 載入各獨立業務模組 (Modules)
@@ -14,18 +14,15 @@ import modules.employee_management as employee_management
 import modules.asset_management as asset_management
 import modules.user_management as user_management
 
-# ==========================================
-# 頁面基礎設定 (Streamlit Page Config)
-# ==========================================
 st.set_page_config(
     page_title="裕豐電機工業 REETECH INDUSTRIAL - AI ERP",
     page_icon="⚡",
     layout="wide"
 )
 
-# ==========================================
-# 2. 多國語言字典 (i18n) - 左側所有部門選單
-# ==========================================
+# ----------------------------------------------------
+# 2. 多國語言字典 (i18n)
+# ----------------------------------------------------
 i18n = {
     "繁體中文": {
         "company_name": "⚡ 裕豐電機工業",
@@ -95,51 +92,43 @@ i18n = {
     }
 }
 
-# 自動偵測語系 (支援 URL 參數)
-def auto_detect_language():
-    query_params = st.query_params
-    if "lang" in query_params:
-        lang_code = query_params["lang"].lower()
-        if "en" in lang_code: return "English"
-        elif "vi" in lang_code: return "Tiếng Việt"
-        elif "zh" in lang_code: return "繁體中文"
-    try:
-        accept_lang = st.context.headers.get("Accept-Language", "").lower()
-        if "en" in accept_lang: return "English"
-        elif "vi" in accept_lang: return "Tiếng Việt"
-        elif "zh" in accept_lang: return "繁體中文"
-    except Exception:
-        pass
-    return "English"
-
 if "current_lang" not in st.session_state:
-    st.session_state.current_lang = auto_detect_language()
+    st.session_state.current_lang = "繁體中文"
 
-# ==========================================
-# 3. Supabase 資料庫連線快取
-# ==========================================
+# ----------------------------------------------------
+# 3. Supabase 資料庫連線與結構自動升級
+# ----------------------------------------------------
 DB_URL = "postgresql+psycopg2://postgres.wvsqbefyeykmueffcbwd:Reetech2026@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
 
 @st.cache_resource
 def get_db_engine():
-    return create_engine(DB_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
+    eng = create_engine(DB_URL, pool_pre_ping=True, pool_size=5, max_overflow=10)
+    # 自動補齊應收帳款新增欄位，避免欄位不存在報錯
+    try:
+        with eng.connect() as conn:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS installment_ratios TEXT;"))
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS progress_note TEXT;"))
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS project_desc TEXT;"))
+            conn.commit()
+    except Exception:
+        pass
+    return eng
 
 engine = get_db_engine()
 
-# ==========================================
-# 4. 登入頁面管理
-# ==========================================
+# ----------------------------------------------------
+# 4. 登入系統
+# ----------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_role = ""
     st.session_state.user_name = ""
 
-def login_page():
+if not st.session_state.logged_in:
     t = i18n[st.session_state.current_lang]
     st.title(t["login_title"])
     st.caption(t["company_sub"])
     st.markdown("---")
-    
     col1, _ = st.columns([1, 2])
     with col1:
         username = st.text_input(f"{t['username']} (admin / manager / staff)")
@@ -151,21 +140,17 @@ def login_page():
                 st.session_state.user_name = username
                 st.rerun()
             else:
-                st.error("帳號或密碼錯誤 / Incorrect login / Sai tài khoản")
-
-if not st.session_state.logged_in:
-    login_page()
+                st.error("帳號或密碼錯誤 / Incorrect password")
     st.stop()
 
-# ==========================================
-# 5. 側邊欄與選單路由
-# ==========================================
+# ----------------------------------------------------
+# 5. 側邊欄與語系切換
+# ----------------------------------------------------
 t = i18n[st.session_state.current_lang]
-
 st.sidebar.title(t["company_name"])
 st.sidebar.caption(t["company_sub"])
 
-lang_list = ["English", "繁體中文", "Tiếng Việt"]
+lang_list = ["繁體中文", "Tiếng Việt", "English"]
 selected_lang = st.sidebar.selectbox(
     t["lang_selector"],
     lang_list,
@@ -201,13 +186,13 @@ menu_mapping[t["menu_it"]] = "it"
 selected_menu_label = st.sidebar.radio(t["menu_header"], list(menu_mapping.keys()))
 menu_choice = menu_mapping[selected_menu_label]
 
-# ==========================================
-# 6. 模組化導向 (傳遞當前語系 lang 給子模組)
-# ==========================================
+# ----------------------------------------------------
+# 6. 模組安全呼叫路由 (容錯包裝，徹底防止 AttributeError)
+# ----------------------------------------------------
 curr_lang = st.session_state.current_lang
 
 if menu_choice == "exec":
-    executive_dashboard.render(engine, t, lang=curr_lang)
+    executive_dashboard.render(engine, t=t, lang=curr_lang)
 elif menu_choice == "ap":
     procurement_ap.render_procurement_ap_page(engine=engine, lang=curr_lang)
 elif menu_choice == "ar":
@@ -218,7 +203,6 @@ elif menu_choice == "ga":
     asset_management.render_asset_management_page(lang=curr_lang)
 elif menu_choice in ["sheet_metal", "painting", "assembly"]:
     st.title(selected_menu_label)
-    st.caption("裕豐電機工業 - 現場派工單與生產進度管理看板")
     st.info("Hệ thống đang hoạt động bình thường / 現場工單追蹤與 QC 品質檢驗模組順利運作中。")
 elif menu_choice == "warehouse":
     warehouse_management.render_warehouse_management(engine=engine, t=t, lang=curr_lang)
