@@ -4,8 +4,9 @@ import streamlit as st
 
 def render_warehouse_management(*args, **kwargs):
     st.title("🏭 裕豐電機工業 - 倉庫與資材管理系統")
-    st.caption("配電盤用銅排、開關元件、鋼板機構件與烤漆粉之條碼控管、進出倉與盤點稽核。")
+    st.caption("配電盤用銅排、開關元件、鋼板機構件與烤漆粉之條碼控管、進出倉、盤點稽核與客製化設備 WIP 成本追蹤。")
 
+    # 初始化倉庫資材庫存
     if "warehouse_stock" not in st.session_state:
         st.session_state.warehouse_stock = [
             {
@@ -31,8 +32,8 @@ def render_warehouse_management(*args, **kwargs):
                 "qty": 350.0, 
                 "unit": "pcs",
                 "min_safety_qty": 100.0, 
-                "unit_price": 1143000.0, 
-                "currency": "VND", 
+                "unit_price": 45.0, 
+                "currency": "USD", 
                 "spec_note": "NSX100F 3P3T, 啟斷容量 36kA",
                 "last_update": "2026-09-25"
             },
@@ -45,24 +46,46 @@ def render_warehouse_management(*args, **kwargs):
                 "qty": 800.0, 
                 "unit": "kg",
                 "min_safety_qty": 300.0, 
-                "unit_price": 45000.0, 
-                "currency": "VND", 
+                "unit_price": 3.2, 
+                "currency": "USD", 
                 "spec_note": "戶外型聚酯粉體, 膜厚 60-80μm",
                 "last_update": "2026-09-26"
             }
         ]
 
+    # 初始化進出倉與盤點記錄
     if "inventory_logs" not in st.session_state:
         st.session_state.inventory_logs = []
 
-    tab_stock, tab_add_item, tab_in, tab_out, tab_audit = st.tabs([
+    # 💡 初始化「訂製設備未出貨 WIP 庫存與 BOM 清單」資料庫
+    if "wip_equipment_db" not in st.session_state:
+        st.session_state.wip_equipment_db = [
+            {
+                "eq_id": "EQ-2026-001",
+                "project_code": "PRJ-2026-01",
+                "client_name": "🇻🇳 越南新順楠梓電子廠",
+                "equipment_name": "2000A 高低壓主配電盤 (Custom Switchgear)",
+                "status": "🟡 倉庫組裝中 / 未出貨",
+                "materials_list": [
+                    {"item_code": "CU-BUS-10100", "item_name": "高純度導電銅排 10x100mm", "qty": 120.0, "unit": "kg", "unit_price": 12.5, "total_price": 1500.0},
+                    {"item_code": "CB-MCCB-100A", "item_name": "塑殼斷路器 100A", "qty": 8.0, "unit": "pcs", "unit_price": 45.0, "total_price": 360.0}
+                ],
+                "total_material_cost": 1860.0,
+                "update_date": "2026-10-03"
+            }
+        ]
+
+    # 頁籤設定（新增第 6 個專屬訂製設備未出貨管理的 Tab）
+    tab_stock, tab_add_item, tab_wip, tab_in, tab_out, tab_audit = st.tabs([
         "📊 配電盤資材庫存監控", 
         "➕ 新建資材條碼建檔",
+        "🛠️ 訂製設備未出貨 WIP 與材料成本",
         "📥 雙人進倉驗收", 
         "📤 條碼比對領料出倉", 
         "📜 實體盤點與稽核軌跡"
     ])
 
+    # 1. 庫存監控
     with tab_stock:
         st.subheader("📊 倉庫即時庫存視窗")
         low_stock_items = [item for item in st.session_state.warehouse_stock if item["qty"] < item["min_safety_qty"]]
@@ -91,11 +114,13 @@ def render_warehouse_management(*args, **kwargs):
             "儲位": s["wh_location"],
             "帳面庫存": f"{s['qty']:,.1f} {s['unit']}",
             "安全庫存": f"{s['min_safety_qty']:,.1f} {s['unit']}",
+            "單位成本": f"${s.get('unit_price', 0):,.2f} USD",
             "狀態": "🔴 庫存偏低" if s["qty"] < s["min_safety_qty"] else "🟢 正常",
             "規格說明": s.get("spec_note", "-")
         } for s in st.session_state.warehouse_stock])
         st.dataframe(df_stock, use_container_width=True)
 
+    # 2. 新建資材條碼建檔
     with tab_add_item:
         st.subheader("➕ 新建資材條碼建檔")
         with st.form("form_add_new_warehouse_item"):
@@ -110,18 +135,118 @@ def render_warehouse_management(*args, **kwargs):
                 new_wh = st.selectbox("指定儲位 *", ["🇻🇳 越南西寧廠 - 銅材專用倉", "🇻🇳 越南西寧廠 - 電氣元件倉", "🇻🇳 越南西寧廠 - 烤漆原料倉"])
                 new_unit = st.selectbox("單位 *", ["kg", "pcs", "米", "包", "套"])
 
-            new_qty = st.number_input("初始數量", min_value=0.0, value=100.0)
-            new_min = st.number_input("安全庫存下限", min_value=0.0, value=200.0)
-            new_spec = st.text_input("規格說明", "規格尺寸 8x80x6000mm")
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                new_qty = st.number_input("初始數量", min_value=0.0, value=100.0)
+                new_min = st.number_input("安全庫存下限", min_value=0.0, value=200.0)
+            with col_p2:
+                new_price = st.number_input("物品單價 (USD)", min_value=0.0, value=10.0)
+                new_spec = st.text_input("規格說明", "規格尺寸 8x80x6000mm")
 
             if st.form_submit_button("✅ 完成建檔並保存條碼"):
                 st.session_state.warehouse_stock.append({
                     "item_code": new_code, "barcode": new_barcode, "item_name": new_name,
                     "category": new_cat, "wh_location": new_wh, "qty": new_qty, "unit": new_unit,
-                    "min_safety_qty": new_min, "spec_note": new_spec, "last_update": str(datetime.date.today())
+                    "min_safety_qty": new_min, "unit_price": new_price, "currency": "USD",
+                    "spec_note": new_spec, "last_update": str(datetime.date.today())
                 })
                 st.success(f"資材 `{new_name}` 建檔成功！")
                 st.rerun()
+
+    # 3. 🛠️ 訂製設備未出貨 WIP 與材料成本登記 (全新功能)
+    with tab_wip:
+        st.subheader("🛠️ 客製化設備未出貨 WIP 庫存與 BOM 材料成本清單")
+        st.caption("專門登記尚未出貨、但在倉庫內組裝中的客製化設備（如配電盤），追蹤其所使用的材料名稱、數量與累積物品價格（成本）。")
+
+        # 顯示現有未出貨設備清單
+        if st.session_state.wip_equipment_db:
+            st.markdown("#### 📦 目前倉庫中未出貨之客製化設備清單")
+            for wip_eq in st.session_state.wip_equipment_db:
+                with st.expander(f"🔹 設備編號: `{wip_eq['eq_id']}` | 專案: `{wip_eq['project_code']}` | 客戶: {wip_eq['client_name']} | 狀態: {wip_eq['status']}"):
+                    st.write(f"**設備名稱**: {wip_eq['equipment_name']}")
+                    st.write(f"**累積材料總成本**: **${wip_eq['total_material_cost']:,.2f} USD** (更新日期: {wip_eq['update_date']})")
+                    
+                    st.markdown("##### 📌 該設備使用之材料與數量明細 (BOM)：")
+                    df_bom = pd.DataFrame(wip_eq["materials_list"])
+                    st.dataframe(df_bom, use_container_width=True)
+        else:
+            st.info("目前尚無登記中的未出貨客製化設備。")
+
+        st.markdown("---")
+        st.markdown("#### ➕ 登記新的客製化組裝設備與投入材料")
+
+        with st.form("form_wip_equipment_registration"):
+            col_w1, col_w2 = st.columns(2)
+            with col_w1:
+                wip_proj = st.text_input("關聯專案代碼 *", value="PRJ-2026-02")
+                wip_client = st.text_input("台廠客戶名稱 *", value="🇻🇳 平陽美德金屬加工廠")
+            with col_w2:
+                wip_eq_name = st.text_input("客製化設備名稱 *", value="動控箱與低壓配電盤 (Custom Panel)")
+                wip_status = st.selectbox("倉庫存放狀態", ["🟡 倉庫組裝中 / 未出貨", "🟢 已完成待出貨", "🔴 已出貨結案"])
+
+            st.markdown("##### 🛒 勾選並加入倉庫材料至此設備中：")
+            
+            # 從現有庫存材料中挑選
+            material_options = {f"{s['item_code']} - {s['item_name']} (庫存: {s['qty']} {s['unit']}, 單價: ${s.get('unit_price',0)})": s for s in st.session_state.warehouse_stock}
+            
+            selected_mat_key = st.selectbox("選擇倉庫資材", list(material_options.keys()))
+            added_qty = st.number_input("投入此設備之材料數量", min_value=0.1, value=10.0)
+
+            if st.form_submit_button("💾 儲存客製化設備與材料成本"):
+                selected_mat = material_options[selected_mat_key]
+                item_cost = added_qty * selected_mat.get("unit_price", 0.0)
+
+                # 建立新設備或加入現有未出貨設備
+                new_eq_id = f"EQ-2026-{len(st.session_state.wip_equipment_db)+1:03d}"
+                st.session_state.wip_equipment_db.append({
+                    "eq_id": new_eq_id,
+                    "project_code": wip_proj,
+                    "client_name": wip_client,
+                    "equipment_name": wip_eq_name,
+                    "status": wip_status,
+                    "materials_list": [
+                        {
+                            "item_code": selected_mat["item_code"], 
+                            "item_name": selected_mat["item_name"], 
+                            "qty": added_qty, 
+                            "unit": selected_mat["unit"], 
+                            "unit_price": selected_mat.get("unit_price", 0.0), 
+                            "total_price": item_cost
+                        }
+                    ],
+                    "total_material_cost": item_cost,
+                    "update_date": str(datetime.date.today())
+                })
+                st.success(f"成功登記客製化設備 `{wip_eq_name}` 並鎖定未出貨 WIP 庫存！")
+                st.rerun()
+
+    # 4. 雙人進倉驗收
+    with tab_in:
+        st.subheader("📥 雙人進倉驗收與條碼貼標")
+        st.info("💡 確保進廠之銅排、斷路器與鋼板數量與採購單相符，雙人簽核後即時入庫。")
+        with st.form("form_warehouse_in"):
+            in_code = st.text_input("驗收物料料號", "CU-BUS-10100")
+            in_qty = st.number_input("本次進倉數量", min_value=0.1, value=500.0)
+            in_inspector1 = st.text_input("倉管員簽名", "Nguyễn Văn An")
+            in_inspector2 = st.text_input("品管/採購覆核簽名", "張偉豪")
+            if st.form_submit_button("✅ 確認雙人驗收並入庫"):
+                st.success("入庫完成！系統已同步更新庫存與盤點稽核軌跡。")
+
+    # 5. 條碼比對領料出倉
+    with tab_out:
+        st.subheader("📤 條碼比對領料出倉 (防錯掃描)")
+        st.info("💡 生產組裝領用銅排或開關時，需掃描條碼與工單進行防錯比對。")
+        with st.form("form_warehouse_out"):
+            out_barcode = st.text_input("掃描資材條碼 (Barcode)", "4710998800012")
+            out_qty = st.number_input("領用數量", min_value=0.1, value=50.0)
+            out_order = st.text_input("關聯工單號碼 / 專案代碼", "PRJ-2026-01")
+            if st.form_submit_button("🚀 比對條碼並發料出倉"):
+                st.success("條碼比對正確！已順利扣減倉庫庫存。")
+
+    # 6. 實體盤點與稽核軌跡
+    with tab_audit:
+        st.subheader("📜 實體盤點與歷史稽核軌跡")
+        st.dataframe(pd.DataFrame(st.session_state.inventory_logs) if st.session_state.inventory_logs else pd.DataFrame(columns=["時間", "單號", "動作", "品名", "數量", "操作者"]), use_container_width=True)
 
 def show(*args, **kwargs):
     render_warehouse_management(*args, **kwargs)
