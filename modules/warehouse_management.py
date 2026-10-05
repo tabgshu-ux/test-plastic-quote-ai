@@ -57,7 +57,7 @@ def render_warehouse_management(*args, **kwargs):
     if "inventory_logs" not in st.session_state:
         st.session_state.inventory_logs = []
 
-    # 💡 初始化「訂製設備未出貨 WIP 庫存與 BOM 清單」資料庫
+    # 初始化「訂製設備未出貨 WIP 庫存與 BOM 清單」資料庫
     if "wip_equipment_db" not in st.session_state:
         st.session_state.wip_equipment_db = [
             {
@@ -75,12 +75,12 @@ def render_warehouse_management(*args, **kwargs):
             }
         ]
 
-    # 頁籤設定（新增第 6 個專屬訂製設備未出貨管理的 Tab）
+    # 頁籤設定
     tab_stock, tab_add_item, tab_wip, tab_in, tab_out, tab_audit = st.tabs([
         "📊 配電盤資材庫存監控", 
         "➕ 新建資材條碼建檔",
         "🛠️ 訂製設備未出貨 WIP 與材料成本",
-        "📥 雙人進倉驗收", 
+        "📥 雙人進倉驗收 (倉庫+採購)", 
         "📤 條碼比對領料出倉", 
         "📜 實體盤點與稽核軌跡"
     ])
@@ -153,12 +153,11 @@ def render_warehouse_management(*args, **kwargs):
                 st.success(f"資材 `{new_name}` 建檔成功！")
                 st.rerun()
 
-    # 3. 🛠️ 訂製設備未出貨 WIP 與材料成本登記 (全新功能)
+    # 3. 🛠️ 訂製設備未出貨 WIP 與材料成本登記
     with tab_wip:
         st.subheader("🛠️ 客製化設備未出貨 WIP 庫存與 BOM 材料成本清單")
         st.caption("專門登記尚未出貨、但在倉庫內組裝中的客製化設備（如配電盤），追蹤其所使用的材料名稱、數量與累積物品價格（成本）。")
 
-        # 顯示現有未出貨設備清單
         if st.session_state.wip_equipment_db:
             st.markdown("#### 📦 目前倉庫中未出貨之客製化設備清單")
             for wip_eq in st.session_state.wip_equipment_db:
@@ -185,8 +184,6 @@ def render_warehouse_management(*args, **kwargs):
                 wip_status = st.selectbox("倉庫存放狀態", ["🟡 倉庫組裝中 / 未出貨", "🟢 已完成待出貨", "🔴 已出貨結案"])
 
             st.markdown("##### 🛒 勾選並加入倉庫材料至此設備中：")
-            
-            # 從現有庫存材料中挑選
             material_options = {f"{s['item_code']} - {s['item_name']} (庫存: {s['qty']} {s['unit']}, 單價: ${s.get('unit_price',0)})": s for s in st.session_state.warehouse_stock}
             
             selected_mat_key = st.selectbox("選擇倉庫資材", list(material_options.keys()))
@@ -196,7 +193,6 @@ def render_warehouse_management(*args, **kwargs):
                 selected_mat = material_options[selected_mat_key]
                 item_cost = added_qty * selected_mat.get("unit_price", 0.0)
 
-                # 建立新設備或加入現有未出貨設備
                 new_eq_id = f"EQ-2026-{len(st.session_state.wip_equipment_db)+1:03d}"
                 st.session_state.wip_equipment_db.append({
                     "eq_id": new_eq_id,
@@ -220,17 +216,47 @@ def render_warehouse_management(*args, **kwargs):
                 st.success(f"成功登記客製化設備 `{wip_eq_name}` 並鎖定未出貨 WIP 庫存！")
                 st.rerun()
 
-    # 4. 雙人進倉驗收
+    # 4. 📥 雙人進倉驗收 (強制規定：倉庫管理員 + 採購人員 雙軌簽核)
     with tab_in:
-        st.subheader("📥 雙人進倉驗收與條碼貼標")
-        st.info("💡 確保進廠之銅排、斷路器與鋼板數量與採購單相符，雙人簽核後即時入庫。")
-        with st.form("form_warehouse_in"):
-            in_code = st.text_input("驗收物料料號", "CU-BUS-10100")
-            in_qty = st.number_input("本次進倉數量", min_value=0.1, value=500.0)
-            in_inspector1 = st.text_input("倉管員簽名", "Nguyễn Văn An")
-            in_inspector2 = st.text_input("品管/採購覆核簽名", "張偉豪")
-            if st.form_submit_button("✅ 確認雙人驗收並入庫"):
-                st.success("入庫完成！系統已同步更新庫存與盤點稽核軌跡。")
+        st.subheader("📥 雙人進倉驗收 (倉庫管理員與採購人員共同驗收)")
+        st.info("💡 內控稽核規定：廠商交貨時，必須由【倉庫管理員】清點實體數量與條碼，並由【採購人員】核對採購訂單規格與價格，雙方皆簽名確認後始可完成入庫。")
+        
+        with st.form("form_warehouse_dual_inspection"):
+            col_i1, col_i2 = st.columns(2)
+            with col_i1:
+                in_code = st.selectbox("驗收進倉物料", [f"{s['item_code']} - {s['item_name']}" for s in st.session_state.warehouse_stock])
+                in_qty = st.number_input("本次實收數量", min_value=0.1, value=100.0)
+            with col_i2:
+                in_po = st.text_input("關聯採購訂單號碼 (PO No.)", value="PO-2026-0901")
+                in_condition = st.selectbox("外觀與規格檢驗結果", ["🟢 驗收合格，無破損", "🟡 包裝微損但內容物正常", "🔴 規格不符或數量短少 (拒收)"])
+
+            st.markdown("---")
+            st.markdown("#### ✍️ 雙人驗收驗證簽署 (內控防弊機制)")
+            col_sig1, col_sig2 = st.columns(2)
+            with col_sig1:
+                warehouse_keeper = st.text_input("📦 倉庫管理員姓名 (簽名確認實收數量) *", value="Nguyễn Văn Hùng")
+            with col_sig2:
+                purchasing_agent = st.text_input("🛒 採購人員姓名 (簽名確認訂單與價格) *", value="張偉豪")
+
+            in_remark = st.text_area("驗收備註說明", "如期交貨，銅排導電率與尺寸符合採購規範。")
+
+            if st.form_submit_button("✅ 提交雙人驗收並正式入庫"):
+                if warehouse_keeper and purchasing_agent:
+                    # 記錄至盤點與稽核軌跡
+                    st.session_state.inventory_logs.insert(0, {
+                        "時間": str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                        "單號": in_po,
+                        "動作": "📥 雙人驗收進倉",
+                        "品名": in_code,
+                        "數量": f"+{in_qty}",
+                        "倉庫管理員": warehouse_keeper,
+                        "採購人員": purchasing_agent,
+                        "狀態": in_condition
+                    })
+                    st.success(f"🎉 【雙人驗收成功】由倉庫管理員「{warehouse_keeper}」與採購人員「{purchasing_agent}」共同完成驗收，已順利入庫！")
+                    st.rerun()
+                else:
+                    st.error("❌ 必須完整填寫【倉庫管理員】與【採購人員】之姓名方可入庫！")
 
     # 5. 條碼比對領料出倉
     with tab_out:
@@ -245,8 +271,8 @@ def render_warehouse_management(*args, **kwargs):
 
     # 6. 實體盤點與稽核軌跡
     with tab_audit:
-        st.subheader("📜 實體盤點與歷史稽核軌跡")
-        st.dataframe(pd.DataFrame(st.session_state.inventory_logs) if st.session_state.inventory_logs else pd.DataFrame(columns=["時間", "單號", "動作", "品名", "數量", "操作者"]), use_container_width=True)
+        st.subheader("📜 實體盤點與雙人驗收歷史稽核軌跡")
+        st.dataframe(pd.DataFrame(st.session_state.inventory_logs) if st.session_state.inventory_logs else pd.DataFrame(columns=["時間", "單號", "動作", "品名", "數量", "倉庫管理員", "採購人員", "狀態"]), use_container_width=True)
 
 def show(*args, **kwargs):
     render_warehouse_management(*args, **kwargs)
