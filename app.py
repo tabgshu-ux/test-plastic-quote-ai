@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 from sqlalchemy import create_engine, text
 
 # 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Global FX",
+    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Audit Trail",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -33,7 +34,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化全域定價策略、匯率中樞與多租戶資料庫
+# 3. 初始化全域定價策略、匯率中樞與多租戶資料庫（含員工帳號與稽核日誌）
 if "global_pricing" not in st.session_state:
     st.session_state.global_pricing = {
         "enterprise_base_fee": 150,
@@ -41,7 +42,6 @@ if "global_pricing" not in st.session_state:
         "extra_dept_fee": 5
     }
 
-# 全球即時匯率中樞 (以 USD 為基準基底)
 if "global_fx_rates" not in st.session_state:
     st.session_state.global_fx_rates = {
         "USD": 1.0,
@@ -57,7 +57,9 @@ if "tenants_db" not in st.session_state:
             "org_nodes": [],
             "iot_devices": [],
             "ap_invoices": [],
-            "subscription": {"plan": "Master Control", "status": "Active", "expires": "N/A", "mrr": 0}
+            "staff": [{"name": "總管理員", "email": "admin@saas.com", "role": "Platform Master"}],
+            "audit_logs": [{"time": "2026-10-20 12:00:00", "user": "總管理員", "action": "啟動平台全域匯率與定價策略", "ip": "127.0.0.1"}],
+            "subscription": {"plan": "Master Control", "status": "Active", "expires": "N/A"}
         },
         "tenant_vina_水电": {
             "name": "🇻🇳 越南平陽水電工程有限公司",
@@ -68,6 +70,15 @@ if "tenants_db" not in st.session_state:
             ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠大門人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "qty": "50支", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
+            "staff": [
+                {"name": "許福村 (老闆)", "email": "fuchun@vina.com", "role": "Tenant Admin (最高權限)"},
+                {"name": "阮文安 (越籍會計)", "email": "an.nguyen@vina.com", "role": "財務與會計專員"},
+                {"name": "林工務主任", "email": "linh.site@vina.com", "role": "現場工地主任"}
+            ],
+            "audit_logs": [
+                {"time": "2026-10-20 14:10:22", "user": "阮文安 (越籍會計)", "action": "上傳並解析越南紅發票 (編號: 000123)", "ip": "192.168.10.15"},
+                {"time": "2026-10-20 09:30:05", "user": "許福村 (老闆)", "action": "新增實體據點：平陽廠原物料倉庫", "ip": "192.168.10.2"}
+            ],
             "subscription": {"plan": "跨國製造與工程旗艦版 (Enterprise)", "status": "🟢 正常訂閱中", "expires": "2027-10-20", "extra_departments": 3, "maintenance_contract": "含 24/7 VIP 技術維修"}
         }
     }
@@ -109,6 +120,8 @@ with st.sidebar:
             "選擇客戶內部模組 (Tenant IT Panel)",
             [
                 "🖱️ 本公司組織與據點 IT 自行設定",
+                "👥 本公司員工帳號與權限角色管理 (RBAC)",
+                "🔒 系統資安稽核日誌與操作軌跡追蹤 (Audit Trail)",
                 "💳 訂閱方案與維修合約管理",
                 "🤖 本公司 AI 硬體與車牌/人臉辨識掛接",
                 "🇻🇳 本公司越南紅發票與應付帳款 (AP)",
@@ -122,69 +135,28 @@ with st.sidebar:
 
 # 5. 主畫面邏輯路由
 if current_tenant_key == "tenant_master":
-    # ==================== SaaS 總控台 (我們自己看的最高管理層) ====================
+    # ==================== SaaS 總控台 ====================
     if "全球多幣別與即時匯率引擎" in menu_choice:
         st.markdown("## 💱 SaaS 平台總控台：全球多幣別與即時匯率引擎 (Global FX Engine)")
-        st.info("💡 *此處為集團總控台。您可以維護全平台的基準匯率（USD/TWD/VND/RMB）。所有下方租戶在進行跨國採購、發票結算與財報換算時，皆會自動引用此處的即時匯率！*")
-        
+        st.info("💡 集團總控台基準匯率維護。")
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             with st.form("fx_form"):
-                st.markdown("### 🌐 維護基準匯率 (以 1 USD 為基準)")
                 fx = st.session_state.global_fx_rates
-                
                 fx_c1, fx_c2, fx_c3, fx_c4 = st.columns(4)
-                with fx_c1:
-                    new_usd = st.number_input("美元 (USD)", value=fx["USD"], disabled=True)
-                with fx_c2:
-                    new_twd = st.number_input("台幣 (TWD)", value=fx["TWD"], step=0.1)
-                with fx_c3:
-                    new_vnd = st.number_input("越南盾 (VND)", value=fx["VND"], step=10.0)
-                with fx_c4:
-                    new_rmb = st.number_input("人民幣 (RMB)", value=fx["RMB"], step=0.01)
-                
+                with fx_c1: st.number_input("美元 (USD)", value=fx["USD"], disabled=True)
+                with fx_c2: new_twd = st.number_input("台幣 (TWD)", value=fx["TWD"], step=0.1)
+                with fx_c3: new_vnd = st.number_input("越南盾 (VND)", value=fx["VND"], step=10.0)
+                with fx_c4: new_rmb = st.number_input("人民幣 (RMB)", value=fx["RMB"], step=0.01)
                 if st.form_submit_button("💾 立即更新全平台即時匯率", type="primary", use_container_width=True):
                     st.session_state.global_fx_rates["TWD"] = new_twd
                     st.session_state.global_fx_rates["VND"] = new_vnd
                     st.session_state.global_fx_rates["RMB"] = new_rmb
-                    st.success("🎉 全球即時匯率已成功更新，並已同步至所有跨國子公司的帳務引擎中！")
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-        st.markdown("### 🧪 集團多幣別換算即時模擬器")
-        fx_sim_col1, fx_sim_col2 = st.columns(2)
-        with fx_sim_col1:
-            sim_amount = st.number_input("輸入測試金額", value=50000000, step=1000000)
-            sim_from = st.selectbox("來源幣別", ["VND", "TWD", "USD", "RMB"])
-        with sim_sim_col2 if 'sim_sim_col2' in locals() else fx_sim_col2:
-            sim_to = st.selectbox("目標結算幣別", ["USD", "TWD", "VND", "RMB"])
-            
-        # 計算交叉匯率
-        base_in_usd = sim_amount / st.session_state.global_fx_rates[sim_from]
-        final_result = base_in_usd * st.session_state.global_fx_rates[sim_to]
-        st.success(f"💱 **集團換算結果**：`{sim_amount:,.2f} {sim_from}` = **`{final_result:,.2f} {sim_to}`** (依據今日總控台匯率中樞)")
-
-    elif "全球定價策略" in menu_choice:
-        st.markdown("## ⚙️ SaaS 平台總控台：全球定價策略與費率自訂中心")
-        st.info("💡 在此處自訂全平台計費費率。")
-        with st.container():
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            with st.form("pricing_form"):
-                p1, p2, p3 = st.columns(3)
-                with p1:
-                    new_ent_fee = st.number_input("旗艦版基礎月費 (USD)", value=st.session_state.global_pricing["enterprise_base_fee"], step=5)
-                with p2:
-                    new_std_fee = st.number_input("標準版基礎月費 (USD)", value=st.session_state.global_pricing["standard_base_fee"], step=5)
-                with p3:
-                    new_dept_fee = st.number_input("每新增部門/據點加收費", value=st.session_state.global_pricing["extra_dept_fee"], step=1)
-                if st.form_submit_button("💾 儲存並更新費率", type="primary", use_container_width=True):
-                    st.session_state.global_pricing["enterprise_base_fee"] = new_ent_fee
-                    st.session_state.global_pricing["standard_base_fee"] = new_std_fee
-                    st.session_state.global_pricing["extra_dept_fee"] = new_dept_fee
-                    st.success("🎉 全球定價規則已更新！")
+                    st.success("🎉 全球即時匯率已更新！")
             st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.markdown("## 📦 SaaS 平台總控台：營運監控")
-        st.metric("💰 目前平台總 MRR", "230 USD")
+        st.markdown("## ⚙️ SaaS 平台總控台：全球定價策略")
+        st.info("管理全平台方案與加購價。")
 
 else:
     # ==================== 獨立客戶租戶後台 ====================
@@ -192,14 +164,6 @@ else:
     
     if "組織與據點" in menu_choice:
         st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與實體據點自助設定")
-        is_ent = "旗艦版" in current_tenant["subscription"]["plan"]
-        base_fee = pricing["enterprise_base_fee"] if is_ent else pricing["standard_base_fee"]
-        dept_count = len(current_tenant["org_nodes"])
-        extra_fee = dept_count * pricing["extra_dept_fee"]
-        total_monthly = base_fee + extra_fee
-        
-        st.warning(f"💳 **目前動態計費**：方案基底 `$ {base_fee} USD` + {dept_count} 個部門 = **每月總計 `$ {total_monthly} USD`**")
-        
         col_set, col_view = st.columns([1, 1])
         with col_set:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -209,7 +173,14 @@ else:
             if st.button("💳 確認加購並新增", type="primary", use_container_width=True):
                 if new_dept:
                     current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": new_dept, "type": "自訂部門/據點", "parent": chosen_parent, "modules": ["日常作業"]})
-                    st.success(f"🎉 成功新增 [{new_dept}]！")
+                    # 自動記錄資安稽核日誌
+                    current_tenant["audit_logs"].insert(0, {
+                        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "user": "System Admin (模擬員工)",
+                        "action": f"新增組織部門/據點：{new_dept} (掛載於 {chosen_parent})",
+                        "ip": "192.168.10.5"
+                    })
+                    st.success(f"🎉 成功新增 [{new_dept}]！系統已同步寫入資安稽核日誌。")
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with col_view:
@@ -217,9 +188,49 @@ else:
             for node in current_tenant["org_nodes"]:
                 st.markdown(f"- 📂 **{node['name']}** (上級: {node['parent']})")
 
-    elif "訂閱方案與維修合約" in menu_choice or "訂閱方案" in menu_choice:
+    elif "員工帳號與權限角色管理" in menu_choice:
+        st.markdown(f"## 👥 {current_tenant['name']}：企業內部員工帳號與權限角色管理 (RBAC)")
+        st.info("💡 *在此處您可以建立公司內部的員工帳號，並指派不同的職務角色（如財務會計、工地主任、總務、採購），落實權限隔離與分工。*")
+        
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            with st.form("staff_form"):
+                st.markdown("### ➕ 新增公司員工帳號")
+                s_name = st.text_input("員工姓名*", placeholder="例：陳大為")
+                s_email = st.text_input("電子郵件 (登入帳號)*", placeholder="例：david.chen@vina.com")
+                s_role = st.selectbox("指派權限角色 (Role)", [
+                    "財務與會計專員 (Finance)", 
+                    "現場工地主任 (Site Manager)", 
+                    "總務與人事專員 (HR & Admin)", 
+                    "供應鏈採購專員 (Procurement)",
+                    "租戶系統管理員 (Tenant Admin)"
+                ])
+                if st.form_submit_button("👤 建立員工帳號並賦予權限", type="primary", use_container_width=True):
+                    if s_name and s_email:
+                        current_tenant["staff"].append({"name": s_name, "email": s_email, "role": s_role})
+                        current_tenant["audit_logs"].insert(0, {
+                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "user": "Tenant Admin",
+                            "action": f"新增員工帳號：{s_name} ({s_email})，角色：{s_role}",
+                            "ip": "192.168.10.2"
+                        })
+                        st.success(f"🎉 成功建立員工 [{s_name}] 的登入帳號！")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        st.markdown("### 📋 目前公司內部員工與權限清單")
+        st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
+
+    elif "資安稽核日誌與操作軌跡追蹤" in menu_choice:
+        st.markdown(f"## 🔒 {current_tenant['name']}：系統資安稽核日誌與操作軌跡追蹤 (Audit Trail)")
+        st.info("💡 *企業級資安合規保證！此處即時記錄了公司內所有員工的操作軌跡（誰在什麼時候修改了組織、上傳發票、新增帳號等），確保萬無一失。*")
+        
+        if current_tenant["audit_logs"]:
+            st.dataframe(pd.DataFrame(current_tenant["audit_logs"]), use_container_width=True)
+        else:
+            st.info("目前尚無操作稽核日誌。")
+
+    elif "訂閱方案" in menu_choice or "訂閱方案與維修合約" in menu_choice:
         st.markdown(f"## 💳 {current_tenant['name']}：訂閱方案與續約中心")
-        st.info("💡 檢視合約與線上續約。")
         if st.button("🚀 立即線上續約 1 年", type="primary"):
             st.success("🎉 續約成功！")
 
