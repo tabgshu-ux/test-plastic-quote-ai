@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
+import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (全功能部門與樂高模組市集 App Store)
+# 🧩 SaaS 企業級多租戶 AI-ERP 平台 (完整功能大合集：市集市集 + 組織圖 + AP + 總控台)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Feature App Store",
+    page_title="SaaS Enterprise Modular AI-ERP Ultimate",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -32,12 +33,55 @@ st.markdown("""
         border-radius: 6px;
         font-weight: 600;
     }
+    .org-root-card {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 15px;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    .org-level1-card {
+        background: #ffffff;
+        border: 2px solid #2563eb;
+        color: #1e293b;
+        padding: 10px 15px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin: 4px;
+        min-width: 160px;
+    }
+    .org-level2-card {
+        background: #f0fdf4;
+        border: 2px solid #10b981;
+        color: #065f46;
+        padding: 8px 12px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin: 3px;
+        min-width: 140px;
+        font-size: 12px;
+    }
+    .tree-connector {
+        width: 2px;
+        height: 20px;
+        background-color: #94a3b8;
+        margin: 0 auto;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # 3. 初始化全域資料
 if "global_pricing" not in st.session_state:
-    st.session_state.global_pricing = {"base_fee": 150, "module_fee": 15}
+    st.session_state.global_pricing = {"enterprise_base_fee": 150, "standard_base_fee": 80, "module_fee": 15}
 
 if "global_fx_rates" not in st.session_state:
     st.session_state.global_fx_rates = {"USD": 1.0, "TWD": 31.50, "VND": 25400.00, "RMB": 7.20}
@@ -65,32 +109,31 @@ ALL_ENTERPRISE_DEPARTMENTS = [
     "💻 資訊技術與系統開發部 (IT & Software Development)"
 ]
 
-# 各部門對應的模組市集大合集
 DEPARTMENT_MODULE_CATALOG = {
     "👑 董事長室 / 總經理室 (Executive & Board Room)": {
-        "col1": ["全球原物料即時行情看板", "國際匯率多幣別換算中心", "全球股市財經大盤監控", "綜合損益表與資產負債表", "企業 KPI 與多維度 BI 戰情室"],
-        "col2": ["智能進銷存與批號效期管理", "全球供應鏈採購比價系統", "倉儲物流與條碼掃描(WMS)", "供應商交期與品質評鑑系統", "進出口報關與海運物流追蹤", "條碼/QR Code與資產標籤列印"],
-        "col3": ["總帳會計、傳票與會計師報表", "生產排程、BOM表與製程智考", "CRM 客戶關係與外貿商機管理", "人事薪酬、勞健保與考勤排班", "電子簽核流程引擎 (BPM)", "AI 智慧語音助理與跨國翻譯"]
+        "col1": ["全局戰情室與BI分析", "高階決策審核", "營運總控台", "跨部門協調"],
+        "col2": ["智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑"],
+        "col3": ["總帳會計與報表", "生產排程與BOM管理", "CRM客戶關係管理", "人事考勤與薪資計算"]
     },
     "👥 人力資源與行政管理部 (HR & Admin Dept)": {
-        "col1": ["人事組織架構與編制管理", "員工考勤打卡與GPS定位管理", "多國薪資計算與勞健保投保", "教育訓練與考核績效追蹤", "辦公資產與福委會管理系統"],
-        "col2": ["內部公告與員工公文簽核", "訪客預約與門禁人臉辨識對接", "會議室與公司車輛預約系統", "辦公用品請購與庫存申領", "勞安衛檢查與教育訓練紀錄"],
-        "col3": ["AI 履歷篩選與面試排程助手", "員工滿意度調查與離職分析", "法規合規與勞資糾紛預防資料庫", "多語言員工自助服務 App 介面", "跨國簽證與外籍員工管理"]
+        "col1": ["人事組織架構管理", "員工考勤打卡與GPS", "多國薪資與勞健保", "教育訓練與考核"],
+        "col2": ["內部公告與公文簽核", "訪客預約與門禁對接", "會議室與車輛預約", "辦公用品請購申領"],
+        "col3": ["AI 履歷篩選助手", "員工滿意度調查", "勞資合規資料庫", "多語言員工App"]
     },
     "💰 財務與資本運作部 (Finance Dept)": {
-        "col1": ["全球多幣別資金水位管理", "應收帳款(AR)與催收追蹤", "應付帳款(AP)與付款排程", "銀行融資與信用狀(LC)管理", "現金流量預測與財報分析模型"],
-        "col2": ["各子公司損益合併報表", "稅務申報試算與發票勾稽", "預算編列與部門費用控管", "資本支出(CAPEX)審核追蹤", "企業投資與資產配置戰情室"],
-        "col3": ["AI 異常財務交易自動預警", "電子發票與越南紅發票整合", "區塊鏈供應鏈金融融資對接", "自動化傳票生成與會計勾稽", "跨國利潤匯出與稅務合規分析"]
+        "col1": ["全球資金水位管理", "應收帳款(AR)催收", "應付帳款(AP)排程", "銀行融資與LC管理"],
+        "col2": ["子公司合併報表", "稅務申報與發票勾稽", "預算編列與費用控管", "資本支出(CAPEX)追蹤"],
+        "col3": ["AI 異常交易預警", "電子發票與越南紅發票", "自動化傳票生成", "跨國利潤匯出分析"]
     },
     "⚙️ 工程與技術服務部 (Engineering & Technical)": {
-        "col1": ["水電工程專案與工項預算編號", "工程估驗與計價請款追蹤", "工地現場點工點料管理", "施工日報表與工時扣減聯動", "工程合約與外包商管理"],
-        "col2": ["設備維修履歷與保養排程", "CAD/BIM 圖檔雲端協同檢視", "工地現場安衛與檢驗查核", "工程材料進場驗收與檢驗", "外包商工班計價與應付帳款"],
-        "col3": ["AI 工程預算超支自動預警", "行動裝置 PDA 現場叫料系統", "工程現場物聯網(IoT)設備監控", "多國工程技術文件資料庫", "智能施工進度甘特圖與排程"]
+        "col1": ["水電工程專案與預算", "工程估驗與計價請款", "工地現場點工點料", "施工日報表與工時扣減"],
+        "col2": ["設備維修履歷保養", "CAD/BIM圖檔協同", "工地現場安衛查核", "外包商工班計價"],
+        "col3": ["AI 工程預算超支預警", "PDA現場叫料系統", "工地物聯網(IoT)監控", "智能施工甘特圖"]
     },
     "🏭 生產製造與廠務管理部 (Manufacturing & Plant)": {
-        "col1": ["MES 製造執行系統與動態報工", "BOM 表與多階用料清單管理", "產線排程與機台產能規劃", "製程工藝與標準作業程序(SOP)", "廠內在製品(WIP)即時追蹤"],
-        "col2": ["設備 OEE 稼動率與故障預警", "模具壽命與保養維護管理", "產線人員績效與計件薪資計算", "車間能源消耗與碳排監控", "製程異常與不良品追蹤處理"],
-        "col3": ["AI 產能瓶頸自動優化建議", "機器視覺(AI)瑕疵檢測對接", "AGV 無人搬運車派工整合", "智慧燈號與大螢幕產線看板", "多工廠產能平衡調度系統"]
+        "col1": ["MES製造執行與報工", "BOM表與用料清單", "產線排程與產能規劃", "製程SOP管理"],
+        "col2": ["設備OEE稼動率預警", "模具壽命與保養維護", "產線計件薪資計算", "車間碳排與能源監控"],
+        "col3": ["AI 產能瓶頸優化", "機器視覺(AI)瑕疵檢測", "AGV無人搬運車派工", "智慧產線看板"]
     }
 }
 
@@ -103,8 +146,13 @@ if "tenants_db" not in st.session_state:
             "price_usd": 170,
             "expiry_date": "2027-10-20",
             "active_department": "👑 董事長室 / 總經理室 (Executive & Board Room)",
-            "enabled_modules": ["全球原物料即時行情看板", "國際匯率多幣別換算中心", "水電工程專案與工項預算編號", "工程估驗與計價請款追蹤"],
-            "org_nodes": [{"id": "n_1", "name": "董事長室", "type": "👑 董事會", "parent": "無 (頂層)"}],
+            "enabled_modules": ["全局戰情室與BI分析", "高階決策審核", "水電工程專案與預算", "工程估驗與計價請款"],
+            "org_nodes": [
+                {"id": "node_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
+                {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 二級部門", "parent": "董事長室"},
+                {"id": "node_fin", "name": "財務會計部", "type": "💰 二級部門", "parent": "董事長室"},
+                {"id": "node_site", "name": "平陽美福工地", "type": "📦 三級據點", "parent": "工程技術部"}
+            ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
             "staff": [{"name": "許福村", "email": "fuchun@vina.com", "role": "Tenant Admin"}],
@@ -117,8 +165,12 @@ if "tenants_db" not in st.session_state:
             "price_usd": 80,
             "expiry_date": "2026-11-05",
             "active_department": "👥 人力資源與行政管理部 (HR & Admin Dept)",
-            "enabled_modules": ["人事組織架構與編制管理", "員工考勤打卡與GPS定位管理"],
-            "org_nodes": [{"id": "w_1", "name": "董事長室", "type": "👑 董事會", "parent": "無 (頂層)"}],
+            "enabled_modules": ["人事組織架構管理", "員工考勤打卡與GPS"],
+            "org_nodes": [
+                {"id": "w_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
+                {"id": "w_branch", "name": "台北旗艦總店", "type": "🏢 一級據點", "parent": "董事長室"},
+                {"id": "w_dept", "name": "洗車美容作業部", "type": "🏭 二級部門", "parent": "台北旗艦總店"}
+            ],
             "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
             "staff": [{"name": "張店長", "email": "manager@wash.com", "role": "Tenant Admin"}],
@@ -146,7 +198,7 @@ with st.sidebar:
     else:
         st.markdown("👑 **目前身分**: `SaaS 平台總管理員 (Master)`")
     
-    st.markdown("---
+    st.markdown("---")
     st.markdown("### 📌 系統導覽選單")
     
     if st.session_state.current_portal == "Master":
@@ -163,8 +215,8 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🧩 樂高積木式模組拼圖與功能開關 (App Store)",
-                "🖱️ 企業組織與部門階層圖管理",
+                "🧩 樂高積木式模組市集與功能開關 (App Store)",
+                "🖱️ ProcessOn 標準組織架構圖與節點 CRUD",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -180,7 +232,7 @@ with st.sidebar:
 if st.session_state.current_portal == "Master":
     if "全球企業租戶動態總覽" in menu_choice:
         st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與管理中心")
-        st.info("💡 *在此處檢視所有企業客戶，並可直接點擊進入該公司後台協助核對與管理！*")
+        st.info("💡 *在此處檢視所有企業客戶，並可直接點擊進入該公司後台協助核對組織圖！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -205,7 +257,7 @@ if st.session_state.current_portal == "Master":
                 "地區位置": t_val["region"],
                 "訂閱方案": t_val["plan"],
                 "每月價格 (USD)": t_val["price_usd"],
-                "啟用部門數": 1,
+                "組織節點數": len(t_val["org_nodes"]),
                 "啟用功能數": len(t_val.get("enabled_modules", [])),
                 "狀態": "🟢 正常營運"
             })
@@ -219,7 +271,7 @@ if st.session_state.current_portal == "Master":
         st.markdown("### 📋 企業租戶列表")
         st.dataframe(df_tenants, use_container_width=True)
         
-        st.markdown("### 🚀 快速進入指定客戶租戶後台與模組市集")
+        st.markdown("### 🚀 快速進入指定客戶租戶後台與組織圖核對")
         quick_cols = st.columns(len(st.session_state.tenants_db))
         for idx, (t_key, t_val) in enumerate(st.session_state.tenants_db.items()):
             with quick_cols[idx]:
@@ -229,7 +281,7 @@ if st.session_state.current_portal == "Master":
                         <span style="font-size: 12px; color: gray;">{t_val['region']} | ${t_val['price_usd']}/月</span>
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"📂 進入模組市集", key=f"btn_{t_key}", use_container_width=True):
+                if st.button(f"📂 進入後台", key=f"btn_{t_key}", use_container_width=True):
                     st.session_state.current_portal = t_key
                     st.rerun()
 
@@ -257,20 +309,17 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：樂高積木式模組拼圖市集 (App Store) ====================
+    # ==================== 個別租戶後台：完整保留所有精彩功能 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "樂高積木式模組拼圖與功能開關" in menu_choice:
-        st.markdown(f"## 🧩 {current_tenant['name']}：樂高積木式模組拼圖與功能開關 (App Store)")
+    if "樂高積木式模組市集與功能開關" in menu_choice:
+        st.markdown(f"## 🧩 {current_tenant['name']}：樂高積木式模組市集與功能開關 (App Store)")
         st.info("💡 *說明：此展示系統【全功能模組大合集】。您可以點選左側任意部門，並自由勾選或組合市面上所有企業管理、高階決策、財會與供應鏈所需的完整模組拼圖。*")
         
         col_left, col_right = st.columns([1, 2.5])
         
         with col_left:
             st.markdown("### 🏢 選擇目標部門 / 管理層")
-            st.markdown("<span style='font-size: 13px; color: gray;'>請點選要配置的部門：</span>", unsafe_allow_html=True)
-            
-            # 使用 radio 讓租戶點選左側部門
             selected_dept = st.radio(
                 "部門選擇",
                 ALL_ENTERPRISE_DEPARTMENTS,
@@ -280,14 +329,11 @@ else:
             current_tenant["active_department"] = selected_dept
             
         with col_right:
-            st.markdown(f"### 🛒 【{selected_dept.split('(')[0].strip()}】的企業全功能模組市集 (App Store)")
-            st.markdown("<span style='font-size: 13px; color: gray;'>頻勾選此部門/高階角色可解鎖啟用的所有功能與價情儀表板：</span>", unsafe_allow_html=True)
-            
-            # 取得當前部門對應的模組清單，若不在預設字典則給予通用模組
+            st.markdown(f"### 🛒 【{selected_dept.split('(')[0].strip()}】的企業全功能模組市集")
             cat_data = DEPARTMENT_MODULE_CATALOG.get(selected_dept, {
-                "col1": ["全局戰情室", "高階決策審核", "營運總控台", "跨部門協調", "督導管理"],
-                "col2": ["進銷存與批號效期管理", "供應鏈採購比價系統", "倉儲物流與條碼掃描(WMS)", "供應商交期與品質評鑑", "進出口報關與海運追蹤"],
-                "col3": ["總帳會計與報表", "生產排程與BOM管理", "CRM客戶關係與商機管理", "人事考勤與薪資計算", "電子簽核流程引擎(BPM)"]
+                "col1": ["全局戰情室", "高階決策審核", "營運總控台", "跨部門協調"],
+                "col2": ["智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑"],
+                "col3": ["總帳會計與報表", "生產排程與BOM", "CRM客戶關係管理", "人事考勤與薪資"]
             })
             
             if "enabled_modules" not in current_tenant:
@@ -295,64 +341,168 @@ else:
                 
             with st.form("module_appstore_form"):
                 mc1, mc2, mc3 = st.columns(3)
-                
                 new_selected_mods = []
                 
                 with mc1:
-                    st.markdown("#### 📈 高階決策與即時行情")
+                    st.markdown("#### 📈 高階決策與行情")
                     for mod in cat_data["col1"]:
-                        is_checked = st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}")
-                        if is_checked:
+                        if st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}"):
                             new_selected_mods.append(mod)
-                            
                 with mc2:
-                    st.markdown("#### 📦 供應鏈與進銷存 (SCM)")
+                    st.markdown("#### 📦 供應鏈與進銷存")
                     for mod in cat_data["col2"]:
-                        is_checked = st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}")
-                        if is_checked:
+                        if st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}2"):
                             new_selected_mods.append(mod)
-                            
                 with mc3:
-                    st.markdown("#### 💰 財會、生產與其他核心")
+                    st.markdown("#### 💰 財會與生產核心")
                     for mod in cat_data["col3"]:
-                        is_checked = st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}")
-                        if is_checked:
+                        if st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}3"):
                             new_selected_mods.append(mod)
                             
                 st.markdown("---")
-                
-                # 計算動態價格
                 total_mods_count = len(set(new_selected_mods))
                 calculated_price = 80 + (total_mods_count * 5)
                 current_tenant["price_usd"] = calculated_price
                 
-                st.markdown(f"### 💳 目前配置計費試算：已選定 `{total_mods_count}` 項模組 ➔ 預估每月總訂閱費用：**`$ {calculated_price} USD`**")
+                st.markdown(f"### 💳 計費試算：已選定 `{total_mods_count}` 項模組 ➔ 每月總訂閱費用：**`$ {calculated_price} USD`**")
                 
-                if st.form_submit_button(f"💾 儲存【{selected_dept.split('(')[0].strip()}】的全功能拼圖圈定", type="primary", use_container_width=True):
+                if st.form_submit_button(f"💾 儲存【{selected_dept.split('(')[0].strip()}】的模組拼圖設定", type="primary", use_container_width=True):
                     current_tenant["enabled_modules"] = list(set(new_selected_mods))
-                    st.success(f"🎉 成功儲存 [{selected_dept.split('(')[0].strip()}] 的模組拼圖設定！當前總月費更新為 ${calculated_price} USD。")
+                    st.success(f"🎉 成功儲存模組設定！當前總月費更新為 ${calculated_price} USD。")
                     st.rerun()
 
-    elif "企業組織與部門階層圖管理" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：企業組織與部門階層圖管理")
-        st.info("💡 在此處檢視與管理您公司的組織架構圖與節點掛載。")
-        if current_tenant["org_nodes"]:
-            st.dataframe(pd.DataFrame(current_tenant["org_nodes"]), use_container_width=True)
+    elif "ProcessOn 標準組織架構圖與節點 CRUD" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：ProcessOn 標準組織架構圖與節點管理")
+        st.info("💡 *在此處自由新增、修改或刪除公司內部組織節點，下方即時呈現標準階層方塊組織樹狀圖！*")
+        
+        col_set, col_edit = st.columns([1, 1])
+        existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
+        
+        with col_set:
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.markdown("### ➕ 新增組織節點或據點")
+            with st.form("org_add_form"):
+                n_name = st.text_input("部門/據點名稱*", placeholder="例：工程技術部 / 台北旗艦總店")
+                n_type = st.selectbox("部門層級屬性", ["👑 頂層 (Board / 董事會)", "👑 一級部門 (Headquarters)", "⚙️ 二級部門 (Functional Dept)", "🏢 三級據點/倉庫 (Branch / Warehouse)"])
+                n_parent = st.selectbox("指定上級掛載點", existing_parents)
+                
+                if st.form_submit_button("🧱 確認新增節點", type="primary", use_container_width=True):
+                    if n_name:
+                        current_tenant["org_nodes"].append({
+                            "id": f"node_{uuid.uuid4().hex[:8]}",
+                            "name": n_name,
+                            "type": n_type,
+                            "parent": n_parent
+                        })
+                        st.success(f"🎉 成功新增 [{n_name}]！")
+                        st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        with col_edit:
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.markdown("### ✏️ 修改或刪除現有節點 (支援唯一 ID)")
+            if current_tenant["org_nodes"]:
+                node_options = {f"{n['name']} ({n['type']}) [ID: {n['id']}]": n for n in current_tenant["org_nodes"]}
+                selected_label = st.selectbox("選擇要管理的節點", list(node_options.keys()))
+                target_node = node_options[selected_label]
+                
+                if target_node:
+                    with st.form("org_edit_form"):
+                        up_name = st.text_input("修改名稱", value=target_node["name"])
+                        up_parent = st.selectbox("修改上級掛載點", existing_parents, index=existing_parents.index(target_node["parent"]) if target_node["parent"] in existing_parents else 0)
+                        
+                        cb1, cb2 = st.columns(2)
+                        with cb1:
+                            sub_u = st.form_submit_button("💾 儲存修改", type="primary", use_container_width=True)
+                        with cb2:
+                            sub_d = st.form_submit_button("🗑️ 刪除此節點", use_container_width=True)
+                            
+                        if sub_u:
+                            target_node["name"] = up_name
+                            target_node["parent"] = up_parent
+                            st.success("🎉 節點更新成功！")
+                            st.rerun()
+                        if sub_d:
+                            if target_node["parent"] == "無 (頂層)":
+                                st.error("❌ 無法刪除頂層最高決策層！")
+                            else:
+                                current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["id"] != target_node["id"]]
+                                st.success("🗑️ 節點已刪除！")
+                                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # 下方 ProcessOn 標準方塊組織圖呈現
+        st.markdown("---")
+        st.markdown("### 📊 貴公司標準階層方塊組織架構圖 (Org Chart Tree)")
+        st.info("💡 *下方即時呈現如同 ProcessOn 那樣層級分明的標準方塊組織圖！*")
+        
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
+            others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
+            
+            for r in roots:
+                st.markdown(f"""
+                    <div style="text-align: center;">
+                        <div class="org-root-card">
+                            👑 {r['name']} <span style="font-size: 12px; font-weight: normal;">({r['type']})</span>
+                        </div>
+                    </div>
+                    <div class="tree-connector"></div>
+                """, unsafe_allow_html=True)
+                
+                level1 = [n for n in others if n["parent"] == r["name"]]
+                if level1:
+                    cols1 = st.columns(len(level1))
+                    for idx1, l1 in enumerate(level1):
+                        with cols1[idx1]:
+                            st.markdown(f"""
+                                <div style="text-align: center;">
+                                    <div class="org-level1-card">
+                                        <b>{l1['name']}</b><br>
+                                        <span style="font-size: 11px; color: gray;">{l1['type']}</span>
+                                    </div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                            level2 = [n for n in others if n["parent"] == l1["name"]]
+                            if level2:
+                                st.markdown('<div class="tree-connector" style="height: 15px;"></div>', unsafe_allow_html=True)
+                                for l2 in level2:
+                                    st.markdown(f"""
+                                        <div style="text-align: center;">
+                                            <div class="org-level2-card">
+                                                <b>{l2['name']}</b><br>
+                                                <span style="font-size: 10px; color: gray;">{l2['type']}</span>
+                                            </div>
+                                        </div>
+                                    """, unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
     elif "員工帳號與權限角色管理" in menu_choice:
         st.markdown(f"## 👥 {current_tenant['name']}：員工帳號與權限角色管理 (RBAC)")
         st.info("💡 建立公司內部員工帳號與職務。")
-        if current_tenant["staff"]:
-            st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            with st.form("staff_form"):
+                s_name = st.text_input("員工姓名*", placeholder="例：陳大為")
+                s_email = st.text_input("電子郵件 (登入帳號)*", placeholder="例：david@company.com")
+                s_role = st.selectbox("指派權限角色", ["財務與會計專員", "現場工地主任", "總務與人事專員", "採購專員", "租戶系統管理員"])
+                if st.form_submit_button("👤 建立員工帳號", type="primary", use_container_width=True):
+                    if s_name and s_email:
+                        current_tenant["staff"].append({"name": s_name, "email": s_email, "role": s_role})
+                        st.success(f"🎉 成功建立員工 [{s_name}]！")
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
 
-    elif "系統資安稽核日誌" in menu_choice:
+    elif "資安稽核日誌" in menu_choice:
         st.markdown(f"## 🔒 {current_tenant['name']}：系統資安稽核日誌")
         st.info("💡 記錄公司內部員工操作軌跡。")
-        if current_tenant["audit_logs"]:
-            st.dataframe(pd.DataFrame(current_tenant["audit_logs"]), use_container_width=True)
+        st.dataframe(pd.DataFrame(current_tenant["audit_logs"]), use_container_width=True)
 
     elif "AI 硬體與車牌" in menu_choice:
         st.markdown(f"## 🤖 {current_tenant['name']}：AI 硬體與車牌/人臉辨識自助掛接")
+        st.info("💡 管理公司內部的 AI 鏡頭與辨識設備。")
         if current_tenant["iot_devices"]:
             st.dataframe(pd.DataFrame(current_tenant["iot_devices"]), use_container_width=True)
 
