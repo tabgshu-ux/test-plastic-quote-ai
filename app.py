@@ -102,6 +102,7 @@ if "滑鼠流視覺化組織拼圖" in menu_choice:
 
     st.markdown("---")
     
+    # 這裡將變數統一命名為 col_picker 與 col_tree
     col_picker, col_tree = st.columns([1, 1])
     
     with col_picker:
@@ -109,7 +110,6 @@ if "滑鼠流視覺化組織拼圖" in menu_choice:
         st.markdown("### 🛠️ 自訂模組與據點快速拼裝")
         st.markdown("如果您需要掛載其他部門或實體據點，只需用滑鼠選擇即可：")
         
-        # 下拉選單免打字
         preset_dept = st.selectbox("選擇要新增的部門或實體據點：", [
             "👥 人力資源與行政管理部",
             "🌍 國際貿易與海外業務部",
@@ -119,11 +119,9 @@ if "滑鼠流視覺化組織拼圖" in menu_choice:
             "💻 資訊技術與系統開發部 (IT)"
         ])
         
-        # 自動對應取得現有節點作為上級
         existing_parents = [node["name"] for node in st.session_state.org_nodes]
         target_parent = st.selectbox("指定其上級掛載點 (Parent):", existing_parents)
         
-        # 快速勾選拼圖
         st.markdown("#### 🧩 快速勾選功能拼圖：")
         p1, p2 = st.columns(2)
         with p1:
@@ -156,7 +154,7 @@ if "滑鼠流視覺化組織拼圖" in menu_choice:
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_preview:
+    with col_tree:
         st.markdown("### 🌳 目前企業組織樹狀拼圖總覽")
         st.info("💡 滑鼠點選即時生成的組織與實體據點掛載關係：")
         
