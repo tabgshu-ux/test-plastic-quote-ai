@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 
 # 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Billing",
+    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Custom Billing",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -33,7 +33,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化多租戶資料庫與商業計費中心 (Billing & Tenants Hub)
+# 3. 初始化全域定價策略與多租戶資料庫
+if "global_pricing" not in st.session_state:
+    st.session_state.global_pricing = {
+        "enterprise_base_fee": 150,  # 企業旗艦版預設月費 (USD)
+        "standard_base_fee": 80,     # 標準版預設月費 (USD)
+        "extra_dept_fee": 5          # 每多一個部門/據點加收費率 (USD)
+    }
+
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
         "tenant_master": {
@@ -61,9 +68,7 @@ if "tenants_db" not in st.session_state:
                 "plan": "跨國製造與工程旗艦版 (Enterprise)",
                 "status": "🟢 正常訂閱中",
                 "expires": "2027-10-20",
-                "monthly_fee_usd": 150,
                 "extra_departments": 4,
-                "extra_fee_usd": 20, # 每多一個部門 +5 USD
                 "maintenance_contract": "含 24/7 VIP 技術維修與遠端支援"
             }
         },
@@ -81,9 +86,7 @@ if "tenants_db" not in st.session_state:
                 "plan": "智慧零售與服務標準版 (Standard)",
                 "status": "🟡 即將到期 (剩餘 15 天)",
                 "expires": "2026-11-05",
-                "monthly_fee_usd": 80,
                 "extra_departments": 2,
-                "extra_fee_usd": 0,
                 "maintenance_contract": "標準線上客服維修支援"
             }
         }
@@ -116,7 +119,8 @@ with st.sidebar:
         menu_choice = st.radio(
             "選擇管理模組 (Master)",
             [
-                "📦 SaaS 平台模組市集與全租戶營收監控 (Master Billing)",
+                "⚙️ 全球定價策略與計費費率自訂 (Custom Pricing)",
+                "📦 SaaS 平台模組市集與全租戶營收監控",
                 "📊 平台運行狀態與跨租戶數據監控"
             ]
         )
@@ -124,7 +128,7 @@ with st.sidebar:
         menu_choice = st.radio(
             "選擇客戶內部模組 (Tenant IT Panel)",
             [
-                "🖱️ 本公司組織與據點 IT 自行設定 (含計費)",
+                "🖱️ 本公司組織與據點 IT 自行設定 (含即時計費)",
                 "💳 訂閱方案、維修合約與續約付費 (Billing & Renewal)",
                 "🤖 本公司 AI 硬體與車牌/人臉辨識掛接",
                 "🇻🇳 本公司越南紅發票與應付帳款 (AP)",
@@ -138,53 +142,75 @@ with st.sidebar:
 
 # 5. 主畫面邏輯路由
 if current_tenant_key == "tenant_master":
-    # ==================== SaaS 總控台 (我們自己看的營收與續約管理) ====================
-    st.markdown("## 📦 SaaS 平台總控台：全租戶營收、訂閱與續約管理 (Master Billing)")
-    st.info("💡 *此處為平台運營商視角。您可以總覽所有客戶的訂閱方案、每月經常性收入 (MRR)、部門擴充計費與維修合約到期狀況。*")
-    
-    m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.metric("💰 平台總 MRR (月營收)", "230 USD", delta="+15% MoM")
-    with m2:
-        st.metric("🏢 活躍企業租戶數", "2 家", delta="成長中")
-    with m3:
-        st.metric("⚠️ 30天內即將到期合約", "1 家 (台北洗車坊)", delta="需發送續約提醒", delta_color="inverse")
-    with m4:
-        st.metric("💳 自動續約扣款成功率", "100%", delta="Stripe Gateway")
+    # ==================== SaaS 總控台：自訂定價與費率管理 ====================
+    if "全球定價策略" in menu_choice:
+        st.markdown("## ⚙️ SaaS 平台總控台：全球定價策略與費率自訂中心 (Custom Pricing Engine)")
+        st.info("💡 *在此處您可以自由調整全平台的收費規則。所有客戶後台的計費與新增部門加價，都會即時依據您在這裡設定的費率自動計算！*")
         
-    st.markdown("---")
-    st.markdown("### 📋 所有企業租戶訂閱與計費總表")
-    billing_summary_data = [
-        {"租戶代碼": "tenant_vina_水电", "公司名稱": "越南平陽水電工程", "訂閱方案": "企業旗艦版 ($150)", "部門數": 4, "額外加收": "$20", "合約到期日": "2027-10-20", "狀態": "🟢 正常"},
-        {"租戶代碼": "tenant_taipei_wash", "公司名稱": "台北極速智慧洗車坊", "訂閱方案": "標準版 ($80)", "部門數": 2, "額外加收": "$0", "合約到期日": "2026-11-05", "狀態": "🟡 15天後到期"}
-    ]
-    st.dataframe(pd.DataFrame(billing_summary_data), use_container_width=True)
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            with st.form("pricing_form"):
+                st.markdown("### 💵 自訂 SaaS 方案基礎月費與加購費率 (USD)")
+                
+                p1, p2, p3 = st.columns(3)
+                with p1:
+                    new_ent_fee = st.number_input("旗艦版基礎月費 (Enterprise)", value=st.session_state.global_pricing["enterprise_base_fee"], step=5)
+                with p2:
+                    new_std_fee = st.number_input("標準版基礎月費 (Standard)", value=st.session_state.global_pricing["standard_base_fee"], step=5)
+                with p3:
+                    new_dept_fee = st.number_input("每新增一個部門/據點加收費", value=st.session_state.global_pricing["extra_dept_fee"], step=1)
+                
+                st.markdown("---")
+                if st.form_submit_button("💾 儲存並即時更新全球定價策略", type="primary", use_container_width=True):
+                    st.session_state.global_pricing["enterprise_base_fee"] = new_ent_fee
+                    st.session_state.global_pricing["standard_base_fee"] = new_std_fee
+                    st.session_state.global_pricing["extra_dept_fee"] = new_dept_fee
+                    st.success("🎉 全球定價規則已成功更新！所有租戶的計費方式已即時同步生效。")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        st.markdown("### 📊 目前生效中的費率總覽")
+        st.markdown(f"- 企業旗艦版月費：**`$ {st.session_state.global_pricing['enterprise_base_fee']} USD`**")
+        st.markdown(f"- 標準版月費：**`$ {st.session_state.global_pricing['standard_base_fee']} USD`**")
+        st.markdown(f"- 部門/據點彈性加購價：**`$ {st.session_state.global_pricing['extra_dept_fee']} USD / 個`**")
+
+    else:
+        st.markdown("## 📦 SaaS 平台總控台：全租戶營收與模組市集")
+        st.info("💡 管理全平台模組市集與租戶營收狀況。")
+        st.metric("💰 目前平台總 MRR (月營收)", "230 USD")
+        st.dataframe(pd.DataFrame([
+            {"公司名稱": "越南平陽水電工程", "方案": "旗艦版", "狀態": "🟢 正常"},
+            {"公司名稱": "台北極速智慧洗車坊", "方案": "標準版", "狀態": "🟡 15天後到期"}
+        ]), use_container_width=True)
 
 else:
-    # ==================== 獨立客戶租戶後台 (含部門新增付費與續約管理) ====================
+    # ==================== 獨立客戶租戶後台 (依全域定價動態計費) ====================
+    pricing = st.session_state.global_pricing
+    
     if "組織與據點" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與實體據點自助設定 (含按量計費)")
-        st.info("💡 *貴公司的 IT 可以隨時新增部門或倉庫。注意：系統採彈性計費，每新增一個部門或實體據點將自動加收 5 USD/月。*")
+        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與實體據點自助設定 (含自訂計費)")
         
-        # 顯示當前計費提示
-        sub_info = current_tenant["subscription"]
-        st.warning(f"💳 **目前計費方案**：`{sub_info['plan']}` | 現有部門/據點數：`{len(current_tenant['org_nodes'])}` 個 (每月額外加收：`$ {sub_info['extra_fee_usd']} USD`)")
+        # 根據方案與部門數量動態計算總費用
+        is_ent = "旗艦版" in current_tenant["subscription"]["plan"]
+        base_fee = pricing["enterprise_base_fee"] if is_ent else pricing["standard_base_fee"]
+        dept_count = len(current_tenant["org_nodes"])
+        extra_fee = dept_count * pricing["extra_dept_fee"]
+        total_monthly = base_fee + extra_fee
+        
+        st.warning(f"💳 **目前動態計費**：方案基底 `$ {base_fee} USD` + {dept_count} 個部門/據點 (每個 ${pricing['extra_dept_fee']} USD) = **每月總計 `$ {total_monthly} USD`**")
         
         col_set, col_view = st.columns([1, 1])
         
         with col_set:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ 新增部門或實體據點 (付費確認)")
+            st.markdown(f"### ➕ 新增部門或實體據點 (每新增一個加收 ${pricing['extra_dept_fee']} USD)")
             new_dept = st.text_input("輸入要新增的部門或倉庫名稱", placeholder="例：越南美福二廠 / 財務部")
             existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
             chosen_parent = st.selectbox("指定上級掛載點", existing_parents)
             
-            st.markdown("ℹ️ *新增此據點將使您的每月訂閱費自動增加 5 USD。*")
             if st.button("💳 確認加購並新增部門/據點", type="primary", use_container_width=True):
                 if new_dept:
                     current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": new_dept, "type": "自訂部門/據點", "parent": chosen_parent, "modules": ["日常作業"]})
-                    current_tenant["subscription"]["extra_fee_usd"] += 5
-                    st.success(f"🎉 成功新增 [{new_dept}]！已自動更新每月帳單（增加 5 USD）。")
+                    st.success(f"🎉 成功新增 [{new_dept}]！系統已依據管理員設定的費率自動更新帳單。")
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
@@ -202,37 +228,36 @@ else:
 
     elif "訂閱方案、維修合約" in menu_choice:
         st.markdown(f"## 💳 {current_tenant['name']}：訂閱方案、維修合約與續約付費中心")
-        st.info("💡 *在此處您可以檢視貴公司的軟體訂閱狀態、維修合約等級，並透過線上金流隨時進行續約或升級方案。*")
         
-        sub = current_tenant["subscription"]
+        is_ent = "旗艦版" in current_tenant["subscription"]["plan"]
+        base_fee = pricing["enterprise_base_fee"] if is_ent else pricing["standard_base_fee"]
+        dept_count = len(current_tenant["org_nodes"])
+        extra_fee = dept_count * pricing["extra_dept_fee"]
+        total_monthly = base_fee + extra_fee
         
         sc1, sc2 = st.columns(2)
         with sc1:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 📦 目前訂閱與帳單明細")
-            st.markdown(f"- **目前方案**: `{sub['plan']}`")
-            st.markdown(f"- **訂閱狀態**: `{sub['status']}`")
-            st.markdown(f"- **合約到期日**: `{sub['expires']}`")
-            st.markdown(f"- **基本月租費**: `$ {sub['monthly_fee_usd']} USD`")
-            st.markdown(f"- **額外部門/據點加收**: `$ {sub['extra_fee_usd']} USD`")
-            st.markdown(f"- **總計每月應繳金額**: **`$ {sub['monthly_fee_usd'] + sub['extra_fee_usd']} USD / 月`**")
+            st.markdown("### 📦 目前動態計費明細 (即時對應總控台定價)")
+            st.markdown(f"- **目前方案**: `{current_tenant['subscription']['plan']}`")
+            st.markdown(f"- **方案基礎月費**: `$ {base_fee} USD`")
+            st.markdown(f"- **現有部門/據點數**: `{dept_count} 個` (費率: ${pricing['extra_dept_fee']}/個)")
+            st.markdown(f"- **額外加收總額**: `$ {extra_fee} USD`")
+            st.markdown(f"- **總計每月應繳金額**: **`$ {total_monthly} USD / 月`**")
             st.markdown('</div>', unsafe_allow_html=True)
             
         with sc2:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 🛠️ 維修合約與技術支援 (Maintenance)")
-            st.markdown(f"- **維修等級**: `{sub['maintenance_contract']}`")
-            st.markdown("- **硬體遠端保固**: `包含 (人臉機/車牌機/IoT 設備)`")
-            st.markdown("- **專屬技術顧問**: `線上 7x24 即時支援`")
-            
+            st.markdown("### 🛠️ 維修合約與線上續約")
+            st.markdown(f"- **維修等級**: `{current_tenant['subscription']['maintenance_contract']}`")
+            st.markdown("- **合約到期日**: `{}`".format(current_tenant['subscription']['expires']))
             st.markdown("---")
-            if st.button("🚀 立即線上續約 1 年 (享有 9 折優惠)", type="primary", use_container_width=True):
-                st.success("🎉 續約成功！系統已透過金流閘道完成扣款，合約有效期限已自動展延一年！")
+            if st.button("🚀 立即線上續約 1 年", type="primary", use_container_width=True):
+                st.success("🎉 續約成功！已透過金流閘道完成扣款，合約有效期限已展延一年！")
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif "AI 硬體與車牌" in menu_choice:
         st.markdown(f"## 🤖 {current_tenant['name']}：AI 硬體與車牌/人臉辨識自助掛接")
-        st.info("💡 *貴公司的 IT 可以在此自行輸入硬體 IP，將人臉辨識機或車牌辨識攝影機直接連進公司系統。*")
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             with st.form("tenant_iot_form"):
@@ -248,7 +273,6 @@ else:
 
     elif "越南紅發票" in menu_choice:
         st.markdown(f"## 🇻🇳 {current_tenant['name']}：越南紅發票與應付帳款 (AP)")
-        st.info("💡 *上傳越南發票後，系統自動串聯應付帳款與董事長戰情室。*")
         up_file = st.file_uploader("上傳越南電子發票 (XML / PDF)", type=["xml", "pdf"])
         if up_file or st.button("⚡ 模擬一鍵上傳發票並自動串聯", type="primary"):
             new_inv = {"invoice_no": "999888", "supplier": "越南在地供應商", "items": "辦公耗材與五金", "qty": "10式", "amount_vnd": "8,500,000", "status": "🔴 待付款"}
@@ -262,7 +286,6 @@ else:
 
     else:
         st.markdown(f"## 👑 {current_tenant['name']}：高階戰情室與 P&L 預覽")
-        st.info("💡 *戰情數字即時反映該租戶內部的發票與營運數據。*")
         k1, k2, k3 = st.columns(3)
         with k1:
             st.metric("📊 本月應付帳款總額", "23,500,000 VND", delta="自動連動")
