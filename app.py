@@ -222,4 +222,37 @@ elif "董事長高階戰情室與財務連動預覽" in menu_choice:
     st.markdown("### 📑 集團綜合損益表與應付帳款連動摘要 (P&L Summary)")
     mock_pl = pd.DataFrame([
         {"財務科目": "營業收入淨額 (Revenue)", "金額 (VND)": "850,000,000", "狀態": "🟢 正常"},
-        {"財務
+        {"財務科目": "營業成本 (Cost of Goods Sold)", "金額 (VND)": "420,000,000", "狀態": "🟢 正常"},
+        {"財務科目": "流動負債 - 應付帳款總額 (Accounts Payable)", "金額 (VND)": total_ap_amount, "狀態": "🔴 即時來自發票自動加總"},
+        {"財務科目": "本期淨利 (Net Profit)", "金額 (VND)": "378,300,000", "狀態": "🟢 營運健康"}
+    ])
+    st.dataframe(mock_pl, use_container_width=True)
+
+elif "模組市集與功能授權設定" in menu_choice:
+    st.markdown("## 📦 模組市集與功能授權設定 (App Store)")
+    st.info("💡 *在此處您可以像逛 App Store 一樣，用滑鼠隨選隨開，為您的企業或跨界業務即時解鎖強大功能。*")
+    
+    with st.container():
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.markdown("### 🛒 跨業態與核心模組雲端市集")
+        c_app1, c_app2 = st.columns(2)
+        with c_app1:
+            sub_vn = st.toggle("越南紅發票自動解析與 VAT 稅務模組", value=st.session_state.app_store_subscriptions["vn_tax"])
+            sub_mfg = st.toggle("製造業 MES 現場報工與 OEE 設備監控", value=st.session_state.app_store_subscriptions["mfg_mes"])
+            sub_bi = st.toggle("高階董事會戰情室 (股市/原物料/匯率/P&L)", value=st.session_state.app_store_subscriptions["bi_market"])
+        with c_app2:
+            sub_iot = st.toggle("AI 人臉辨識、指紋與車牌辨識 (ANPR) 閘道", value=st.session_state.app_store_subscriptions["iot_bridge"])
+            sub_wash = st.toggle("洗車場專用：會員儲值、預約與水刀聯動模組", value=st.session_state.app_store_subscriptions["car_wash"])
+            sub_cafe = st.toggle("連鎖咖啡廳專用：POS 點餐與原料自動扣減", value=st.session_state.app_store_subscriptions["coffee_pos"])
+            
+        if st.button("💾 儲存並即時更新本租戶模組授權", type="primary", use_container_width=True):
+            st.session_state.app_store_subscriptions.update({
+                "vn_tax": sub_vn, "mfg_mes": sub_mfg, "bi_market": sub_bi,
+                "iot_bridge": sub_iot, "car_wash": sub_wash, "coffee_pos": sub_cafe
+            })
+            st.success("🎉 模組市集授權已即時更新！")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    st.markdown("## 📊 系統運行與跨庫數據監控")
+    st.info("💡 說明：即時監控各個已掛接外部資料庫與 API 來源的同步狀態。")
