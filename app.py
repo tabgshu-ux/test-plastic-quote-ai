@@ -1,14 +1,15 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (精準階層方塊組織圖與一鍵拼圖管理)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (Plotly 專業互動式組織樹狀圖)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Clean Org Chart",
+    page_title="SaaS Enterprise Modular AI-ERP & Plotly Org Tree",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -34,39 +35,6 @@ st.markdown("""
         font-weight: 600;
         width: 100%;
     }
-    .org-box-root {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 16px;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-        margin-bottom: 10px;
-    }
-    .org-box-dept {
-        background: #ffffff;
-        border: 2px solid #3b82f6;
-        color: #1e293b;
-        padding: 12px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 10px;
-    }
-    .org-box-branch {
-        background: #f0fdf4;
-        border: 2px solid #10b981;
-        color: #065f46;
-        padding: 12px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 10px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -88,6 +56,7 @@ if "tenants_db" not in st.session_state:
             "org_nodes": [
                 {"id": "node_root", "name": "董事長室", "type": "👑 董事會 / 董事長室", "parent": "無 (頂層)"},
                 {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 工程技術部", "parent": "董事長室"},
+                {"id": "node_fin", "name": "財務部", "type": "💰 財務部", "parent": "董事長室"},
                 {"id": "node_store", "name": "平陽美福營業所", "type": "🏢 門市 / 營業所", "parent": "董事長室"}
             ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
@@ -243,12 +212,12 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：拼圖式一鍵掛載與階層方塊組織圖 ====================
+    # ==================== 個別租戶後台：拼圖式一鍵掛載與 Plotly 專業組織圖 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
     if "拼圖式組織與據點一鍵掛載" in menu_choice:
         st.markdown(f"## 🖱️ {current_tenant['name']}：拼圖式組織與營業據點一鍵掛載")
-        st.info("💡 *滑鼠點擊下方積木按鈕即可一鍵新增部門並掛載至指定上級！下方即時呈現最簡單明瞭的階層方塊組織架構圖，支援精準修改與刪除。*")
+        st.info("💡 *滑鼠點擊下方積木按鈕即可一鍵新增部門並掛載至指定上級！下方即時呈現使用 Plotly 繪製的標準互動式組織架構樹狀圖。*")
         
         existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
         selected_parent_target = st.selectbox("📌 步驟一：請選擇要將新部門掛載在哪個上級下方", existing_parents)
@@ -361,41 +330,40 @@ else:
                                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # ==================== 下方乾淨俐落的階層方塊組織圖 ====================
+        # ==================== 下方使用 Plotly 繪製標準階層樹狀圖 (Treemap / Sunburst) ====================
         st.markdown("---")
-        st.markdown("### 📊 貴公司標準階層組織架構圖 (Org Chart)")
-        st.info("💡 *下方即時呈現乾淨俐落的階層方塊組織圖，上下級歸屬與部門歸納一目了然！*")
+        st.markdown("### 📊 貴公司互動式階層組織架構圖 (Plotly Org Tree)")
+        st.info("💡 *下方利用 Plotly 視覺化引擎繪製出方塊階層樹狀圖，點擊方塊可展開細節，層級關係一目了然！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             
-            roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
-            others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
+            # 準備 Plotly Treemap 資料
+            ids = []
+            labels = []
+            parents = []
             
-            def render_org_tree(parent_name, level=1):
-                children = [n for n in others if n["parent"] == parent_name]
-                for child in children:
-                    box_class = "org-box-branch" if "據點" in child['type'] or "倉庫" in child['type'] else "org-box-dept"
-                    arrow = "└── " * level
-                    st.markdown(f"""
-                        <div style="margin-left: {level * 35}px; margin-bottom: 8px;">
-                            <div class="{box_class}">
-                                <span style="font-size: 12px; color: #64748b;">{arrow} 上級主管: [{child['parent']}]</span><br>
-                                <b>{child['name']}</b> <span style="font-size: 12px; font-weight: normal; color: gray;">({child['type']})</span>
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    render_org_tree(child["name"], level + 1)
-
-            for r in roots:
-                st.markdown(f"""
-                    <div class="org-box-root">
-                        👑 {r['name']} ({r['type']})<br>
-                        <span style="font-size: 12px; font-weight: normal; opacity: 0.9;">企業最高決策核心 (頂層)</span>
-                    </div>
-                """, unsafe_allow_html=True)
-                render_org_tree(r["name"], level=1)
-                
+            for node in current_tenant["org_nodes"]:
+                ids.append(node["name"])
+                labels.append(f"{node['name']}<br>({node['type']})")
+                # Plotly 的 parent 如果是頂層需設為 ""
+                p = node["parent"]
+                if p == "無 (頂層)" or not p:
+                    parents.append("")
+                else:
+                    parents.append(p)
+                    
+            fig = go.Figure(go.Treemap(
+                ids=ids,
+                labels=labels,
+                parents=parents,
+                root_color="#2563eb",
+                marker=dict(colorscale="Blues")
+            ))
+            
+            fig.update_layout(margin = dict(t=10, l=10, r=10, b=10), height=400)
+            st.plotly_chart(fig, use_container_width=True)
+            
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif "員工帳號與權限角色管理" in menu_choice:
