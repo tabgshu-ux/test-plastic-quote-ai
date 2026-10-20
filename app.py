@@ -1,3 +1,66 @@
+import streamlit as st
+import pandas as pd
+from sqlalchemy import create_engine, text
+
+# 1. 頁面基本設定 (Mobile-First & 企業級外觀)
+st.set_page_config(
+    page_title="SaaS Enterprise ERP Control Center",
+    page_icon="🏢",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# 2. 自定義精緻企業風 CSS 美化 (UI/UX Styling)
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f8f9fa;
+    }
+    .card-container {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+    }
+    h1, h2, h3 {
+        color: #1e293b;
+    }
+    .stButton>button {
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# 3. 側邊欄：多語系與登入者角色/管理導覽（務必在最前面定義 menu_choice，避免 NameError）
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/company.png", width=64)
+    st.markdown("### 🌐 SaaS ERP 總控台")
+    
+    # 多語系選單
+    lang = st.selectbox("選擇語系 / Select Language", ["繁體中文", "English", "Tiếng Việt", "简体中文"])
+    
+    st.markdown("---")
+    st.markdown("👤 **目前登入者**: `System Admin`")
+    st.markdown("🏢 **目前租戶**: `SaaS Global Control`")
+    
+    st.markdown("---")
+    st.markdown("### 📌 系統導覽選單")
+    menu_choice = st.radio(
+        "選擇管理模組",
+        [
+            "外部資料庫與異質資料來源串聯 (Database Bridge)", 
+            "樂高積木式模組拼圖與功能開關", 
+            "企業組織與部門樹狀管理", 
+            "系統運行與跨庫數據監控"
+        ]
+    )
+    
+    st.markdown("---")
+    if st.button("🚪 登出系統", use_container_width=True):
+        st.info("已安全登出系統。")
+
 # 4. 主畫面邏輯路由
 if "外部資料庫與異質資料來源串聯" in menu_choice:
     st.markdown("## 🔌 外部資料庫與異質資料來源串聯設定 (Database Bridge)")
@@ -80,38 +143,3 @@ elif "樂高積木式模組拼圖與功能開關" in menu_choice:
             [
                 "總經理室 (Executive Office)",
                 "管理部 (Management Dept)",
-                "全公司電子簽核中心 (Approval Center)",
-                "工程與設計中心 (Engineering Dept)",
-                "生產部 (Production Dept)",
-                "資訊管理部 (IT & System)"
-            ]
-        )
-        st.markdown("---")
-        st.markdown(f"📍 **目前正在設定**：\n`{selected_department}`")
-
-    with col_modules:
-        dept_name_only = selected_department.split(' ')[0]
-        st.markdown(f"### 🧩 【{dept_name_only}】的模組拼圖開關")
-        st.markdown("請勾選此部門可使用的系統模組：")
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.checkbox("智能進銷存與庫存管理", value=True, key=f"{selected_department}_m1")
-            st.checkbox("財務會計與應收付管理", value=True, key=f"{selected_department}_m2")
-            st.checkbox("生產排程與BOM表控管", value=False, key=f"{selected_department}_m3")
-        with c2:
-            st.checkbox("CRM 客戶關係與報價模組", value=True, key=f"{selected_department}_m4")
-            st.checkbox("商業智慧 BI 儀表板", value=True, key=f"{selected_department}_m5")
-            st.checkbox("設備維護與物聯網監控", value=False, key=f"{selected_department}_m6")
-
-        st.markdown("---")
-        if st.button(f"💾 儲存【{dept_name_only}】的模組設定", type="primary", use_container_width=True):
-            st.success(f"✅ 已成功將設定儲存至 [{selected_department}]！該部門成員下次登入時將自動生效。")
-
-elif "企業組織與部門樹狀管理" in menu_choice:
-    st.markdown("## 🏢 企業組織與部門樹狀管理 (Dynamic Org Chart)")
-    st.info("💡 說明：動態建構企業組織架構，確保不同部門與員工享有對應的資料列級隔離（Row-Level Security）。")
-
-else:
-    st.markdown("## 📊 系統運行與跨庫數據監控")
-    st.info("💡 說明：即時監控各個已掛接外部資料庫的同步狀態、API 呼叫次數與系統效能。")
