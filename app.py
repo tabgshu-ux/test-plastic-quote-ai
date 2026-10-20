@@ -132,38 +132,67 @@ if "外部資料庫與異質資料來源串聯" in menu_choice:
 
 elif "樂高積木式模組拼圖與功能開關" in menu_choice:
     st.markdown("## 🧩 樂高積木式模組拼圖與功能開關 (Feature Toggles)")
-    st.info("💡 說明：請先在左側選取要設定的【主部門 / 系統】，再為該部門勾選對應的 ERP 功能模組拼圖。")
+    st.info("💡 說明：請先在左側選取要設定的【企業標準部門 / 營運中心】，再為該部門勾選對應的 ERP 功能模組拼圖。")
 
     col_dept, col_modules = st.columns([1, 2])
 
     with col_dept:
-        st.markdown("### 🏢 選擇目標部門")
+        st.markdown("### 🏢 選擇目標部門 (通用市場企業架構)")
+        
+        # 涵蓋市面上各行各業標準化企業組織架構
         dept_options = [
-            "總經理室 (Executive Office)",
-            "管理部 (Management Dept)",
-            "全公司電子簽核中心 (Approval Center)",
-            "工程與設計中心 (Engineering Dept)",
-            "生產部 (Production Dept)",
-            "資訊管理部 (IT & System)"
+            # 1. 經營管理與行政支援類
+            "👑 董事長室 / 總經理室 (Executive Office)",
+            "📋 經營企劃與策略發展部 (Corporate Strategy)",
+            "👥 人力資源與行政管理部 (HR & Admin Dept)",
+            "⚖️ 法務與合規遵循部 (Legal & Compliance)",
+            "🛡️ 資訊安全與稽核中心 (Audit & Info Security)",
+            
+            # 2. 財務與會計類
+            "💰 財務與資本運作部 (Finance Dept)",
+            "📊 會計與稅務管理部 (Accounting & Tax)",
+            
+            # 3. 業務、行銷與客服類
+            "🤝 國內業務與通路發展部 (Domestic Sales)",
+            "🌍 國際貿易與海外業務部 (Global Export Sales)",
+            "📢 市場行銷與品牌企劃部 (Marketing Dept)",
+            "🎧 客戶成功與售後服務部 (Customer Success / CS)",
+            
+            # 4. 供應鏈、採購與物流類
+            "📦 供應鏈與全球採購部 (Supply Chain & Procurement)",
+            "🚚 倉儲物流與庫存管理部 (Warehouse & Logistics)",
+            
+            # 5. 製造、生產與工程類
+            "🏭 生產製造與廠務管理部 (Manufacturing & Plant)",
+            "⚙️ 工程與技術服務部 (Engineering & Technical)",
+            "📅 生產管制與物料控制部 (PMC / Production Control)",
+            "🔍 品質保證與品管中心 (QA / QC Dept)",
+            
+            # 6. 研發與資訊技術類
+            "🔬 研發設計與創新中心 (R&D / Design Center)",
+            "💻 資訊技術與系統開發部 (IT & Software Development)"
         ]
+        
         selected_department = st.radio("請選擇要配置的部門：", dept_options)
         st.markdown("---")
         st.markdown(f"📍 **目前正在設定**：\n`{selected_department}`")
 
     with col_modules:
-        dept_name_only = selected_department.split(' ')[0]
+        dept_name_only = selected_department.split(' ')[1]
         st.markdown(f"### 🧩 【{dept_name_only}】的模組拼圖開關")
         st.markdown("請勾選此部門可使用的系統模組：")
         
         c1, c2 = st.columns(2)
         with c1:
-            st.checkbox("智能進銷存與庫存管理", value=True, key=f"{selected_department}_m1")
-            st.checkbox("財務會計與應收付管理", value=True, key=f"{selected_department}_m2")
-            st.checkbox("生產排程與BOM表控管", value=False, key=f"{selected_department}_m3")
+            st.checkbox("智能進銷存與供應鏈管理", value=True, key=f"{selected_department}_m1")
+            st.checkbox("財務會計與多幣別應收付", value=True, key=f"{selected_department}_m2")
+            st.checkbox("生產排程與BOM表製造管理", value=False, key=f"{selected_department}_m3")
+            st.checkbox("研發專案與版本控制管理", value=False, key=f"{selected_department}_m4")
         with c2:
-            st.checkbox("CRM 客戶關係與報價模組", value=True, key=f"{selected_department}_m4")
-            st.checkbox("商業智慧 BI 儀表板", value=True, key=f"{selected_department}_m5")
-            st.checkbox("設備維護與物聯網監控", value=False, key=f"{selected_department}_m6")
+            st.checkbox("CRM 客戶關係與外貿報價", value=True, key=f"{selected_department}_m5")
+            st.checkbox("商業智慧 BI 決策儀表板", value=True, key=f"{selected_department}_m6")
+            st.checkbox("人事薪酬與出勤考勤管理", value=False, key=f"{selected_department}_m7")
+            st.checkbox("設備維護與物聯網監控", value=False, key=f"{selected_department}_m8")
 
         st.markdown("---")
         if st.button(f"💾 儲存【{dept_name_only}】的模組設定", type="primary", use_container_width=True):
