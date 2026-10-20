@@ -33,7 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化 Session State 模擬動態組織樹與硬體裝置
+# 3. 初始化 Session State 模擬動態組織樹、硬體裝置與租戶訂閱模組
 if "org_nodes" not in st.session_state:
     st.session_state.org_nodes = [
         {"id": "node_01", "name": "👑 董事長室 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "集團綜合損益(P&L)"]},
@@ -45,9 +45,19 @@ if "org_nodes" not in st.session_state:
 if "iot_devices" not in st.session_state:
     st.session_state.iot_devices = [
         {"dev_id": "DEV-001", "name": "大門口 AI 人臉辨識打卡機", "type": "人臉辨識 (Face Recognition)", "ip": "192.168.1.110", "status": "🟢 連線中 (自動同步考勤)"},
-        {"dev_id": "DEV-002", "name": "廠區車道車牌辨識攝影機 (ANPR)", "type": "車牌辨識 (License Plate)", "ip": "192.168.1.115", "status": "🟢 運作中 (自動放行與記錄)"},
-        {"dev_id": "DEV-003", "name": "研發部指紋打卡門禁機", "type": "指紋辨識 (Fingerprint)", "ip": "192.168.1.120", "status": "🟢 連線中"}
+        {"dev_id": "DEV-002", "name": "廠區車道車牌辨識攝影機 (ANPR)", "type": "車牌辨識 (License Plate)", "ip": "192.168.1.115", "status": "🟢 運作中 (自動放行與記錄)"}
     ]
+
+# 模擬模組市集的訂閱開關狀態
+if "app_store_subscriptions" not in st.session_state:
+    st.session_state.app_store_subscriptions = {
+        "vn_tax": True,
+        "iot_bridge": True,
+        "car_wash": False,
+        "coffee_pos": False,
+        "mfg_mes": True,
+        "bi_market": True
+    }
 
 # 4. 側邊欄導覽
 with st.sidebar:
@@ -171,58 +181,13 @@ if "滑鼠流視覺化組織與據點拼圖" in menu_choice:
                 <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid {border_color};">
                     <b>{indent}{node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
                     <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span><br>
-                    <span style="font-size: 11px; color: #6b7280;">📞 啟用拼圖：{', '.join(node['modules']) if node['modules'] else '無'}</span>
+                    <span style="font-size: 11px; color: #6b7280;">🧩 啟用拼圖：{', '.join(node['modules']) if node['modules'] else '無'}</span>
                 </div>
             """, unsafe_allow_html=True)
 
 elif "AI 硬體與智慧門禁/車牌辨識掛接" in menu_choice:
     st.markdown("## 🤖 AI 硬體與智慧門禁/車牌辨識掛接 (IoT & Biometrics Plug & Play)")
-    st.info("💡 *零設定、滑鼠流！在此處您可以一鍵掛接各種硬體裝置（如人臉辨識打卡機、指紋機、車廠車牌辨識 ANPR 攝影機），系統將自動與雲端人事考勤與廠務模組連動。*")
-    
-    with st.container():
-        st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### ➕ 一鍵新增/配對硬體設備")
-        
-        with st.form("iot_form"):
-            h_col1, h_col2 = st.columns(2)
-            with h_col1:
-                dev_name = st.text_input("裝置名稱*", placeholder="例：越南平陽廠員工宿舍人臉機")
-                dev_type = st.selectbox("裝置類型", [
-                    "👤 AI 人臉辨識打卡機 (Face Recognition)", 
-                    "👆 指紋辨識門禁機 (Fingerprint)", 
-                    "🚗 車牌辨識攝影機 (ANPR / License Plate)", 
-                    "🌡️ 工廠環境溫濕度/IoT感測器",
-                    "☕ 智慧聯網咖啡機 / 洗車場 IoT 閘門"
-                ])
-            with h_col2:
-                dev_ip = st.text_input("設備 IP 位址 / 區域網路通訊埠*", placeholder="例：192.168.1.150 或 ws://iot.device.local")
-                link_module = st.selectbox("自動連動綁定模組", [
-                    "人事考勤與上下班打卡模組 (HRM Attendance)",
-                    "廠區門禁與車隊通行管制 (Access Control & ANPR)",
-                    "MES 現場設備稼動與產量監控",
-                    "智慧零售/洗車場會員與設備聯動"
-                ])
-                
-            iot_submit = st.form_submit_button("🔌 一鍵註冊並配對硬體設備", type="primary", use_container_width=True)
-            if iot_submit:
-                if not dev_name or not dev_ip:
-                    st.error("❌ 請填寫裝置名稱與 IP 位址！")
-                else:
-                    new_dev = {
-                        "dev_id": f"DEV-{len(st.session_state.iot_devices)+1:03d}",
-                        "name": dev_name,
-                        "type": dev_type.split(" ")[1],
-                        "ip": dev_ip,
-                        "status": "🟢 隨插即用連線正常 (自動同步中)"
-                    }
-                    st.session_state.iot_devices.append(new_dev)
-                    st.success(f"🎉 成功配對硬體 [{dev_name}]！資料已自動與 `{link_module}` 雙向打通。")
-                    st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("### 📋 目前已掛接的 AI 硬體與 IoT 設備清單")
-    iot_df = pd.DataFrame(st.session_state.iot_devices)
-    st.dataframe(iot_df, use_container_width=True)
+    st.info("💡 *零設定、滑鼠流！在此處您可以一鍵掛接各種硬體裝置。*")
 
 elif "外部資料庫與 API 快速掛接" in menu_choice:
     st.markdown("## 🔌 外部資料庫與 API 快速掛接 (Database Bridge)")
@@ -230,7 +195,43 @@ elif "外部資料庫與 API 快速掛接" in menu_choice:
 
 elif "模組市集與功能授權設定" in menu_choice:
     st.markdown("## 📦 模組市集與功能授權設定 (App Store & Feature Toggles)")
-    st.info("💡 說明：全系統功能模組市集。")
+    st.info("💡 *歡迎來到 SaaS 萬能模組市集！在此處您可以像逛 App Store 一樣，用滑鼠隨選隨開，為您的企業或跨界業務（製造業、越南財稅、物聯網、洗車場、咖啡廳等）即時解鎖強大功能。*")
+    
+    with st.container():
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.markdown("### 🛒 跨業態與核心模組雲端市集")
+        st.markdown("您可以透過下方的滑鼠開關，即時為本租戶（公司）訂閱或關閉對應的垂直模組：")
+        
+        c_app1, c_app2 = st.columns(2)
+        
+        with c_app1:
+            st.markdown("#### 🇻🇳 跨國在地化與財稅解決方案")
+            sub_vn = st.toggle("越南紅發票自動解析與 VAT 稅務模組", value=st.session_state.app_store_subscriptions["vn_tax"])
+            sub_mfg = st.toggle("製造業 MES 現場報工與 OEE 設備監控", value=st.session_state.app_store_subscriptions["mfg_mes"])
+            sub_bi = st.toggle("高階董事會戰情室 (股市/原物料/匯率/P&L)", value=st.session_state.app_store_subscriptions["bi_market"])
+            
+        with c_app2:
+            st.markdown("#### 🚀 跨界與物聯網 (IoT) 擴充模組")
+            sub_iot = st.toggle("AI 人臉辨識、指紋與車牌辨識 (ANPR) 閘道", value=st.session_state.app_store_subscriptions["iot_bridge"])
+            sub_wash = st.toggle("洗車場專用：會員儲值、預約與水刀聯動模組", value=st.session_state.app_store_subscriptions["car_wash"])
+            sub_cafe = st.toggle("連鎖咖啡廳專用：POS 點餐與原料自動扣減", value=st.session_state.app_store_subscriptions["coffee_pos"])
+            
+        st.markdown("---")
+        if st.button("💾 儲存並即時更新本租戶模組授權", type="primary", use_container_width=True):
+            st.session_state.app_store_subscriptions["vn_tax"] = sub_vn
+            st.session_state.app_store_subscriptions["mfg_mes"] = sub_mfg
+            st.session_state.app_store_subscriptions["bi_market"] = sub_bi
+            st.session_state.app_store_subscriptions["iot_bridge"] = sub_iot
+            st.session_state.app_store_subscriptions["car_wash"] = sub_wash
+            st.session_state.app_store_subscriptions["coffee_pos"] = sub_cafe
+            st.success("🎉 模組市集授權已即時更新！系統側邊欄與功能權限已動態重構完畢。")
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # 顯示目前已開通的強大模組清單預覽
+        st.markdown("### 📋 本租戶目前已解鎖啟用的模組總覽")
+        active_modules_list = [k for k, v in st.session_state.app_store_subscriptions.items() if v]
+        st.info(f"✨ 目前本公司已啟用的核心與跨界模組代碼：`{', '.join(active_modules_list)}`")
 
 elif "跨國在地化與越南財稅模組" in menu_choice:
     st.markdown("## 🇻🇳 跨國在地化與越南財稅模組 (Vietnam Localization & E-Invoice)")
