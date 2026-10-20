@@ -180,7 +180,6 @@ elif "跨國在地化與越南財稅模組" in menu_choice:
                 st.markdown("- **總金額 (含 VAT 10%)**: `35,200,000 VND`")
                 st.markdown("- **串聯狀態**: 🟢 已自動寫入應付帳款與負債總額！")
                 
-            # 即時加入 Session
             new_inv = {
                 "invoice_no": "00099887",
                 "supplier": "Công ty CP Thiết bị Điện Sài Gòn",
@@ -200,8 +199,7 @@ elif "董事長高階戰情室與財務連動預覽" in menu_choice:
     st.markdown("## 👑 董事長高階戰情室與財務聯動預覽 (Executive Dashboard & P&L)")
     st.info("💡 *此處展示董事長或董事會登入時看到的即時戰情：發票金額自動加總、應付帳款負債水位、綜合損益表 (P&L) 與國際原物料/匯率行情。*")
     
-    # 統計加總
-    total_ap_amount = "51,700,000 VND" # 16,500,000 + 35,200,000
+    total_ap_amount = "51,700,000 VND"
     
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
     with kpi1:
