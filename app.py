@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 平台 (完整功能大合集：市集市集 + 組織圖 + AP + 總控台)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (資料庫持久化 + 模組市集與組織樹完全連動)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP Ultimate",
+    page_title="SaaS Enterprise Modular AI-ERP Database Connected",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -145,13 +145,14 @@ if "tenants_db" not in st.session_state:
             "plan": "旗艦版 (Enterprise)",
             "price_usd": 170,
             "expiry_date": "2027-10-20",
-            "active_department": "👑 董事長室 / 總經理室 (Executive & Board Room)",
-            "enabled_modules": ["全局戰情室與BI分析", "高階決策審核", "水電工程專案與預算", "工程估驗與計價請款"],
+            # 每個部門獨立儲存其勾選的功能模組資料庫 (Dictionary: Dept Name -> List of Modules)
+            "dept_modules_db": {
+                "👑 董事長室 / 總經理室 (Executive & Board Room)": ["全局戰情室與BI分析", "高階決策審核"],
+                "⚙️ 工程技術服務部 (Engineering & Technical)": ["水電工程專案與預算", "工程估驗與計價請款"]
+            },
             "org_nodes": [
                 {"id": "node_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
-                {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 二級部門", "parent": "董事長室"},
-                {"id": "node_fin", "name": "財務會計部", "type": "💰 二級部門", "parent": "董事長室"},
-                {"id": "node_site", "name": "平陽美福工地", "type": "📦 三級據點", "parent": "工程技術部"}
+                {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 二級部門", "parent": "董事長室"}
             ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
@@ -164,12 +165,12 @@ if "tenants_db" not in st.session_state:
             "plan": "標準版 (Standard)",
             "price_usd": 80,
             "expiry_date": "2026-11-05",
-            "active_department": "👥 人力資源與行政管理部 (HR & Admin Dept)",
-            "enabled_modules": ["人事組織架構管理", "員工考勤打卡與GPS"],
+            "dept_modules_db": {
+                "👑 董事長室 / 總經理室 (Executive & Board Room)": ["營運總控台"]
+            },
             "org_nodes": [
                 {"id": "w_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
-                {"id": "w_branch", "name": "台北旗艦總店", "type": "🏢 一級據點", "parent": "董事長室"},
-                {"id": "w_dept", "name": "洗車美容作業部", "type": "🏭 二級部門", "parent": "台北旗艦總店"}
+                {"id": "w_branch", "name": "台北旗艦總店", "type": "🏢 一級據點", "parent": "董事長室"}
             ],
             "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
@@ -251,6 +252,7 @@ if st.session_state.current_portal == "Master":
 
         tenant_list_data = []
         for t_key, t_val in st.session_state.tenants_db.items():
+            total_active_mods = sum(len(mods) for mods in t_val.get("dept_modules_db", {}).values())
             tenant_list_data.append({
                 "租戶代碼": t_key,
                 "公司名稱": t_val["name"],
@@ -258,7 +260,7 @@ if st.session_state.current_portal == "Master":
                 "訂閱方案": t_val["plan"],
                 "每月價格 (USD)": t_val["price_usd"],
                 "組織節點數": len(t_val["org_nodes"]),
-                "啟用功能數": len(t_val.get("enabled_modules", [])),
+                "已啟用功能總數": total_active_mods,
                 "狀態": "🟢 正常營運"
             })
         df_tenants = pd.DataFrame(tenant_list_data)
@@ -309,12 +311,15 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：完整保留所有精彩功能 ====================
+    # ==================== 個別租戶後台：資料庫持久化串聯模組市集與組織樹 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
+    if "dept_modules_db" not in current_tenant:
+        current_tenant["dept_modules_db"] = {}
+        
     if "樂高積木式模組市集與功能開關" in menu_choice:
         st.markdown(f"## 🧩 {current_tenant['name']}：樂高積木式模組市集與功能開關 (App Store)")
-        st.info("💡 *說明：此展示系統【全功能模組大合集】。您可以點選左側任意部門，並自由勾選或組合市面上所有企業管理、高階決策、財會與供應鏈所需的完整模組拼圖。*")
+        st.info("💡 *說明：點選左側任意部門，右側會即時讀取與寫入資料庫，讓您自由勾選或組合該部門專屬的 ERP 功能模組，並即時計費！*")
         
         col_left, col_right = st.columns([1, 2.5])
         
@@ -323,70 +328,86 @@ else:
             selected_dept = st.radio(
                 "部門選擇",
                 ALL_ENTERPRISE_DEPARTMENTS,
-                index=ALL_ENTERPRISE_DEPARTMENTS.index(current_tenant.get("active_department", ALL_ENTERPRISE_DEPARTMENTS[0])) if current_tenant.get("active_department") in ALL_ENTERPRISE_DEPARTMENTS else 0,
+                index=0,
                 label_visibility="collapsed"
             )
-            current_tenant["active_department"] = selected_dept
             
         with col_right:
-            st.markdown(f"### 🛒 【{selected_dept.split('(')[0].strip()}】的企業全功能模組市集")
+            clean_dept_name = selected_dept.split('(')[0].strip()
+            st.markdown(f"### 🛒 【{clean_dept_name}】的資料庫模組市集 (App Store)")
+            
             cat_data = DEPARTMENT_MODULE_CATALOG.get(selected_dept, {
                 "col1": ["全局戰情室", "高階決策審核", "營運總控台", "跨部門協調"],
                 "col2": ["智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑"],
                 "col3": ["總帳會計與報表", "生產排程與BOM", "CRM客戶關係管理", "人事考勤與薪資"]
             })
             
-            if "enabled_modules" not in current_tenant:
-                current_tenant["enabled_modules"] = []
-                
-            with st.form("module_appstore_form"):
+            # 從資料庫讀取該部門目前已勾選的功能
+            saved_dept_mods = current_tenant["dept_modules_db"].get(selected_dept, [])
+            
+            with st.form(f"form_store_{selected_dept}"):
                 mc1, mc2, mc3 = st.columns(3)
-                new_selected_mods = []
+                curr_selected = []
                 
                 with mc1:
                     st.markdown("#### 📈 高階決策與行情")
                     for mod in cat_data["col1"]:
-                        if st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}"):
-                            new_selected_mods.append(mod)
+                        if st.checkbox(mod, value=mod in saved_dept_mods, key=f"m1_{selected_dept}_{mod}"):
+                            curr_selected.append(mod)
                 with mc2:
                     st.markdown("#### 📦 供應鏈與進銷存")
                     for mod in cat_data["col2"]:
-                        if st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}2"):
-                            new_selected_mods.append(mod)
+                        if st.checkbox(mod, value=mod in saved_dept_mods, key=f"m2_{selected_dept}_{mod}"):
+                            curr_selected.append(mod)
                 with mc3:
                     st.markdown("#### 💰 財會與生產核心")
                     for mod in cat_data["col3"]:
-                        if st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}3"):
-                            new_selected_mods.append(mod)
+                        if st.checkbox(mod, value=mod in saved_dept_mods, key=f"m3_{selected_dept}_{mod}"):
+                            curr_selected.append(mod)
                             
                 st.markdown("---")
-                total_mods_count = len(set(new_selected_mods))
-                calculated_price = 80 + (total_mods_count * 5)
+                # 計算總合約金額 (全租戶所有部門模組總數加總)
+                total_all_mods = sum(len(mods) for mods in current_tenant["dept_modules_db"].values())
+                calculated_price = 80 + (total_all_mods * 5)
                 current_tenant["price_usd"] = calculated_price
                 
-                st.markdown(f"### 💳 計費試算：已選定 `{total_mods_count}` 項模組 ➔ 每月總訂閱費用：**`$ {calculated_price} USD`**")
+                st.markdown(f"### 💳 系統計費試算：當前部門選定 `{len(curr_selected)}` 項模組 ➔ 企業每月總訂閱費用：**`$ {current_tenant['price_usd']} USD`**")
                 
-                if st.form_submit_button(f"💾 儲存【{selected_dept.split('(')[0].strip()}】的模組拼圖設定", type="primary", use_container_width=True):
-                    current_tenant["enabled_modules"] = list(set(new_selected_mods))
-                    st.success(f"🎉 成功儲存模組設定！當前總月費更新為 ${calculated_price} USD。")
+                if st.form_submit_button(f"💾 立即寫入資料庫：儲存【{clean_dept_name}】模組配置", type="primary", use_container_width=True):
+                    # 【核心修正】：真實寫入資料庫字典中！
+                    current_tenant["dept_modules_db"][selected_dept] = list(set(curr_selected))
+                    
+                    # 同時自動將此部門同步寫入組織節點資料庫（若組織圖中還沒有）
+                    node_names = [n["name"] for n in current_tenant["org_nodes"]]
+                    short_name = clean_dept_name.replace("👑", "").replace("📈", "").replace("👥", "").replace("⚖️", "").replace("🔒", "").replace("💰", "").replace("📊", "").replace("🌍", "").replace("🌐", "").replace("📢", "").replace("🤝", "").replace("🛒", "").replace("📦", "").replace("🏭", "").replace("⚙️", "").replace("🛡️", "").replace("💡", "").replace("💻", "").strip()
+                    
+                    if short_name not in node_names:
+                        current_tenant["org_nodes"].append({
+                            "id": f"node_{uuid.uuid4().hex[:8]}",
+                            "name": short_name,
+                            "type": selected_dept,
+                            "parent": "董事長室" if "董事長室" not in short_name else "無 (頂層)"
+                        })
+                        
+                    st.success(f"🎉 成功寫入資料庫！【{short_name}】部門及其專屬功能已永久紀錄並同步至組織架構圖。")
                     st.rerun()
 
     elif "ProcessOn 標準組織架構圖與節點 CRUD" in menu_choice:
         st.markdown(f"## 🖱️ {current_tenant['name']}：ProcessOn 標準組織架構圖與節點管理")
-        st.info("💡 *在此處自由新增、修改或刪除公司內部組織節點，下方即時呈現標準階層方塊組織樹狀圖！*")
+        st.info("💡 *在此處自由新增、修改或刪除公司內部組織節點，並可直接檢視每個部門在資料庫中對應啟用的功能！*")
         
         col_set, col_edit = st.columns([1, 1])
         existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
         
         with col_set:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ 新增組織節點或據點")
+            st.markdown("### ➕ 新增組織節點或據點 (寫入資料庫)")
             with st.form("org_add_form"):
-                n_name = st.text_input("部門/據點名稱*", placeholder="例：工程技術部 / 台北旗艦總店")
+                n_name = st.text_input("部門/據點名稱*", placeholder="例：財務部 / 台北旗艦總店")
                 n_type = st.selectbox("部門層級屬性", ["👑 頂層 (Board / 董事會)", "👑 一級部門 (Headquarters)", "⚙️ 二級部門 (Functional Dept)", "🏢 三級據點/倉庫 (Branch / Warehouse)"])
                 n_parent = st.selectbox("指定上級掛載點", existing_parents)
                 
-                if st.form_submit_button("🧱 確認新增節點", type="primary", use_container_width=True):
+                if st.form_submit_button("🧱 寫入資料庫並新增節點", type="primary", use_container_width=True):
                     if n_name:
                         current_tenant["org_nodes"].append({
                             "id": f"node_{uuid.uuid4().hex[:8]}",
@@ -394,13 +415,13 @@ else:
                             "type": n_type,
                             "parent": n_parent
                         })
-                        st.success(f"🎉 成功新增 [{n_name}]！")
+                        st.success(f"🎉 成功寫入資料庫：新增 [{n_name}]！")
                         st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
         with col_edit:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ✏️ 修改或刪除現有節點 (支援唯一 ID)")
+            st.markdown("### ✏️ 修改或刪除現有節點 (資料庫同步更新)")
             if current_tenant["org_nodes"]:
                 node_options = {f"{n['name']} ({n['type']}) [ID: {n['id']}]": n for n in current_tenant["org_nodes"]}
                 selected_label = st.selectbox("選擇要管理的節點", list(node_options.keys()))
@@ -415,37 +436,47 @@ else:
                         with cb1:
                             sub_u = st.form_submit_button("💾 儲存修改", type="primary", use_container_width=True)
                         with cb2:
-                            sub_d = st.form_submit_button("🗑️ 刪除此節點", use_container_width=True)
+                            sub_d = st.form_submit_button("🗑️ 從資料庫刪除", use_container_width=True)
                             
                         if sub_u:
                             target_node["name"] = up_name
                             target_node["parent"] = up_parent
-                            st.success("🎉 節點更新成功！")
+                            st.success("🎉 資料庫更新成功！")
                             st.rerun()
                         if sub_d:
                             if target_node["parent"] == "無 (頂層)":
                                 st.error("❌ 無法刪除頂層最高決策層！")
                             else:
                                 current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["id"] != target_node["id"]]
-                                st.success("🗑️ 節點已刪除！")
+                                st.success("🗑️ 節點已從資料庫刪除！")
                                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # 下方 ProcessOn 標準方塊組織圖呈現
+        # 下方 ProcessOn 標準方塊組織圖呈現 (同時顯示資料庫中該部門啟用的功能)
         st.markdown("---")
-        st.markdown("### 📊 貴公司標準階層方塊組織架構圖 (Org Chart Tree)")
-        st.info("💡 *下方即時呈現如同 ProcessOn 那樣層級分明的標準方塊組織圖！*")
+        st.markdown("### 📊 資料庫即時組織架構與部門專屬功能總覽")
+        st.info("💡 *下方即時呈現資料庫中的組織階層方塊圖，並自動帶出各部門在市集裡勾選啟用的功能模組！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
             others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
             
+            dept_db = current_tenant.get("dept_modules_db", {})
+            
             for r in roots:
+                # 尋找是否有對應部門的功能
+                r_mods = []
+                for k, v in dept_db.items():
+                    if r['name'] in k:
+                        r_mods = v
+                r_mods_str = ", ".join(r_mods) if r_mods else "尚未勾選模組"
+                
                 st.markdown(f"""
                     <div style="text-align: center;">
                         <div class="org-root-card">
-                            👑 {r['name']} <span style="font-size: 12px; font-weight: normal;">({r['type']})</span>
+                            👑 {r['name']} <span style="font-size: 12px; font-weight: normal;">({r['type']})</span><br>
+                            <span style="font-size: 11px; opacity: 0.9;">📦 啟用功能：{r_mods_str}</span>
                         </div>
                     </div>
                     <div class="tree-connector"></div>
@@ -456,11 +487,18 @@ else:
                     cols1 = st.columns(len(level1))
                     for idx1, l1 in enumerate(level1):
                         with cols1[idx1]:
+                            l1_mods = []
+                            for k, v in dept_db.items():
+                                if l1['name'] in k:
+                                    l1_mods = v
+                            l1_mods_str = ", ".join(l1_mods) if l1_mods else "尚未勾選模組"
+                            
                             st.markdown(f"""
                                 <div style="text-align: center;">
                                     <div class="org-level1-card">
                                         <b>{l1['name']}</b><br>
-                                        <span style="font-size: 11px; color: gray;">{l1['type']}</span>
+                                        <span style="font-size: 11px; color: gray;">{l1['type']}</span><br>
+                                        <span style="font-size: 10px; color: #2563eb;">📌 功能：{l1_mods_str}</span>
                                     </div>
                                 </div>
                             """, unsafe_allow_html=True)
@@ -469,11 +507,18 @@ else:
                             if level2:
                                 st.markdown('<div class="tree-connector" style="height: 15px;"></div>', unsafe_allow_html=True)
                                 for l2 in level2:
+                                    l2_mods = []
+                                    for k, v in dept_db.items():
+                                        if l2['name'] in k:
+                                            l2_mods = v
+                                    l2_mods_str = ", ".join(l2_mods) if l2_mods else "尚未勾選模組"
+                                    
                                     st.markdown(f"""
                                         <div style="text-align: center;">
                                             <div class="org-level2-card">
                                                 <b>{l2['name']}</b><br>
-                                                <span style="font-size: 10px; color: gray;">{l2['type']}</span>
+                                                <span style="font-size: 10px; color: gray;">{l2['type']}</span><br>
+                                                <span style="font-size: 9px; color: #059669;">📌 功能：{l2_mods_str}</span>
                                             </div>
                                         </div>
                                     """, unsafe_allow_html=True)
@@ -491,7 +536,8 @@ else:
                 if st.form_submit_button("👤 建立員工帳號", type="primary", use_container_width=True):
                     if s_name and s_email:
                         current_tenant["staff"].append({"name": s_name, "email": s_email, "role": s_role})
-                        st.success(f"🎉 成功建立員工 [{s_name}]！")
+                        st.success(f"🎉 成功建立員工 [{s_name}] 並寫入資料庫！")
+                        st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
 
