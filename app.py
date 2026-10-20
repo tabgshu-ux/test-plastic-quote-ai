@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (唯一 ID 識別與階層縮排組織圖)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (精準階層方塊組織圖與一鍵拼圖管理)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Unique ID Org",
+    page_title="SaaS Enterprise Modular AI-ERP & Clean Org Chart",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -33,6 +33,39 @@ st.markdown("""
         border-radius: 6px;
         font-weight: 600;
         width: 100%;
+    }
+    .org-box-root {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 16px;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        margin-bottom: 10px;
+    }
+    .org-box-dept {
+        background: #ffffff;
+        border: 2px solid #3b82f6;
+        color: #1e293b;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
+    }
+    .org-box-branch {
+        background: #f0fdf4;
+        border: 2px solid #10b981;
+        color: #065f46;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -117,7 +150,7 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 拼圖式組織與據點一鍵掛載 (唯一ID管理)",
+                "🖱️ 拼圖式組織與據點一鍵掛載",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -131,7 +164,6 @@ with st.sidebar:
 
 # 5. 主畫面邏輯路由
 if st.session_state.current_portal == "Master":
-    # ==================== SaaS 總控台 ====================
     if "全球企業租戶動態總覽" in menu_choice:
         st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與管理中心")
         st.info("💡 *在此處檢視所有企業客戶，並可直接點擊進入該公司後台協助核對組織圖！*")
@@ -211,102 +243,101 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：唯一 ID 組織管理與階層樹狀圖 ====================
+    # ==================== 個別租戶後台：拼圖式一鍵掛載與階層方塊組織圖 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
     if "拼圖式組織與據點一鍵掛載" in menu_choice:
         st.markdown(f"## 🖱️ {current_tenant['name']}：拼圖式組織與營業據點一鍵掛載")
-        st.info("💡 *滑鼠點擊下方積木按鈕即可一鍵新增部門並掛載至指定上級！下方即時呈現具備精準階層縮排的組織樹狀圖，修改與刪除均採用獨立 ID 識別，絕不重複或混淆。*")
+        st.info("💡 *滑鼠點擊下方積木按鈕即可一鍵新增部門並掛載至指定上級！下方即時呈現最簡單明瞭的階層方塊組織架構圖，支援精準修改與刪除。*")
         
         existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
-        selected_parent_target = st.selectbox("📌 步驟一：請先選擇要將新部門掛載在哪個上級下方 (Parent Target)", existing_parents)
+        selected_parent_target = st.selectbox("📌 步驟一：請選擇要將新部門掛載在哪個上級下方", existing_parents)
         
         st.markdown("---")
-        st.markdown("### 🧩 步驟二：用滑鼠直接點擊積木按鈕一鍵新增部門/據點")
+        st.markdown("### 🧩 步驟二：點擊積木按鈕一鍵新增部門/據點")
         
         p1, p2, p3, p4 = st.columns(4)
         
         with p1:
             st.markdown("#### 👑 決策與高階管理")
-            if st.button("➕ 加入：董事長室 / 董事會"):
+            if st.button("➕ 董事長室"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "董事長室", "type": "👑 董事會 / 董事長室", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [董事長室]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：總經理室 / CEO"):
+            if st.button("➕ 總經理室"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "總經理室", "type": "👑 總經理室 / 執行長室", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [總經理室]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：副總經理室"):
+            if st.button("➕ 副總經理室"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "副總經理室", "type": "👑 副總經理室", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [副總經理室]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
                 
         with p2:
             st.markdown("#### 💰 財務與行政後勤")
-            if st.button("➕ 加入：財務部"):
+            if st.button("➕ 財務部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "財務部", "type": "💰 財務部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [財務部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：會計部"):
+            if st.button("➕ 會計部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "會計部", "type": "💰 會計部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [會計部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：人力資源部 (HR)"):
+            if st.button("➕ 人力資源部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "人力資源部", "type": "👥 人力資源部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [人力資源部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：總務行政部"):
+            if st.button("➕ 總務行政部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "總務行政部", "type": "👥 總務行政部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [總務行政部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
                 
         with p3:
-            st.markdown("#### ⚙️ 工程、研發與生產")
-            if st.button("➕ 加入：工程技術部"):
+            st.markdown("#### ⚙️ 工程與生產")
+            if st.button("➕ 工程技術部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "工程技術部", "type": "⚙️ 工程技術部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [工程技術部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：研發設計中心"):
+            if st.button("➕ 研發設計中心"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "研發設計中心", "type": "⚙️ 研發設計中心", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [研發設計中心]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：生產製造廠務部"):
+            if st.button("➕ 生產製造廠務部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "生產製造廠務部", "type": "🏭 生產製造廠務部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [生產製造廠務部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：供應鏈與採購部"):
+            if st.button("➕ 供應鏈與採購部"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "供應鏈與採購部", "type": "🛒 供應鏈與全球採購部", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [供應鏈與採購部]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
                 
         with p4:
             st.markdown("#### 🏢 實體據點與倉庫")
-            if st.button("➕ 加入：營運據點/旗艦總店"):
+            if st.button("➕ 台北旗艦總店"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "台北旗艦總店", "type": "🏢 營運據點 / 總店", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [台北旗艦總店]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：海外分公司/辦事處"):
+            if st.button("➕ 海外分公司"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "海外分公司", "type": "🏢 分公司 / 辦事處", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [海外分公司]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
-            if st.button("➕ 加入：廠內原物料倉庫"):
+            if st.button("➕ 原物料倉庫"):
                 current_tenant["org_nodes"].append({"id": f"node_{uuid.uuid4().hex[:8]}", "name": "廠內原物料倉庫", "type": "📦 實體原物料倉庫", "parent": selected_parent_target})
-                st.success("🎉 成功新增 [廠內原物料倉庫]！")
+                st.success("🎉 新增成功！")
                 st.rerun()
 
-        # 採用【唯一 UUID】進行精準修改與刪除
+        # 精準修改與刪除區塊
         st.markdown("---")
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ✏️ 管理現有部門與據點 (透過唯一 ID 精準修改或刪除)")
+            st.markdown("### ✏️ 管理現有部門與據點 (精準修改名稱或刪除)")
             if current_tenant["org_nodes"]:
-                # 建立對應字典：顯示名稱 (ID) -> 節點物件
-                node_options = {f"{n['name']} ({n['type']}) [ID: {n.get('id', 'N/A')}]": n for n in current_tenant["org_nodes"]}
-                selected_label = st.selectbox("選擇要管理的特定節點", list(node_options.keys()), key="uuid_edit_select")
+                node_options = {f"{n['name']} ({n['type']}) [ID: {n['id']}]": n for n in current_tenant["org_nodes"]}
+                selected_label = st.selectbox("選擇要管理的特定節點", list(node_options.keys()))
                 target_node = node_options[selected_label]
                 
                 if target_node:
-                    with st.form("edit_uuid_node"):
+                    with st.form("edit_node_form"):
                         up_name = st.text_input("修改名稱", value=target_node["name"])
                         up_parent = st.selectbox("修改上級掛載點", existing_parents, index=existing_parents.index(target_node["parent"]) if target_node["parent"] in existing_parents else 0)
                         
@@ -319,52 +350,51 @@ else:
                         if sub_up:
                             target_node["name"] = up_name
                             target_node["parent"] = up_parent
-                            st.success(f"🎉 節點更新成功！")
+                            st.success("🎉 節點更新成功！")
                             st.rerun()
                         if sub_del:
                             if target_node["parent"] == "無 (頂層)":
-                                st.error("❌ 無法刪除公司頂層最高決策層節點！")
+                                st.error("❌ 無法刪除頂層最高決策層！")
                             else:
                                 current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["id"] != target_node["id"]]
-                                st.success("🗑️ 該節點已成功刪除！")
+                                st.success("🗑️ 節點已刪除！")
                                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # ==================== 下方超清晰的階層縮排組織圖 (Indented Org Tree) ====================
+        # ==================== 下方乾淨俐落的階層方塊組織圖 ====================
         st.markdown("---")
-        st.markdown("### 📊 貴公司階層組織架構與上下級歸屬總覽 (Indented Org Tree)")
-        st.info("💡 *下方以清晰的縮排樹狀結構呈現，讓您與租戶一眼看出每個部門精準掛載在哪個上級底下！*")
+        st.markdown("### 📊 貴公司標準階層組織架構圖 (Org Chart)")
+        st.info("💡 *下方即時呈現乾淨俐落的階層方塊組織圖，上下級歸屬與部門歸納一目了然！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             
-            # 找出頂層節點 (parent == "無 (頂層)")
             roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
             others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
             
-            def render_tree(parent_name, level=0):
+            def render_org_tree(parent_name, level=1):
                 children = [n for n in others if n["parent"] == parent_name]
                 for child in children:
-                    indent_space = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" * level
-                    badge_color = "#10b981" if "據點" in child['type'] or "倉庫" in child['type'] else "#3b82f6"
+                    box_class = "org-box-branch" if "據點" in child['type'] or "倉庫" in child['type'] else "org-box-dept"
+                    arrow = "└── " * level
                     st.markdown(f"""
-                        <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 6px; border-left: 4px solid {badge_color}; margin-left: {level * 25}px;">
-                            <b>{child['name']}</b> <span style="font-size: 11px; color: gray;">({child['type']})</span><br>
-                            <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：<b>{child['parent']}</b></span>
+                        <div style="margin-left: {level * 35}px; margin-bottom: 8px;">
+                            <div class="{box_class}">
+                                <span style="font-size: 12px; color: #64748b;">{arrow} 上級主管: [{child['parent']}]</span><br>
+                                <b>{child['name']}</b> <span style="font-size: 12px; font-weight: normal; color: gray;">({child['type']})</span>
+                            </div>
                         </div>
                     """, unsafe_allow_html=True)
-                    # 遞迴渲染子節點
-                    render_tree(child["name"], level + 1)
+                    render_org_tree(child["name"], level + 1)
 
-            # 先渲染頂層
             for r in roots:
                 st.markdown(f"""
-                    <div style="background: #eff6ff; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 5px solid #2563eb;">
-                        <b>👑 {r['name']}</b> <span style="font-size: 11px; color: gray;">({r['type']})</span><br>
-                        <span style="font-size: 11px; color: #1e40af;">📌 企業最高決策層 (頂層)</span>
+                    <div class="org-box-root">
+                        👑 {r['name']} ({r['type']})<br>
+                        <span style="font-size: 12px; font-weight: normal; opacity: 0.9;">企業最高決策核心 (頂層)</span>
                     </div>
                 """, unsafe_allow_html=True)
-                render_tree(r["name"], level=1)
+                render_org_tree(r["name"], level=1)
                 
             st.markdown('</div>', unsafe_allow_html=True)
 
