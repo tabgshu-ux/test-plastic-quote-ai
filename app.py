@@ -33,31 +33,32 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化 Session State 模擬動態組織樹、硬體裝置與租戶訂閱模組
+# 3. 初始化 Session State 模擬全系統打通的資料庫中心 (Data Hub)
 if "org_nodes" not in st.session_state:
     st.session_state.org_nodes = [
         {"id": "node_01", "name": "👑 董事長室 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "集團綜合損益(P&L)"]},
-        {"id": "node_02", "name": "👥 人力資源與行政管理部", "type": "行政支援", "parent": "👑 董事長室 / 總經理室", "modules": ["AI人臉辨識打卡", "指紋機與門禁管理"]},
-        {"id": "node_03", "name": "🏭 生產製造廠務部", "type": "製造中心", "parent": "👑 董事長室 / 總經理室", "modules": ["MES現場報工", "廠區車牌辨識(ANPR)"]},
-        {"id": "node_04", "name": "📦 廠內原物料倉庫 (生產部附屬)", "type": "實體據點/庫位", "parent": "🏭 生產製造廠務部", "modules": ["多倉儲位查詢", "條碼PDA收發貨"]}
+        {"id": "node_02", "name": "👥 人力資源與總務行政部", "type": "行政支援", "parent": "👑 董事長室 / 總經理室", "modules": ["AI人臉辨識打卡", "廠區車牌辨識(ANPR)"]},
+        {"id": "node_03", "name": "💰 財務會計與應付帳款部", "type": "財務中心", "parent": "👑 董事長室 / 總經理室", "modules": ["越南紅發票自動讀取", "應付帳款(AP)連動"]}
     ]
 
 if "iot_devices" not in st.session_state:
     st.session_state.iot_devices = [
-        {"dev_id": "DEV-001", "name": "大門口 AI 人臉辨識打卡機", "type": "人臉辨識 (Face Recognition)", "ip": "192.168.1.110", "status": "🟢 連線中 (自動同步考勤)"},
-        {"dev_id": "DEV-002", "name": "廠區車道車牌辨識攝影機 (ANPR)", "type": "車牌辨識 (License Plate)", "ip": "192.168.1.115", "status": "🟢 運作中 (自動放行與記錄)"}
+        {"dev_id": "DEV-001", "name": "大門口 AI 人臉辨識打卡機", "type": "人臉辨識", "ip": "192.168.1.110", "status": "🟢 連線中 (自動同步人事)"},
+        {"dev_id": "DEV-002", "name": "廠區車道車牌辨識攝影機 (ANPR)", "type": "車牌辨識", "ip": "192.168.1.115", "status": "🟢 運作中 (同步保全與總務)"}
     ]
 
-# 模擬模組市集的訂閱開關狀態
-if "app_store_subscriptions" not in st.session_state:
-    st.session_state.app_store_subscriptions = {
-        "vn_tax": True,
-        "iot_bridge": True,
-        "car_wash": False,
-        "coffee_pos": False,
-        "mfg_mes": True,
-        "bi_market": True
-    }
+# 模擬全系統自動串聯的發票與應付帳款資料庫
+if "ap_invoices" not in st.session_state:
+    st.session_state.ap_invoices = [
+        {
+            "invoice_no": "00012345", 
+            "supplier": "越南平陽水電材料有限公司 (Công ty TNHH Vina Material)", 
+            "items": "PVC 電線管 50mm, 銅線 2.0", 
+            "qty": "120 卷 / 支", 
+            "amount_vnd": "16,500,000", 
+            "status": "🔴 待付款 (已自動列入應付帳款與負債表)"
+        }
+    ]
 
 # 4. 側邊欄導覽
 with st.sidebar:
@@ -67,7 +68,7 @@ with st.sidebar:
     lang = st.selectbox("選擇語系 / Select Language", ["繁體中文", "English", "Tiếng Việt (越南語)", "简体中文"])
     
     st.markdown("---")
-    st.markdown("👤 **目前登入者**: `System Admin` (極致懶人滑鼠流)")
+    st.markdown("👤 **目前登入者**: `System Admin` (全系統自動串聯模式)")
     st.markdown("🏢 **目前租戶**: `SaaS Global Control`")
     
     st.markdown("---")
@@ -77,9 +78,9 @@ with st.sidebar:
         [
             "🖱️ 滑鼠流視覺化組織與據點拼圖",
             "🤖 AI 硬體與智慧門禁/車牌辨識掛接 (IoT & Biometrics)",
-            "🔌 外部資料庫與 API 快速掛接 (Database Bridge)", 
+            "🇻🇳 跨國在地化與越南財稅模組 (VN Localization & AP)",
+            "👑 董事長高階戰情室與財務連動預覽 (Executive P&L)",
             "📦 模組市集與功能授權設定 (App Store)",
-            "🇻🇳 跨國在地化與越南財稅模組 (VN Localization)",
             "📊 系統運行與跨庫數據監控"
         ]
     )
@@ -95,7 +96,6 @@ if "滑鼠流視覺化組織與據點拼圖" in menu_choice:
     
     st.markdown("### ⚡ 滑鼠一鍵快速掛載矩陣 (Click-to-Add)")
     m_c1, m_c2, m_c3, m_c4, m_c5 = st.columns(5)
-    
     with m_c1:
         if st.button("👑 加入：董事長室", use_container_width=True):
             st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": "👑 董事長室 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "綜合損益表"]})
@@ -118,124 +118,114 @@ if "滑鼠流視覺化組織與據點拼圖" in menu_choice:
             st.rerun()
 
     st.markdown("---")
-    
     col_picker, col_tree = st.columns([1, 1])
-    
     with col_picker:
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
         st.markdown("### 🛠️ 自訂模組與據點快速拼裝")
-        preset_dept = st.selectbox("選擇要新增的部門或實體據點：", [
-            "👥 人力資源與行政管理部",
-            "🌍 國際貿易與海外業務部",
-            "🛒 供應鏈與全球採購部",
-            "🚚 廠外物流轉運倉 (掛採購部)",
-            "🔍 品質保證與品管中心 (QA/QC)",
-            "💻 資訊技術與系統開發部 (IT)"
-        ])
-        
+        preset_dept = st.selectbox("選擇要新增的部門或實體據點：", ["👥 人力資源與總務行政部", "🌍 國際貿易與海外業務部", "🛒 供應鏈與全球採購部"])
         existing_parents = [node["name"] for node in st.session_state.org_nodes]
         target_parent = st.selectbox("指定其上級掛載點 (Parent):", existing_parents)
-        
-        st.markdown("#### 🧩 快速勾選功能拼圖：")
-        p1, p2 = st.columns(2)
-        with p1:
-            chk_1 = st.checkbox("📈 股市/原物料/匯率戰情室", value=False)
-            chk_2 = st.checkbox("💰 財務損益與應收付總覽", value=False)
-            chk_3 = st.checkbox("📦 庫存與倉儲條碼掃描", value=True)
-        with p2:
-            chk_4 = st.checkbox("⚙️ 工程估驗與施工日報", value=False)
-            chk_5 = st.checkbox("👥 人事考勤與薪酬管理", value=False)
-            chk_6 = st.checkbox("🇻🇳 越南電子發票與稅務", value=False)
-            
         if st.button("🖱️ 滑鼠一鍵確認掛載", type="primary", use_container_width=True):
-            mods = []
-            if chk_1: mods.append("📈 股市/原物料/匯率戰情室")
-            if chk_2: mods.append("💰 財務損益與應收付總覽")
-            if chk_3: mods.append("📦 庫存與倉儲條碼掃描")
-            if chk_4: mods.append("⚙️ 工程估驗與施工日報")
-            if chk_5: mods.append("👥 人事考勤與薪酬管理")
-            if chk_6: mods.append("🇻🇳 越南電子發票與稅務")
-            
-            node_type = "實體據點/庫位" if "倉" in preset_dept else "營運/行政部門"
-            st.session_state.org_nodes.append({
-                "id": f"n_{len(st.session_state.org_nodes)+1}",
-                "name": preset_dept,
-                "type": node_type,
-                "parent": target_parent,
-                "modules": mods
-            })
-            st.success(f"🎉 成功將 [{preset_dept}] 掛載至 [{target_parent}] 下方！")
+            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": preset_dept, "type": "營運/行政部門", "parent": target_parent, "modules": ["日常作業"]})
+            st.success(f"🎉 成功將 [{preset_dept}] 掛載至 [{target_parent}]！")
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_tree:
         st.markdown("### 🌳 目前企業組織樹狀拼圖總覽")
-        st.info("💡 滑鼠點選即時生成的組織與實體據點掛載關係：")
-        
         for node in st.session_state.org_nodes:
-            is_loc = "實體據點" in node['type']
-            indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 📦 " if is_loc else ("&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 " if node["parent"] != "無 (頂層主節點)" else "👑 ")
-            border_color = "#10b981" if is_loc else "#3b82f6"
-            
             st.markdown(f"""
-                <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid {border_color};">
-                    <b>{indent}{node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
-                    <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span><br>
-                    <span style="font-size: 11px; color: #6b7280;">🧩 啟用拼圖：{', '.join(node['modules']) if node['modules'] else '無'}</span>
+                <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #3b82f6;">
+                    <b>📂 {node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
+                    <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span>
                 </div>
             """, unsafe_allow_html=True)
 
 elif "AI 硬體與智慧門禁/車牌辨識掛接" in menu_choice:
     st.markdown("## 🤖 AI 硬體與智慧門禁/車牌辨識掛接 (IoT & Biometrics Plug & Play)")
-    st.info("💡 *零設定、滑鼠流！在此處您可以一鍵掛接各種硬體裝置。*")
-
-elif "外部資料庫與 API 快速掛接" in menu_choice:
-    st.markdown("## 🔌 外部資料庫與 API 快速掛接 (Database Bridge)")
-    st.info("💡 說明：透過滑鼠點選與參數填寫，輕鬆對接外部資料庫與 API。")
-
-elif "模組市集與功能授權設定" in menu_choice:
-    st.markdown("## 📦 模組市集與功能授權設定 (App Store & Feature Toggles)")
-    st.info("💡 *歡迎來到 SaaS 萬能模組市集！在此處您可以像逛 App Store 一樣，用滑鼠隨選隨開，為您的企業或跨界業務（製造業、越南財稅、物聯網、洗車場、咖啡廳等）即時解鎖強大功能。*")
+    st.info("💡 *車牌辨識 (ANPR) 影像與進出紀錄將自動即時推播至【保全室】與【總務/人事部】。*")
     
     with st.container():
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 🛒 跨業態與核心模組雲端市集")
-        st.markdown("您可以透過下方的滑鼠開關，即時為本租戶（公司）訂閱或關閉對應的垂直模組：")
+        st.markdown("### 🚗 即時車牌辨識與門禁聯動模擬 (ANPR Live Event Bus)")
+        st.markdown("當廠區大門攝影機拍到車輛時，系統會自動多方分發事件：")
         
-        c_app1, c_app2 = st.columns(2)
-        
-        with c_app1:
-            st.markdown("#### 🇻🇳 跨國在地化與財稅解決方案")
-            sub_vn = st.toggle("越南紅發票自動解析與 VAT 稅務模組", value=st.session_state.app_store_subscriptions["vn_tax"])
-            sub_mfg = st.toggle("製造業 MES 現場報工與 OEE 設備監控", value=st.session_state.app_store_subscriptions["mfg_mes"])
-            sub_bi = st.toggle("高階董事會戰情室 (股市/原物料/匯率/P&L)", value=st.session_state.app_store_subscriptions["bi_market"])
-            
-        with c_app2:
-            st.markdown("#### 🚀 跨界與物聯網 (IoT) 擴充模組")
-            sub_iot = st.toggle("AI 人臉辨識、指紋與車牌辨識 (ANPR) 閘道", value=st.session_state.app_store_subscriptions["iot_bridge"])
-            sub_wash = st.toggle("洗車場專用：會員儲值、預約與水刀聯動模組", value=st.session_state.app_store_subscriptions["car_wash"])
-            sub_cafe = st.toggle("連鎖咖啡廳專用：POS 點餐與原料自動扣減", value=st.session_state.app_store_subscriptions["coffee_pos"])
-            
-        st.markdown("---")
-        if st.button("💾 儲存並即時更新本租戶模組授權", type="primary", use_container_width=True):
-            st.session_state.app_store_subscriptions["vn_tax"] = sub_vn
-            st.session_state.app_store_subscriptions["mfg_mes"] = sub_mfg
-            st.session_state.app_store_subscriptions["bi_market"] = sub_bi
-            st.session_state.app_store_subscriptions["iot_bridge"] = sub_iot
-            st.session_state.app_store_subscriptions["car_wash"] = sub_wash
-            st.session_state.app_store_subscriptions["coffee_pos"] = sub_cafe
-            st.success("🎉 模組市集授權已即時更新！系統側邊欄與功能權限已動態重構完畢。")
-            
+        mock_anpr_df = pd.DataFrame([
+            {"時間": "2026-10-20 15:30:12", "車牌號碼": "61C-888.66", "車輛類型": "外包工程貨車", "分發狀態": "✅ 已同步推播至保全室門禁系統"},
+            {"時間": "2026-10-20 14:15:05", "車牌號碼": "51A-123.45", "車輛類型": "總務公務車", "分發狀態": "✅ 已同步推播至總務/人事考勤記錄"},
+            {"時間": "2026-10-20 11:02:40", "車牌號碼": "61B-555.11", "車輛類型": "供應商送貨車", "分發狀態": "✅ 已同步推播至保全與倉庫收貨端"}
+        ])
+        st.dataframe(mock_anpr_df, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        # 顯示目前已開通的強大模組清單預覽
-        st.markdown("### 📋 本租戶目前已解鎖啟用的模組總覽")
-        active_modules_list = [k for k, v in st.session_state.app_store_subscriptions.items() if v]
-        st.info(f"✨ 目前本公司已啟用的核心與跨界模組代碼：`{', '.join(active_modules_list)}`")
 
 elif "跨國在地化與越南財稅模組" in menu_choice:
-    st.markdown("## 🇻🇳 跨國在地化與越南財稅模組 (Vietnam Localization & E-Invoice)")
-    st.info("💡 說明：越南紅發票自動解析與 VAT 稅額勾稽。")
+    st.markdown("## 🇻🇳 跨國在地化與越南財稅模組 (Vietnam Localization & AP Automation)")
+    st.info("💡 *上傳越南紅發票後，系統會【全自動】將品項、數量、金額、供應商與發票號碼寫入財務應付帳款，並即時反映在負債表與董事長戰情室中！*")
+    
+    with st.container():
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.markdown("### 📄 越南電子發票解析與自動上下游串聯")
+        uploaded_invoice = st.file_uploader("請上傳越南紅發票 (XML 或 PDF)", type=["xml", "pdf"])
+        
+        if uploaded_invoice or st.button("⚡ 模擬一鍵上傳並自動解析發票 (測試串聯)", type="primary"):
+            st.success("🎉 發票解析成功！系統已自動完成全系統下游串聯：")
+            
+            col_iv1, col_iv2 = st.columns(2)
+            with col_iv1:
+                st.markdown("- **發票號碼**: `00099887`")
+                st.markdown("- **開立公司 (供應商)**: `Công ty CP Thiết bị Điện Sài Gòn`")
+                st.markdown("- **購買品項**: `工業級不斷電系統 (UPS) 5KVA`")
+            with col_iv2:
+                st.markdown("- **數量**: `2 台`")
+                st.markdown("- **總金額 (含 VAT 10%)**: `35,200,000 VND`")
+                st.markdown("- **串聯狀態**: 🟢 已自動寫入應付帳款與負債總額！")
+                
+            # 即時加入 Session
+            new_inv = {
+                "invoice_no": "00099887",
+                "supplier": "Công ty CP Thiết bị Điện Sài Gòn",
+                "items": "工業級不斷電系統 (UPS) 5KVA",
+                "qty": "2 台",
+                "amount_vnd": "35,200,000",
+                "status": "🔴 待付款 (已連動至負債與董事長戰情)"
+            }
+            if not any(d['invoice_no'] == '00099887' for d in st.session_state.ap_invoices):
+                st.session_state.ap_invoices.append(new_inv)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("### 📚 目前財務應付帳款總表 (AP Ledger - 跨部門連動即時檢視)")
+    st.dataframe(pd.DataFrame(st.session_state.ap_invoices), use_container_width=True)
+
+elif "董事長高階戰情室與財務連動預覽" in menu_choice:
+    st.markdown("## 👑 董事長高階戰情室與財務聯動預覽 (Executive Dashboard & P&L)")
+    st.info("💡 *此處展示董事長或董事會登入時看到的即時戰情：發票金額自動加總、應付帳款負債水位、綜合損益表 (P&L) 與國際原物料/匯率行情。*")
+    
+    # 統計加總
+    total_ap_amount = "51,700,000 VND" # 16,500,000 + 35,200,000
+    
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    with kpi1:
+        st.metric("📊 本月應付帳款總負債 (AP)", total_ap_amount, delta="即時連動發票資料庫", delta_color="inverse")
+    with kpi2:
+        st.metric("💵 集團現金流水位", "2,450,000,000 VND", delta="+5.2%")
+    with kpi3:
+        st.metric("💱 美金/越幣即時匯率", "25,400 VND", delta="-15 VND")
+    with kpi4:
+        st.metric("📈 銅價/原物料指數", "9,850 USD/T", delta="+1.4%")
+        
+    st.markdown("---")
+    st.markdown("### 📑 集團綜合損益表與應付帳款連動摘要 (P&L Summary)")
+    mock_pl = pd.DataFrame([
+        {"財務科目": "營業收入淨額 (Revenue)", "金額 (VND)": "850,000,000", "狀態": "🟢 正常"},
+        {"財務科目": "營業成本 (Cost of Goods Sold)", "金額 (VND)": "420,000,000", "狀態": "🟢 正常"},
+        {"財務科目": "流動負債 - 應付帳款總額 (Accounts Payable)", "金額 (VND)": total_ap_amount, "狀態": "🔴 即時來自發票自動加總"},
+        {"財務科目": "本期淨利 (Net Profit)", "金額 (VND)": "378,300,000", "狀態": "🟢 營運健康"}
+    ])
+    st.dataframe(mock_pl, use_container_width=True)
+
+elif "模組市集與功能授權設定" in menu_choice:
+    st.markdown("## 📦 模組市集與功能授權設定 (App Store)")
+    st.info("💡 說明：全系統功能模組市集。")
 
 else:
     st.markdown("## 📊 系統運行與跨庫數據監控")
