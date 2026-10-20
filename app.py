@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 
 # 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise ERP Control Center",
+    page_title="SaaS Enterprise AI-ERP Control Center",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -33,7 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化 Session State 模擬全系統打通的資料庫中心 (Data Hub)
+# 3. 初始化全系統資料庫中心 (Data Hub Session State)
 if "org_nodes" not in st.session_state:
     st.session_state.org_nodes = [
         {"id": "node_01", "name": "👑 董事長室 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "集團綜合損益(P&L)"]},
@@ -60,15 +60,25 @@ if "ap_invoices" not in st.session_state:
         }
     ]
 
+if "app_store_subscriptions" not in st.session_state:
+    st.session_state.app_store_subscriptions = {
+        "vn_tax": True,
+        "iot_bridge": True,
+        "car_wash": False,
+        "coffee_pos": False,
+        "mfg_mes": True,
+        "bi_market": True
+    }
+
 # 4. 側邊欄導覽
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
-    st.markdown("### 🌐 SaaS ERP 總控台")
+    st.markdown("### 🌐 SaaS AI-ERP 總控台")
     
     lang = st.selectbox("選擇語系 / Select Language", ["繁體中文", "English", "Tiếng Việt (越南語)", "简体中文"])
     
     st.markdown("---")
-    st.markdown("👤 **目前登入者**: `System Admin` (全系統自動串聯模式)")
+    st.markdown("👤 **目前登入者**: `System Admin` (全系統自動串聯)")
     st.markdown("🏢 **目前租戶**: `SaaS Global Control`")
     
     st.markdown("---")
@@ -148,8 +158,6 @@ elif "AI 硬體與智慧門禁/車牌辨識掛接" in menu_choice:
     with st.container():
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
         st.markdown("### 🚗 即時車牌辨識與門禁聯動模擬 (ANPR Live Event Bus)")
-        st.markdown("當廠區大門攝影機拍到車輛時，系統會自動多方分發事件：")
-        
         mock_anpr_df = pd.DataFrame([
             {"時間": "2026-10-20 15:30:12", "車牌號碼": "61C-888.66", "車輛類型": "外包工程貨車", "分發狀態": "✅ 已同步推播至保全室門禁系統"},
             {"時間": "2026-10-20 14:15:05", "車牌號碼": "51A-123.45", "車輛類型": "總務公務車", "分發狀態": "✅ 已同步推播至總務/人事考勤記錄"},
@@ -169,7 +177,6 @@ elif "跨國在地化與越南財稅模組" in menu_choice:
         
         if uploaded_invoice or st.button("⚡ 模擬一鍵上傳並自動解析發票 (測試串聯)", type="primary"):
             st.success("🎉 發票解析成功！系統已自動完成全系統下游串聯：")
-            
             col_iv1, col_iv2 = st.columns(2)
             with col_iv1:
                 st.markdown("- **發票號碼**: `00099887`")
@@ -215,16 +222,4 @@ elif "董事長高階戰情室與財務連動預覽" in menu_choice:
     st.markdown("### 📑 集團綜合損益表與應付帳款連動摘要 (P&L Summary)")
     mock_pl = pd.DataFrame([
         {"財務科目": "營業收入淨額 (Revenue)", "金額 (VND)": "850,000,000", "狀態": "🟢 正常"},
-        {"財務科目": "營業成本 (Cost of Goods Sold)", "金額 (VND)": "420,000,000", "狀態": "🟢 正常"},
-        {"財務科目": "流動負債 - 應付帳款總額 (Accounts Payable)", "金額 (VND)": total_ap_amount, "狀態": "🔴 即時來自發票自動加總"},
-        {"財務科目": "本期淨利 (Net Profit)", "金額 (VND)": "378,300,000", "狀態": "🟢 營運健康"}
-    ])
-    st.dataframe(mock_pl, use_container_width=True)
-
-elif "模組市集與功能授權設定" in menu_choice:
-    st.markdown("## 📦 模組市集與功能授權設定 (App Store)")
-    st.info("💡 說明：全系統功能模組市集。")
-
-else:
-    st.markdown("## 📊 系統運行與跨庫數據監控")
-    st.info("💡 說明：即時監控各個已掛接外部資料庫與 API 來源的同步狀態。")
+        {"財務
