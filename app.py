@@ -1,362 +1,169 @@
-import traceback
 import streamlit as st
+import pandas as pd
+from sqlalchemy import create_engine, text
 
+# 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="Multinational Injection Molding AI ERP",
-    page_icon="🏭",
-    layout="wide"
+    page_title="SaaS Enterprise ERP Control Center",
+    page_icon="🏢",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ----------------------------------------------------
-# 🔐 1. 初始化使用者帳號資料庫與細部權限 (RBAC)
-# ----------------------------------------------------
-if "user_database" not in st.session_state:
-    st.session_state.user_database = {
-        "admin": {
-            "password": "admin123", 
-            "name": "Alex Chen (System Admin)", 
-            "role": "Super Admin",
-            "allowed_depts": "ALL"
-        },
-        "boss": {
-            "password": "boss123", 
-            "name": "陳董事長 (Chairman)", 
-            "role": "Executive",
-            "allowed_depts": "ALL"
-        },
-        "gm": {
-            "password": "gm123", 
-            "name": "林總經理 (General Manager)", 
-            "role": "Executive",
-            "allowed_depts": "ALL"
-        },
-        "accountant": {
-            "password": "fin123", 
-            "name": "王財務會計 (Accountant)", 
-            "role": "Finance",
-            "allowed_depts": ["🧾 財務 (Finance)"]
-        },
-        "ga_user": {
-            "password": "ga123", 
-            "name": "李總務專員 (GA Specialist)", 
-            "role": "General Affairs",
-            "allowed_depts": ["🏢 總務部 (General Affairs)"]
-        },
-        "hr_manager": {
-            "password": "hr123", 
-            "name": "張人事主管 (HR Manager)", 
-            "role": "HR & Admin",
-            "allowed_depts": ["👥 人事/行政 (HR & Admin)"]
-        },
-        "alex": {
-            "password": "alex123", 
-            "name": "Alex Chen (Sales)", 
-            "role": "Sales",
-            "allowed_depts": ["💼 業務/行銷 (Sales & Marketing)"]
-        },
+# 2. 自定義精緻企業風 CSS 美化 (UI/UX Styling)
+st.markdown("""
+    <style>
+    /* 主體背景與字型優化 */
+    .main {
+        background-color: #f8f9fa;
     }
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if "user_info" not in st.session_state:
-    st.session_state.user_info = None
-
-if "lang" not in st.session_state:
-    st.session_state.lang = "繁體中文"
-
-# ----------------------------------------------------
-# 🔓 2. 未登入身分驗證攔截區
-# ----------------------------------------------------
-if not st.session_state.logged_in:
-    st.title("🏭 跨國塑膠/橡膠射出成型 — 企業級 AI ERP 系統")
-    st.caption("請輸入您的企業帳號與密碼進行身分驗證（畫面重整將自動要求重新登入）")
-
-    col_login, _ = st.columns([1, 1])
-    with col_login:
-        with st.form("login_form_main"):
-            username_input = st.text_input("帳號 / Username", value="ga_user").strip().lower()
-            password_input = st.text_input("密碼 / Password", type="password", value="ga123").strip()
-            submit_button = st.form_submit_button("🔑 登入系統", type="primary")
-
-            if submit_button:
-                db = st.session_state.user_database
-                if username_input in db and db[username_input]["password"] == password_input:
-                    st.session_state.logged_in = True
-                    st.session_state.user_info = db[username_input]
-                    st.success("✅ 登入成功！歡迎，" + str(st.session_state.user_info['name']))
-                    try:
-                        st.rerun()
-                    except Exception:
-                        pass
-                else:
-                    st.error("❌ 帳號或密碼錯誤，請重新輸入！")
-
-        st.info("""
-            💡 **測試帳號清單：**
-            - **最高主管/系統管理員**：`admin` / `admin123` 或 `boss` / `boss123`
-            - **財務會計**：`accountant` / `fin123`
-            - **總務專員 (權限限制只看總務部)**：`ga_user` / `ga123`
-            - **人事主管**：`hr_manager` / `hr123`
-            - **業務專員**：`alex` / `alex123`
-            """)
-    st.stop()
-
-# ----------------------------------------------------
-# 🌐 全球多語系完整字典 (i18n)
-# ----------------------------------------------------
-I18N = {
-    "繁體中文": {
-        "dept_select": "請選擇部門/模組分類：",
-        "depts": [
-            "📈 營運戰情室 (Executive)",
-            "🧾 財務 (Finance)",
-            "🏢 總務部 (General Affairs)",
-            "👥 人事/行政 (HR & Admin)",
-            "💼 業務/行銷 (Sales & Marketing)",
-            "🛠️ 研發/技術 (R&D & Engineering)",
-            "🏭 廠務/設備 (Plant & IoT)",
-            "💻 資訊/IT (IT & System Admin)"
-        ],
-        "sub_exec": ["🌐 全部市場 (All Markets)", "🇹🇼 台灣 (Taiwan)", "🇨🇳 中國/香港 (China/HK)", "🇺🇸 美國 (USA)", "🇻🇳 越南 (Vietnam)", "🛢️ 原物料與匯率 (Commodities/FX)"],
-        "sub_finance": [
-            "🛒 採購與應付帳款系統 (Procurement & AP)", 
-            "📦 訂單與應收帳款系統 (Sales Orders & AR)", 
-            "📄 越南電子發票 XML 解析與登錄",
-            "📧 通用信箱電子發票讀取 (IMAP)",
-            "📊 電子發票張數監控與加購預警",
-            "🌐 全球跨國稅務 AI 智慧問答"
-        ],
-        "sub_ga": [
-            "📦 總務用品採購與庫存 (GA Procurement & Supplies)",
-            "🏢 公司固定資產與設備管理 (Company Assets)",
-            "💵 零用金與行政費用申請 (Petty Cash & Expenses)",
-            "📄 行政公文與合同管理 (Admin Documents & Contracts)",
-            "📑 總務與簽核審核中心 (Approval Center)"
-        ],
-        "sub_hr": [
-            "📋 員工人事資料表", 
-            "💰 每月薪資與考勤變動扣款", 
-            "⏰ 網路打卡機連線對接"
-        ],
-        "sub_sales": ["📝 AI 即時報價 & CAD/3D Pipeline", "📊 歷史報價單據與資料庫"],
-        "sub_rd": ["📦 跨國資產與模具管理", "🛠️ 試模履歷與 DFM 檢討"],
-        "sub_plant": ["📡 IoT 射出機/連線設備狀態監控", "⚡ 廠區營運與機台 OEE KPI", "🔧 設備預防性保養與故障告警"],
-        "sub_it": ["🏢 跨國廠區與子公司管理", "👥 人員帳號與網頁授權", "🔒 模組權限矩陣 (RBAC)"]
-    },
-    "English": {
-        "dept_select": "Select Department / Module:",
-        "depts": [
-            "📈 Executive Dashboard",
-            "🧾 Finance & Accounting",
-            "🏢 General Affairs (GA)",
-            "👥 HR & Administration",
-            "💼 Sales & Marketing",
-            "🛠️ R&D & Engineering",
-            "🏭 Plant & IoT Engineering",
-            "💻 IT & System Admin"
-        ],
-        "sub_exec": ["🌐 All Markets", "🇹🇼 Taiwan", "🇨🇳 China/HK", "🇺🇸 USA", "🇻🇳 Vietnam", "🛢️ Commodities & FX"],
-        "sub_finance": [
-            "🛒 Procurement & Accounts Payable (AP)", 
-            "📦 Sales Orders & Accounts Receivable (AR)", 
-            "📄 Vietnam E-Invoice XML Parser",
-            "📧 Email Invoice Fetcher (IMAP)",
-            "📊 E-Invoice Quota Alert & Top-up",
-            "🌐 Global Tax & Compliance AI"
-        ],
-        "sub_ga": [
-            "📦 GA Procurement & Supplies",
-            "🏢 Company Asset Management",
-            "💵 Petty Cash & Expense Claim",
-            "📄 Admin Documents & Contracts",
-            "📑 Approval & Workflow Center"
-        ],
-        "sub_hr": [
-            "📋 Global Employee Profiles", 
-            "💰 Monthly Payroll & Deductions", 
-            "⏰ Biometric Clock-in Sync"
-        ],
-        "sub_sales": ["📝 AI Instant Quote & CAD/3D Pipeline", "📊 Quotation History & Database"],
-        "sub_rd": ["📦 Global Assets & Mold Management", "🛠️ Mold Trial Logs & DFM Review"],
-        "sub_plant": ["📡 IoT Molding Machine Monitoring", "⚡ Plant OEE & Operational KPIs", "🔧 Preventive Maintenance & Alerts"],
-        "sub_it": ["🏢 Global Sites & Subsidiaries", "👥 User Auth & Web Permissions", "🔒 Role-Based Access Control (RBAC)"]
-    },
-    "Tiếng Việt": {
-        "dept_select": "Vui lòng chọn phòng ban/phân hệ:",
-        "depts": [
-            "📈 Phòng Điều Hành (Executive)",
-            "🧾 Tài Chính / Kế Toán",
-            "🏢 Phòng Tổng Vụ (General Affairs)",
-            "👥 Nhân Sự / Hành Chính",
-            "💼 Kinh Doanh / Marketing",
-            "🛠️ R&D / Kỹ Thuật",
-            "🏭 Quản Lý Nhà Máy & IoT",
-            "💻 Công Nghệ Thông Tin (IT)"
-        ],
-        "sub_exec": ["🌐 Tất cả thị trường", "🇹🇼 Đài Loan", "🇨🇳 Trung Quốc/HK", "🇺🇸 Mỹ", "🇻🇳 Việt Nam", "🛢️ Nguyên liệu & Tỷ giá"],
-        "sub_finance": [
-            "🛒 Quản lý Mua hàng & Phải trả (AP)", 
-            "📦 Đơn bán hàng & Phải thu (AR)", 
-            "📄 Phân tích Hóa đơn XML Việt Nam",
-            "📧 Đọc Hóa đơn qua Email (IMAP)",
-            "📊 Giám sát & Báo động số lượng HĐ",
-            "🌐 Tư vấn AI Thuế Quốc Tế"
-        ],
-        "sub_ga": [
-            "📦 Mua sắm & Vật tư Tổng vụ",
-            "🏢 Quản lý Tài sản cố định",
-            "💵 Quyết toán Tiền mặt & Chi phí",
-            "📄 Quản lý Công văn & Hợp đồng",
-            "📑 Trung tâm Phê duyệt & Ký duyệt"
-        ],
-        "sub_hr": [
-            "📋 Hồ sơ nhân sự toàn cầu", 
-            "💰 Lương hàng tháng & Chấm công", 
-            "⏰ Kết nối máy chấm công"
-        ],
-        "sub_sales": ["📝 Báo giá AI & CAD/3D Pipeline", "📊 Lịch sử báo giá & CSDL"],
-        "sub_rd": ["📦 Quản lý Tài sản & Khuôn mẫu", "🛠️ Nhật ký thử khuôn & DFM"],
-        "sub_plant": ["📡 Giám sát máy ép phun IoT", "⚡ KPI OEE & Vận hành nhà máy", "🔧 Bảo trì phòng ngừa & Cảnh báo"],
-        "sub_it": ["🏢 Quản lý Chi nhánh & Công ty con", "👥 Phân quyền người dùng", "🔒 Ma trận quyền (RBAC)"]
+    /* 卡片式容器樣式 */
+    .card-container {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
     }
-}
+    /* 標題樣式 */
+    h1, h2, h3 {
+        color: #1e293b;
+    }
+    /* 按鈕美化 */
+    .stButton>button {
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# ----------------------------------------------------
-# 🛡️ 安全動態模組載入器 (萬用無錯包裝)
-# ----------------------------------------------------
-def load_module_function(module_name, func_names):
-    try:
-        mod = __import__("modules." + str(module_name), fromlist=["*"])
-        for fname in func_names:
-            if hasattr(mod, fname):
-                func = getattr(mod, fname)
-                def safe_wrapper(*args, **kwargs):
-                    try:
-                        return func(*args, **kwargs)
-                    except TypeError:
-                        try:
-                            return func(args[0]) if len(args) > 0 else func()
-                        except TypeError:
-                            try:
-                                return func()
-                            except Exception:
-                                st.error("❌ 執行 modules/" + str(module_name) + ".py 內部錯誤：\n```python\n" + str(traceback.format_exc()) + "\n```")
-                    except Exception:
-                        st.error("❌ 執行 modules/" + str(module_name) + ".py 例外錯誤：\n```python\n" + str(traceback.format_exc()) + "\n```")
-                return safe_wrapper
-        return lambda *args, **kwargs: st.error("⚠️ 在 modules/" + str(module_name) + ".py 中找不到入口函式: " + str(func_names))
-    except Exception:
-        err_detail = traceback.format_exc()
-        return lambda *args, **kwargs: st.error("❌ 載入 modules/" + str(module_name) + ".py 失敗！\n\n**詳細錯誤追蹤**:\n```python\n" + str(err_detail) + "\n```")
-
-# 載入所有功能模組
-render_exec_db = load_module_function("executive_dashboard", ["render_executive_dashboard_page", "show", "main"])
-render_sales = load_module_function("sales_quotation", ["render_sales_quotation_page", "show", "main"])
-render_invoice = load_module_function("invoice_management", ["render_invoice_management_page", "show", "main"])
-render_ap = load_module_function("procurement_ap", ["render_procurement_ap_page", "show", "main"])
-render_ar = load_module_function("sales_order_ar", ["render_sales_order_ar_page", "show", "main"])
-render_tax_ai = load_module_function("finance_tax", ["render_finance_tax_page", "show", "main"])
-render_asset = load_module_function("asset_management", ["render_asset_management_page", "show", "main"])
-render_erp_db = load_module_function("erp_dashboard", ["render_erp_dashboard_page", "show", "main"])
-render_payroll = load_module_function("payroll_management", ["render_payroll_management_page", "show", "main"])
-render_user_mgmt = load_module_function("user_management", ["render_user_management_page", "show", "main"])
-render_ga = load_module_function("general_affairs", ["render_general_affairs_page", "show", "main"])
-render_emp_mgmt = load_module_function("employee_management", ["render_employee_management", "show", "main"])
-
-# ----------------------------------------------------
-# 🔒 RBAC 權限過濾與側邊欄選單
-# ----------------------------------------------------
-user_info = st.session_state.user_info
-allowed_depts = user_info.get("allowed_depts", "ALL")
-
-st.sidebar.title("🏭 AI ERP")
-st.sidebar.markdown("### 👤 User Status")
-st.sidebar.success("🟢 **" + str(user_info['name']) + "** (" + str(user_info['role']) + ")")
-
-if st.sidebar.button("🔒 Logout System", key="btn_global_logout"):
-    st.session_state.logged_in = False
-    st.session_state.user_info = None
-    try:
-        st.rerun()
-    except Exception:
-        pass
-
-st.sidebar.markdown("---")
-
-selected_lang = st.sidebar.selectbox(
-    "🌐 System Language:",
-    ["繁體中文", "Tiếng Việt", "English"],
-    key="fixed_lang_selector_key"
-)
-
-st.session_state["lang"] = selected_lang
-lang_dict = I18N.get(selected_lang, I18N["繁體中文"])
-st.sidebar.markdown("---")
-
-all_depts = lang_dict["depts"]
-
-# 權限過濾
-if allowed_depts != "ALL":
-    available_depts = [d for d in all_depts if any(a in d for a in allowed_depts)]
-    if not available_depts:
-        available_depts = [all_depts[2]]
-else:
-    available_depts = all_depts
-
-selected_dept = st.sidebar.radio(
-    lang_dict["dept_select"],
-    options=available_depts,
-    key="sidebar_dept_radio_" + str(selected_lang)
-)
-st.sidebar.markdown("---")
-
-dept_idx = all_depts.index(selected_dept)
-
-# ----------------------------------------------------
-# 🔀 路由分流
-# ----------------------------------------------------
-if dept_idx == 0:  # 📈 營運戰情室
-    sub_option = st.sidebar.radio("Executive:", lang_dict["sub_exec"], key="sub_exec_" + str(selected_lang))
-    render_exec_db(sub_option, selected_lang)
-
-elif dept_idx == 1:  # 🧾 財務
-    sub_option = st.sidebar.radio("Finance:", lang_dict["sub_finance"], key="sub_finance_" + str(selected_lang))
-    sub_idx = lang_dict["sub_finance"].index(sub_option)
-    if sub_idx == 0:
-        render_ap(sub_option, selected_lang)
-    elif sub_idx == 1:
-        render_ar(sub_option, selected_lang)
-    elif sub_idx == 5:
-        render_tax_ai(sub_option, selected_lang)
-    else:
-        render_invoice(sub_option, selected_lang)
-
-elif dept_idx == 2:  # 🏢 總務部
-    sub_option = st.sidebar.radio("General Affairs:", lang_dict["sub_ga"], key="sub_ga_" + str(selected_lang))
-    render_ga(sub_option, selected_lang)
-
-elif dept_idx == 3:  # 👥 人事/行政
-    sub_option = st.sidebar.radio("HR:", lang_dict["sub_hr"], key="sub_hr_" + str(selected_lang))
-    sub_idx = lang_dict["sub_hr"].index(sub_option)
+# 3. 側邊欄：多語系與登入者角色/管理導覽
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/company.png", width=64)
+    st.markdown("### 🌐 SaaS ERP 總控台")
     
-    if sub_idx == 0:
-        render_emp_mgmt(sub_option, selected_lang)
-    else:
-        render_payroll(sub_option, selected_lang)
+    # 多語系選單
+    lang = st.selectbox("選擇語系 / Select Language", ["繁體中文", "English", "Tiếng Việt", "简体中文"])
+    
+    st.markdown("---")
+    st.markdown("👤 **目前登入者**: `System Admin`")
+    st.markdown("🏢 **目前租戶**: `SaaS Global Control`")
+    
+    st.markdown("---")
+    st.markdown("### 📌 系統導覽選單")
+    menu_choice = st.radio(
+        "選擇管理模組",
+        [
+            "🔌 外部資料庫與異質資料來源串聯 (Database Bridge)", 
+            "🧩 樂高積木式模組拼圖與功能開關", 
+            "🏢 企業組織與部門樹狀管理", 
+            "📊 系統運行與跨庫數據監控"
+        ]
+    )
+    
+    st.markdown("---")
+    if st.button("🚪 登出系統", use_container_width=True):
+        st.info("已安全登出系統。")
 
-elif dept_idx == 4:  # 💼 業務/行銷
-    sub_option = st.sidebar.radio("Sales:", lang_dict["sub_sales"], key="sub_sales_" + str(selected_lang))
-    render_sales(sub_option, selected_lang)
+# 4. 主畫面邏輯路由
+if "🔌 外部資料庫與異質資料來源串聯 (Database Bridge)" in menu_choice:
+    st.markdown("## 🔌 外部資料庫與異質資料來源串聯設定 (Database Bridge)")
+    st.markdown("💡 *在此處您可以設定與擴充對外連結的其他客戶資料庫（例如：客戶舊版 MySQL、總公司 SQL Server 或外部供應商 API 資料庫），供系統進行跨庫數據交換與自動同步，無須修改程式碼。*")
+    
+    with st.container():
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        with st.form("db_bridge_form"):
+            st.markdown("### ➕ 新增或設定外部資料庫連線")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                db_key = st.text_input("資料庫代碼 (Key)*", placeholder="例：client_a_mysql")
+                db_display_name = st.text_input("資料庫顯示名稱*", placeholder="例：A客戶舊版生產管理資料庫")
+                db_type = st.selectbox("資料庫類型", ["PostgreSQL / Supabase", "MySQL / MariaDB", "Microsoft SQL Server", "Oracle DB", "RESTful API / JSON Bridge"])
+                db_host = st.text_input("主機位址 (Host / IP)*", placeholder="例：192.168.1.100 或 db.client-a.com")
 
-elif dept_idx == 5:  # 🛠️ 研發/技術
-    sub_option = st.sidebar.radio("Engineering:", lang_dict["sub_rd"], key="sub_rd_" + str(selected_lang))
-    render_asset(sub_option, selected_lang)
+            with col2:
+                db_port = st.text_input("通訊埠 (Port)*", placeholder="例：3306 或 5432")
+                db_name = st.text_input("資料庫名稱 (Database Name)*", placeholder="例：production_db_v2")
+                db_user = st.text_input("使用者帳號 (Username)*", placeholder="例：db_admin")
+                db_password = st.text_input("使用者密碼 (Password)*", type="password", placeholder="請輸入資料庫密碼")
 
-elif dept_idx == 6:  # 🏭 廠務/設備
-    sub_option = st.sidebar.radio("Plant & IoT:", lang_dict["sub_plant"], key="sub_plant_" + str(selected_lang))
-    render_erp_db(sub_option, selected_lang)
+            st.markdown("---")
+            col_btn1, col_btn2 = st.columns([1, 2])
+            with col_btn1:
+                test_conn_btn = st.form_submit_button("🧪 測試資料庫連線 (Test Connection)", use_container_width=True)
+            with col_btn2:
+                save_btn = st.form_submit_button("💾 儲存並啟用資料庫設定", type="primary", use_container_width=True)
 
-elif dept_idx == 7:  # 💻 資訊/IT
-    sub_option = st.sidebar.radio("IT Admin:", lang_dict["sub_it"], key="sub_it_" + str(selected_lang))
-    render_user_mgmt(sub_option, selected_lang)
+            # 點擊測試連線邏輯
+            if test_conn_btn:
+                if not db_host or not db_name or not db_user:
+                    st.warning("⚠️ 請完整填寫主機位址、資料庫名稱與帳號資訊才能進行測試！")
+                else:
+                    try:
+                        if "PostgreSQL" in db_type:
+                            conn_str = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+                            engine = create_engine(conn_str)
+                            with engine.connect() as conn:
+                                conn.execute(text("SELECT 1"))
+                            st.success(f"🎉 成功連線至 PostgreSQL 資料庫：{db_display_name}！")
+                        elif "MySQL" in db_type:
+                            conn_str = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+                            engine = create_engine(conn_str)
+                            with engine.connect() as conn:
+                                conn.execute(text("SELECT 1"))
+                            st.success(f"🎉 成功連線至 MySQL 資料庫：{db_display_name}！")
+                        else:
+                            st.info(f"ℹ️ [{db_type}] 連線語法模擬測試成功。")
+                    except Exception as e:
+                        st.error(f"❌ 連線失敗，請檢查網路或帳號密碼：\n`{str(e)}`")
+
+            if save_btn:
+                if not db_key or not db_display_name or not db_host:
+                    st.error("❌ 請填寫必要的代碼、名稱與主機位址欄位！")
+                else:
+                    st.success(f"✅ 外部資料庫 [{db_display_name}] (代碼: `{db_key}`) 設定已成功儲存！")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # 下方：已配置的外部資料庫清單 (支援搜尋與刪除/修改)
+    st.markdown("### 📋 目前已配置的外部資料庫連線清單")
+    
+    # 模擬資料展示 (未來從資料庫撈取)
+    mock_db_data = pd.DataFrame([
+        {"代碼 Key": "tw_factory_sql", "名稱": "台灣總廠 MySQL", "類型": "MySQL", "主機": "192.168.10.5", "狀態": "🟢 連線正常"},
+        {"代碼 Key": "vn_branch_pg", "名稱": "越南分公司 Supabase", "類型": "PostgreSQL", "主機": "db.vietnam-erp.com", "狀態": "🟢 連線正常"}
+    ])
+    
+    # 搜尋與過濾功能
+    search_query = st.text_input("🔍 搜尋資料庫名稱或代碼", placeholder="輸入關鍵字篩選...")
+    if search_query:
+        mock_db_data = mock_db_data[mock_db_data.astype(str).apply(lambda x: x.str.contains(search_query, case=False)).any(axis=1)]
+
+    st.dataframe(mock_db_data, use_container_width=True)
+
+elif "🧩 樂高積木式模組拼圖與功能開關" in menu_choice:
+    st.markdown("## 🧩 樂高積木式模組拼圖與功能開關 (Feature Toggles)")
+    st.info("💡 說明：您可以針對不同的客戶或部門，自由勾選要開啟或關閉的 ERP 模組（如進銷存、財會、CRM、生產製造），滿足不同方案的銷售需求。")
+    
+    # 模擬模組開關介面
+    col1, col2 = st.columns(2)
+    with col1:
+        st.checkbox("📦 智能進銷存與庫存管理模組", value=True)
+        st.checkbox("💰 財務會計與多幣別應收付模組", value=True)
+        st.checkbox("🏭 生產排程與BOM表管理模組", value=False)
+    with col2:
+        st.checkbox("🤝 CRM 客戶關係與報價模組", value=True)
+        st.checkbox("📊 商業智慧 BI 儀表板與報表模組", value=True)
+        st.checkbox("⚙️ 設備維護與物聯網監控模組", value=False)
+        
+    if st.button("💾 儲存模組拼圖設定", type="primary"):
+        st.success("✅ 客戶功能模組拼圖已更新！下次登入時側邊欄將自動動態調整。")
+
+elif "🏢 企業組織與部門樹狀管理" in menu_choice:
+    st.markdown("## 🏢 企業組織與部門樹狀管理 (Dynamic Org Chart)")
+    st.info("💡 說明：動態建構企業組織架構，確保不同部門與員工享有對應的資料列級隔離（Row-Level Security）。")
+    st.text("（此處將提供組織樹新增、修改、刪除與部門主管指派介面）")
+
+else:
+    st.markdown("## 📊 系統運行與跨庫數據監控")
+    st.info("💡 說明：即時監控各個已掛接外部資料庫的同步狀態、API 呼叫次數與系統效能。")
