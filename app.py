@@ -33,7 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 側邊欄：多語系與登入者角色/管理導覽（務必在最前面定義 menu_choice，避免 NameError）
+# 3. 側邊欄：多語系與登入者角色/管理導覽
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
     st.markdown("### 🌐 SaaS ERP 總控台")
@@ -131,15 +131,15 @@ if "外部資料庫與異質資料來源串聯" in menu_choice:
     st.dataframe(mock_db_data, use_container_width=True)
 
 elif "樂高積木式模組拼圖與功能開關" in menu_choice:
-    st.markdown("## 🧩 樂高積木式模組拼圖與功能開關 (Feature Toggles)")
-    st.info("💡 說明：請先在左側選取要設定的【企業標準部門】，再為該部門勾選市面上所有可能用到的完整企業功能模組拼圖。")
+    st.markdown("## 🧩 樂高積木式模組拼圖與功能開關 (Feature Toggles & App Store)")
+    st.info("💡 說明：此處展示系統【全功能模組大合集】。您可以點選左側任意部門，並自由勾選或組合市面上所有企業營運、高階決策、財會與供應鏈所需的完整模組拼圖。")
 
     col_dept, col_modules = st.columns([1, 2])
 
     with col_dept:
-        st.markdown("### 🏢 選擇目標部門 (通用市場企業架構)")
+        st.markdown("### 🏢 選擇目標部門 / 管理層")
         dept_options = [
-            "👑 董事長室 / 總經理室 (Executive Office)",
+            "👑 董事長室 / 總經理室 (Executive & Board Room)",
             "📋 經營企劃與策略發展部 (Corporate Strategy)",
             "👥 人力資源與行政管理部 (HR & Admin Dept)",
             "⚖️ 法務與合規遵循部 (Legal & Compliance)",
@@ -165,36 +165,42 @@ elif "樂高積木式模組拼圖與功能開關" in menu_choice:
 
     with col_modules:
         dept_name_only = selected_department.split(' ')[1]
-        st.markdown(f"### 🧩 【{dept_name_only}】的完整功能模組拼圖")
-        st.markdown("請勾選此部門可使用的所有企業級功能模組：")
+        st.markdown(f"### 🧩 【{dept_name_only}】的企業全功能模組市集 (App Store)")
+        st.markdown("請勾選此部門/高階角色可解鎖啟用的所有功能與戰情儀表板：")
         
-        # 市面上所有公司可能用到的完整功能清單（三欄式佈局，涵蓋 ERP, SCM, CRM, HRM, BI, MES, PLM 等）
-        mc1, mc2, mc3 = st.columns(3)
-        with mc1:
-            st.checkbox("智能進銷存 (Inventory)", value=True, key=f"{selected_department}_f1")
-            st.checkbox("財務總帳與應收付 (GL/AR/AP)", value=True, key=f"{selected_department}_f2")
-            st.checkbox("生管與BOM表控管 (PMC/BOM)", value=False, key=f"{selected_department}_f3")
-            st.checkbox("研發專案與PLM管理", value=False, key=f"{selected_department}_f4")
-            st.checkbox("供應鏈與採購管理 (SCM)", value=True, key=f"{selected_department}_f5")
-            st.checkbox("資產與固定設備管理", value=False, key=f"{selected_department}_f6")
-        with mc2:
-            st.checkbox("CRM客戶關係與商機管理", value=True, key=f"{selected_department}_f7")
-            st.checkbox("人事薪酬與考勤管理 (HRM)", value=False, key=f"{selected_department}_f8")
-            st.checkbox("電子簽核與流程引擎 (BPM)", value=True, key=f"{selected_department}_f9")
-            st.checkbox("商業智慧與BI決策報表", value=True, key=f"{selected_department}_f10")
-            st.checkbox("倉儲物流與條碼掃描 (WMS)", value=False, key=f"{selected_department}_f11")
-            st.checkbox("專案管理與工時工項追蹤", value=True, key=f"{selected_department}_f12")
-        with mc3:
-            st.checkbox("品保與客訴檢驗管理 (QA/QC)", value=False, key=f"{selected_department}_f13")
-            st.checkbox("廠務設備與物聯網 (IoT)", value=False, key=f"{selected_department}_f14")
-            st.checkbox("多語系與動態翻譯模組", value=True, key=f"{selected_department}_f15")
-            st.checkbox("跨國多公司財務合併報表", value=False, key=f"{selected_department}_f16")
-            st.checkbox("API 閘道與異質系統整合", value=True, key=f"{selected_department}_f17")
-            st.checkbox("AI 智慧助理與語音辨識", value=True, key=f"{selected_department}_f18")
+        # 業界最完整、涵蓋高階決策與各部門營運的超級功能清單
+        m_col1, m_col2, m_col3 = st.columns(3)
+        
+        with m_col1:
+            st.markdown("#### 📈 高階決策與即時行情")
+            st.checkbox("🌍 全球原物料即時行情看板", value=True, key=f"{selected_department}_top1")
+            st.checkbox("💱 國際匯率與多幣別換算中心", value=True, key=f"{selected_department}_top2")
+            st.checkbox("📊 全球股市與財經大盤監控", value=True, key=f"{selected_department}_top3")
+            st.checkbox("📑 綜合損益表與資產負債表", value=True, key=f"{selected_department}_top4")
+            st.checkbox("💵 現金流與應收/應付帳款水位", value=True, key=f"{selected_department}_top5")
+            st.checkbox("🎯 企業KPI與多維度BI戰情室", value=True, key=f"{selected_department}_top6")
+            
+        with m_col2:
+            st.markdown("#### 📦 供應鏈與進銷存 (SCM)")
+            st.checkbox("📦 智能進銷存與批號效期管理", value=True, key=f"{selected_department}_scm1")
+            st.checkbox("🛒 全球供應鏈採購與比價系統", value=True, key=f"{selected_department}_scm2")
+            st.checkbox("🚚 倉儲物流與條碼PDA掃描(WMS)", value=False, key=f"{selected_department}_scm3")
+            st.checkbox("📋 供應商交期與品質評鑑系統", value=False, key=f"{selected_department}_scm4")
+            st.checkbox("🚢 進出口報關與海運物流追蹤", value=False, key=f"{selected_department}_scm5")
+            st.checkbox("🏷️ 條碼/QR Code與資產標籤列印", value=False, key=f"{selected_department}_scm6")
+
+        with m_col3:
+            st.markdown("#### 💰 財會、生產與其他核心")
+            st.checkbox("💰 總帳會計、傳票與會計師報表", value=True, key=f"{selected_department}_fin1")
+            st.checkbox("🏭 生產排程、BOM表與製程管考", value=False, key=f"{selected_department}_mes1")
+            st.checkbox("🤝 CRM 客戶關係與外貿商機管理", value=True, key=f"{selected_department}_crm1")
+            st.checkbox("👥 人事薪酬、勞健保與考勤排班", value=False, key=f"{selected_department}_hr1")
+            st.checkbox("✍️ 電子簽核流程引擎 (BPM)", value=True, key=f"{selected_department}_bpm1")
+            st.checkbox("🤖 AI 智慧語音助理與跨國翻譯", value=True, key=f"{selected_department}_ai1")
 
         st.markdown("---")
-        if st.button(f"💾 儲存【{dept_name_only}】的完整模組設定", type="primary", use_container_width=True):
-            st.success(f"✅ 已成功將設定儲存至 [{selected_department}]！該部門所屬模組拼圖已全面更新生效。")
+        if st.button(f"💾 儲存【{dept_name_only}】的全功能拼圖設定", type="primary", use_container_width=True):
+            st.success(f"✅ 已成功將最新完整模組清單儲存至 [{selected_department}]！系統權限已即時更新。")
 
 elif "企業組織與部門樹狀管理" in menu_choice:
     st.markdown("## 🏢 企業組織與部門樹狀管理 (Dynamic Org Chart)")
