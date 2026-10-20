@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, text
 
 # 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Master Hub",
+    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Visual Org",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -90,11 +90,11 @@ if "tenants_db" not in st.session_state:
         }
     }
 
-# 追蹤目前的登入模式："Master" (總控台) 或 具體某個 Tenant Key (租戶後台)
+# 追蹤目前登入模式：如果是 "Master" 代表在總控台；如果是具體的 tenant key 代表進入該公司後台
 if "current_portal" not in st.session_state:
     st.session_state.current_portal = "Master"
 
-# 4. 側邊欄：乾淨清晰的導覽與身分切換
+# 4. 側邊欄：乾淨清晰的導覽（徹底移除笨拙的下拉選單）
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
     st.markdown("### 🌐 SaaS 多租戶 AI-ERP 平台")
@@ -102,34 +102,24 @@ with st.sidebar:
     lang = st.selectbox("選擇語系 / Select Language", ["繁體中文", "English", "Tiếng Việt (越南語)", "简体中文"])
     
     st.markdown("---")
-    st.markdown("🔒 **[系統身分切換]**")
     
-    portal_mode = st.radio(
-        "選擇操作視角",
-        ["👑 SaaS 平台總控台 (Master Hub)", "🏢 進入客戶租戶公司後台 (Tenant Portal)"]
-    )
-    
-    if portal_mode == "👑 SaaS 平台總控台 (Master Hub)":
-        st.session_state.current_portal = "Master"
+    # 快速返回總控台按鈕
+    if st.session_state.current_portal != "Master":
+        if st.button("👑 返回 SaaS 平台總控台", type="primary", use_container_width=True):
+            st.session_state.current_portal = "Master"
+            st.rerun()
+        st.markdown(f"🏢 **目前管理租戶**: `{st.session_state.tenants_db[st.session_state.current_portal]['name']}`")
     else:
-        # 下拉選單只在需要進去看個別客戶時使用，平常在總控台用表格搜尋
-        selected_t_key = st.selectbox(
-            "選擇要模擬進入的公司租戶",
-            options=list(st.session_state.tenants_db.keys()),
-            format_func=lambda x: st.session_state.tenants_db[x]["name"]
-        )
-        st.session_state.current_portal = selected_t_key
-
-    is_master = (st.session_state.current_portal == "Master")
+        st.markdown("👑 **目前身分**: `SaaS 平台總管理員 (Master)`")
     
     st.markdown("---")
     st.markdown("### 📌 系統導覽選單")
     
-    if is_master:
+    if st.session_state.current_portal == "Master":
         menu_choice = st.radio(
             "選擇總控台模組",
             [
-                "🏢 全球租戶動態總覽與搜尋中心 (Tenants Hub)",
+                "🏢 全球企業租戶動態總覽與管理 (Tenants Hub)",
                 "💱 全球多幣別與即時匯率中樞 (Global FX)",
                 "⚙️ 全球定價策略與費率自訂 (Pricing)"
             ]
@@ -139,7 +129,7 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 公司組織與據點自助設定 (超清楚版)",
+                "🖱️ 公司組織與視覺化樹狀圖設定",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -152,29 +142,29 @@ with st.sidebar:
         st.info("已安全登出系統。")
 
 # 5. 主畫面邏輯路由
-if is_master:
-    # ==================== SaaS 總控台：強大租戶管理與搜尋中心 ====================
-    if "全球租戶動態總覽" in menu_choice:
-        st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與搜尋中心 (Tenants Management Hub)")
-        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶。支援即時關鍵字搜尋，並可依據【價格】、【地區位置】、【使用到期日】進行智慧排序與過濾！*")
+if st.session_state.current_portal == "Master":
+    # ==================== SaaS 總控台：強大租戶管理與點擊進入 ====================
+    if "全球企業租戶動態總覽" in menu_choice:
+        st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與搜尋中心")
+        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶。支援即時搜尋，並可直接點擊表格下方的按鈕進入該公司的獨立後台管理！*")
         
-        # 搜尋與篩選控制面板
+        # 搜尋與篩選面板
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             s1, s2, s3, s4 = st.columns(4)
             with s1:
-                search_keyword = st.text_input("🔍 搜尋公司名稱或代碼", placeholder="輸入關鍵字...")
+                search_keyword = st.text_input("🔍 搜尋公司名稱", placeholder="輸入關鍵字...")
             with s2:
                 region_filter = st.selectbox("🌍 依地區位置過濾", ["全部地區", "越南 (Binh Duong, VN)", "台灣 (Taipei, TW)"])
             with s3:
-                sort_by = st.selectbox("📊 排序依據", ["價格由高到低 (Price)", "使用到期日最近 (Expiry)", "公司名稱筆畫 (Name)"])
+                sort_by = st.selectbox("📊 排序依據", ["價格由高到低", "使用到期日最近", "公司名稱筆畫"])
             with s4:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("➕ 新增企業客戶租戶", type="primary", use_container_width=True):
-                    st.success("🎉 請前往模組市集或發布連結供客戶自助註冊！")
+                    st.success("🎉 請透過模組市集或自助註冊引導客戶！")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # 整理租戶資料成 DataFrame
+        # 整理租戶資料
         tenant_list_data = []
         for t_key, t_val in st.session_state.tenants_db.items():
             tenant_list_data.append({
@@ -189,32 +179,31 @@ if is_master:
             })
         df_tenants = pd.DataFrame(tenant_list_data)
 
-        # 套用搜尋與過濾邏輯
         if search_keyword:
             df_tenants = df_tenants[df_tenants.astype(str).apply(lambda x: x.str.contains(search_keyword, case=False)).any(axis=1)]
         if region_filter != "全部地區":
             df_tenants = df_tenants[df_tenants["地區位置"] == region_filter]
-        
-        if "價格由高到低" in sort_by:
-            df_tenants = df_tenants.sort_values(by="每月價格 (USD)", ascending=False)
-        elif "使用到期日最近" in sort_by:
-            df_tenants = df_tenants.sort_values(by="合約到期日", ascending=True)
 
-        # 顯示互動表格
-        st.markdown("### 📋 企業租戶列表與管理")
+        st.markdown("### 📋 企業租戶列表")
         st.dataframe(df_tenants, use_container_width=True)
         
-        # 快速進入租戶管理捷徑
-        st.markdown("### 🚀 快速切換至指定客戶租戶後台")
+        # 點擊進入指定租戶後台的卡片捷徑
+        st.markdown("### 🚀 快速進入指定客戶租戶後台管理")
         quick_cols = st.columns(len(st.session_state.tenants_db))
         for idx, (t_key, t_val) in enumerate(st.session_state.tenants_db.items()):
             with quick_cols[idx]:
-                if st.button(f"📂 進入：{t_val['name']}", use_container_width=True):
+                st.markdown(f"""
+                    <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
+                        <b>{t_val['name']}</b><br>
+                        <span style="font-size: 12px; color: gray;">{t_val['region']} | ${t_val['price_usd']}/月</span>
+                    </div>
+                """, unsafe_allow_html=True)
+                if st.button(f"📂 進入該公司後台", key=f"btn_{t_key}", use_container_width=True):
                     st.session_state.current_portal = t_key
                     st.rerun()
 
     elif "全球多幣別與即時匯率引擎" in menu_choice:
-        st.markdown("## 💱 SaaS 平台總控台：全球多幣別與即時匯率引擎 (Global FX Engine)")
+        st.markdown("## 💱 SaaS 平台總控台：全球多幣別與即時匯率引擎")
         st.info("💡 維護全平台的基準匯率（USD/TWD/VND/RMB）。")
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -237,12 +226,12 @@ if is_master:
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台 (超清楚、區塊化設定介面) ====================
+    # ==================== 個別租戶後台 (視覺化組織圖與節點調整) ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "組織與據點自助設定" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與實體據點自助設定")
-        st.info("💡 *極致清晰的區塊化設定！您可以直接新增部門或實體倉庫，系統會即時在右側呈現最新的組織與據點樹狀圖。*")
+    if "公司組織與視覺化樹狀圖設定" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與視覺化樹狀圖設定")
+        st.info("💡 *在此處您可以新增部門或實體倉庫，並能隨時調整其上級掛載關係，下方即時呈現完整的視覺化組織結構圖！*")
         
         col_set, col_view = st.columns([1, 1])
         
@@ -271,19 +260,21 @@ else:
                             "action": f"新增{dept_type}：{new_dept} (掛載於 {chosen_parent})",
                             "ip": "192.168.10.5"
                         })
-                        st.success(f"🎉 成功新增 [{new_dept}] 並完成掛載！")
+                        st.success(f"🎉 成功新增 [{new_dept}]！")
                         st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
         with col_view:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 🌳 貴公司目前的組織與據點樹狀圖")
+            st.markdown("### 🌳 貴公司即時視覺化組織架構圖")
+            
+            # 以樹狀結構呈現
             for node in current_tenant["org_nodes"]:
                 is_loc = "實體據點" in node['type'] or "倉庫" in node['name']
                 indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 📦 " if is_loc else ("&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 " if node["parent"] != "無 (頂層)" else "👑 ")
                 border_color = "#10b981" if is_loc else "#3b82f6"
                 st.markdown(f"""
-                    <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid {border_color};">
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         <b>{indent}{node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
                         <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span>
                     </div>
@@ -291,8 +282,8 @@ else:
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif "員工帳號與權限角色管理" in menu_choice:
-        st.markdown(f"## 👥 {current_tenant['name']}：企業內部員工帳號與權限角色管理 (RBAC)")
-        st.info("💡 在此處建立公司內部的員工帳號與指派職務。")
+        st.markdown(f"## 👥 {current_tenant['name']}：員工帳號與權限角色管理 (RBAC)")
+        st.info("💡 建立公司內部員工帳號與職務。")
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             with st.form("staff_form"):
@@ -307,8 +298,8 @@ else:
         st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
 
     elif "資安稽核日誌" in menu_choice:
-        st.markdown(f"## 🔒 {current_tenant['name']}：系統資安稽核日誌與操作軌跡追蹤")
-        st.info("💡 記錄公司內部所有員工的操作軌跡。")
+        st.markdown(f"## 🔒 {current_tenant['name']}：系統資安稽核日誌")
+        st.info("💡 記錄公司內部員工操作軌跡。")
         st.dataframe(pd.DataFrame(current_tenant["audit_logs"]), use_container_width=True)
 
     elif "AI 硬體與車牌" in menu_choice:
