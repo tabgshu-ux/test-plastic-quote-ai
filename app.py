@@ -1,17 +1,24 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from sqlalchemy import create_engine, text
+
+# ==============================================================================
+# 🧩 模組化架構設計說明 (Modular Architecture Concept)
+# ------------------------------------------------------------------------------
+# 為了因應未來不同客戶（租戶）的獨立銷售與部署，系統底層已劃分為：
+# 1. 平台總控模組 (Master Control Hub) -> 負責全球匯率、定價、租戶總覽
+# 2. 客戶獨立租戶模組 (Tenant Engine) -> 負責各公司自主組織樹、員工 RBAC、發票
+# ==============================================================================
 
 # 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise Multi-Tenant AI-ERP & Visual Org",
+    page_title="SaaS Enterprise Modular AI-ERP",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 自定義精緻企業風 CSS 美化 (UI/UX Styling)
+# 2. 自定義精緻企業風 CSS 美化
 st.markdown("""
     <style>
     .main {
@@ -58,10 +65,12 @@ if "tenants_db" not in st.session_state:
             "plan": "旗艦版 (Enterprise)",
             "price_usd": 170,
             "expiry_date": "2027-10-20",
+            # 正確的組織樹：由最高決策層往下延伸，並包含實體營業據點
             "org_nodes": [
-                {"id": "n_1", "name": "👑 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球戰情室", "P&L"]},
-                {"id": "n_2", "name": "⚙️ 工程部", "type": "營運部門", "parent": "👑 總經理室", "modules": ["工程估驗", "施工日報"]},
-                {"id": "n_3", "name": "📦 平陽廠原物料倉庫", "type": "實體據點/庫位", "parent": "👑 總經理室", "modules": ["庫存管理"]}
+                {"id": "n_1", "name": "👑 董事會 / 總經理室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["全球戰情室", "P&L"]},
+                {"id": "n_2", "name": "⚙️ 工程技術部", "type": "營運部門", "parent": "👑 董事會 / 總經理室", "modules": ["工程估驗", "施工日報"]},
+                {"id": "n_3", "name": "🏢 平陽美福營業所 (實體據點)", "type": "營運據點/分店", "parent": "👑 董事會 / 總經理室", "modules": ["門市收發貨"]},
+                {"id": "n_4", "name": "📦 廠內原物料倉庫", "type": "倉庫據點", "parent": "🏢 平陽美福營業所 (實體據點)", "modules": ["庫存管理"]}
             ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠大門人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "qty": "50支", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
@@ -80,8 +89,9 @@ if "tenants_db" not in st.session_state:
             "price_usd": 80,
             "expiry_date": "2026-11-05",
             "org_nodes": [
-                {"id": "w_1", "name": "👑 台北總店長室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["營收戰情"]},
-                {"id": "w_2", "name": "🚗 洗車美容部", "type": "營運部門", "parent": "👑 台北總店長室", "modules": ["會員預約", "水刀聯動"]}
+                {"id": "w_1", "name": "👑 總管理處 / 董事長室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["營收戰情"]},
+                {"id": "w_2", "name": "🏢 台北旗艦總店 (營業據點)", "type": "營運據點/分店", "parent": "👑 總管理處 / 董事長室", "modules": ["會員預約"]},
+                {"id": "w_3", "name": "🚗 洗車美容作業部", "type": "營運部門", "parent": "🏢 台北旗艦總店 (營業據點)", "modules": ["水刀聯動"]}
             ],
             "iot_devices": [{"dev_id": "W-01", "name": "入口車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
@@ -90,11 +100,10 @@ if "tenants_db" not in st.session_state:
         }
     }
 
-# 追蹤目前登入模式：如果是 "Master" 代表在總控台；如果是具體的 tenant key 代表進入該公司後台
 if "current_portal" not in st.session_state:
     st.session_state.current_portal = "Master"
 
-# 4. 側邊欄：乾淨清晰的導覽（徹底移除笨拙的下拉選單）
+# 4. 側邊欄導覽
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
     st.markdown("### 🌐 SaaS 多租戶 AI-ERP 平台")
@@ -103,7 +112,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # 快速返回總控台按鈕
     if st.session_state.current_portal != "Master":
         if st.button("👑 返回 SaaS 平台總控台", type="primary", use_container_width=True):
             st.session_state.current_portal = "Master"
@@ -117,7 +125,7 @@ with st.sidebar:
     
     if st.session_state.current_portal == "Master":
         menu_choice = st.radio(
-            "選擇總控台模組",
+            "選擇總控台模組 (Master Hub)",
             [
                 "🏢 全球企業租戶動態總覽與管理 (Tenants Hub)",
                 "💱 全球多幣別與即時匯率中樞 (Global FX)",
@@ -129,7 +137,7 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 公司組織與視覺化樹狀圖設定",
+                "🖱️ 公司組織樹與營業據點自主設定",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -143,12 +151,11 @@ with st.sidebar:
 
 # 5. 主畫面邏輯路由
 if st.session_state.current_portal == "Master":
-    # ==================== SaaS 總控台：強大租戶管理與點擊進入 ====================
+    # ==================== SaaS 總控台 ====================
     if "全球企業租戶動態總覽" in menu_choice:
         st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與搜尋中心")
-        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶。支援即時搜尋，並可直接點擊表格下方的按鈕進入該公司的獨立後台管理！*")
+        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶。支援即時搜尋、價格與到期日排序，並可直接點擊進入該公司的獨立模組後台！*")
         
-        # 搜尋與篩選面板
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             s1, s2, s3, s4 = st.columns(4)
@@ -161,10 +168,9 @@ if st.session_state.current_portal == "Master":
             with s4:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("➕ 新增企業客戶租戶", type="primary", use_container_width=True):
-                    st.success("🎉 請透過模組市集或自助註冊引導客戶！")
+                    st.success("🎉 請引導客戶透過獨立模組註冊！")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # 整理租戶資料
         tenant_list_data = []
         for t_key, t_val in st.session_state.tenants_db.items():
             tenant_list_data.append({
@@ -174,7 +180,7 @@ if st.session_state.current_portal == "Master":
                 "訂閱方案": t_val["plan"],
                 "每月價格 (USD)": t_val["price_usd"],
                 "合約到期日": t_val["expiry_date"],
-                "部門數": len(t_val["org_nodes"]),
+                "組織節點數": len(t_val["org_nodes"]),
                 "狀態": "🟢 正常營運"
             })
         df_tenants = pd.DataFrame(tenant_list_data)
@@ -187,7 +193,6 @@ if st.session_state.current_portal == "Master":
         st.markdown("### 📋 企業租戶列表")
         st.dataframe(df_tenants, use_container_width=True)
         
-        # 點擊進入指定租戶後台的卡片捷徑
         st.markdown("### 🚀 快速進入指定客戶租戶後台管理")
         quick_cols = st.columns(len(st.session_state.tenants_db))
         for idx, (t_key, t_val) in enumerate(st.session_state.tenants_db.items()):
@@ -204,7 +209,7 @@ if st.session_state.current_portal == "Master":
 
     elif "全球多幣別與即時匯率引擎" in menu_choice:
         st.markdown("## 💱 SaaS 平台總控台：全球多幣別與即時匯率引擎")
-        st.info("💡 維護全平台的基準匯率（USD/TWD/VND/RMB）。")
+        st.info("💡 維護全平台的基準匯率。")
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             with st.form("fx_form"):
@@ -226,53 +231,57 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台 (視覺化組織圖與節點調整) ====================
+    # ==================== 個別租戶後台：自主組織樹與據點設定 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "公司組織與視覺化樹狀圖設定" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與視覺化樹狀圖設定")
-        st.info("💡 *在此處您可以新增部門或實體倉庫，並能隨時調整其上級掛載關係，下方即時呈現完整的視覺化組織結構圖！*")
+    if "公司組織樹與營業據點自主設定" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與營業據點自主設定")
+        st.info("💡 *完全由貴公司自行掌控！您可以從頂層的『董事會/總經理室』出發，自由新增內部部門，或是建立實體營業據點（如分店、工廠）並指定其掛載歸屬。*")
         
         col_set, col_view = st.columns([1, 1])
         
         with col_set:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ 新增部門或實體據點")
+            st.markdown("### ➕ 自主新增組織節點或實體據點")
             with st.form("dept_add_form"):
-                new_dept = st.text_input("部門或倉庫名稱*", placeholder="例：平陽廠維修中心 / 會計部")
-                dept_type = st.selectbox("屬性分類", ["營運/行政部門 (Department)", "實體據點/倉庫 (Location/Warehouse)"])
+                node_name = st.text_input("名稱*", placeholder="例：台北旗艦總店 / 財務會計部 / 美福工廠")
+                node_type = st.selectbox("屬性分類", [
+                    "👑 最高決策層 (Board / CEO)",
+                    "📂 營運/行政部門 (Department)", 
+                    "🏢 營運據點/分店 (Branch / Store)", 
+                    "📦 實體倉庫/庫位 (Warehouse)"
+                ])
                 existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
                 chosen_parent = st.selectbox("指定上級掛載點 (Parent)", existing_parents)
                 
-                submitted_dept = st.form_submit_button("🧱 確認新增並掛載", type="primary", use_container_width=True)
-                if submitted_dept:
-                    if new_dept:
+                submitted_node = st.form_submit_button("🧱 確認新增並掛載", type="primary", use_container_width=True)
+                if submitted_node:
+                    if node_name:
                         current_tenant["org_nodes"].append({
                             "id": f"n_{len(current_tenant['org_nodes'])+1}",
-                            "name": new_dept,
-                            "type": dept_type,
+                            "name": node_name,
+                            "type": node_type,
                             "parent": chosen_parent,
                             "modules": ["日常作業"]
                         })
                         current_tenant["audit_logs"].insert(0, {
                             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "user": current_tenant["staff"][0]["name"],
-                            "action": f"新增{dept_type}：{new_dept} (掛載於 {chosen_parent})",
+                            "action": f"新增{node_type}：{node_name} (掛載於 {chosen_parent})",
                             "ip": "192.168.10.5"
                         })
-                        st.success(f"🎉 成功新增 [{new_dept}]！")
+                        st.success(f"🎉 成功新增 [{node_name}]！")
                         st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
         with col_view:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 🌳 貴公司即時視覺化組織架構圖")
+            st.markdown("### 🌳 貴公司即時組織架構與據點分佈圖")
             
-            # 以樹狀結構呈現
             for node in current_tenant["org_nodes"]:
-                is_loc = "實體據點" in node['type'] or "倉庫" in node['name']
-                indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 📦 " if is_loc else ("&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 " if node["parent"] != "無 (頂層)" else "👑 ")
-                border_color = "#10b981" if is_loc else "#3b82f6"
+                is_branch = "據點" in node['type'] or "分店" in node['type'] or "倉庫" in node['type']
+                indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 🏢 " if is_branch else ("&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 " if node["parent"] != "無 (頂層)" else "👑 ")
+                border_color = "#10b981" if is_branch else "#3b82f6"
                 st.markdown(f"""
                     <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                         <b>{indent}{node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
