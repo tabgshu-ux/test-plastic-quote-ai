@@ -116,7 +116,7 @@ if "外部資料庫與異質資料來源串聯" in menu_choice:
 
 elif "樂高積木式模組拼圖與功能開關" in menu_choice:
     st.markdown("## 🧩 樂高積木式模組拼圖與功能開關 (Granular Feature Toggles)")
-    st.info("💡 說明：請在左側選取目標部門，右側將展開該部門在專業 ERP 中所有細分到日常作業的完整功能清單，供您精準勾選授權。")
+    st.info("💡 說明：請在左側選取目標部門，右側將展開該部門在專業 ERP 中完全獨立、職能專屬的細分功能清單，供您精準勾選授權。")
 
     col_dept, col_modules = st.columns([1, 2])
 
@@ -152,7 +152,7 @@ elif "樂高積木式模組拼圖與功能開關" in menu_choice:
         st.markdown(f"### 🧩 【{dept_name_only}】的專屬細分功能清單")
         st.markdown("請針對該部門勾選其日常作業所需的所有專業子功能：")
         
-        # 根據不同部門動態提供最專業、最完整的細分功能
+        # 1. 董事長室 / 總經理室
         if "董事長室" in selected_department or "總經理室" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
@@ -174,6 +174,26 @@ elif "樂高積木式模組拼圖與功能開關" in menu_choice:
                 st.checkbox("AI 智慧經營摘要與異常風險預警", value=True)
                 st.checkbox("高管專屬行動端戰情推播通知", value=True)
 
+        # 2. 經營企劃與策略發展部
+        elif "經營企劃" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 📊 策略與年度目標")
+                st.checkbox("年度經營計畫與策略目標分解 (OKR/KPI)", value=True)
+                st.checkbox("競品分析與市場趨勢數據收集", value=True)
+                st.checkbox("集團各事業部投資效益評估", value=True)
+            with sub_col2:
+                st.markdown("#### 📋 專案與組織變革")
+                st.checkbox("跨部門大型策略專案管考", value=True)
+                st.checkbox("組織結構重整與編制規畫模擬", value=True)
+                st.checkbox("新事業體可行性評估與商業模式建模", value=True)
+            with sub_col3:
+                st.markdown("#### 📑 報告與大數據支援")
+                st.checkbox("董事會專用月報/季報自動化彙編", value=True)
+                st.checkbox("巨量營運數據商業智慧分析", value=True)
+                st.checkbox("跨國營運效率對比與優化建議", value=True)
+
+        # 3. 人力資源與行政管理部
         elif "人力資源" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
@@ -196,7 +216,65 @@ elif "樂高積木式模組拼圖與功能開關" in menu_choice:
                 st.checkbox("人才招募、面試流程與人才庫管理", value=True)
                 st.checkbox("勞資法規遵循與員工福利管理", value=True)
 
-        elif "財務" in selected_department or "會計" in selected_department:
+        # 4. 法務與合規遵循部
+        elif "法務" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 📑 合約與文件管理")
+                st.checkbox("全公司各類商務合約草擬與審查歸檔", value=True)
+                st.checkbox("合約到期自動提醒與續約管理", value=True)
+                st.checkbox("中、英、越等多語系合約範本庫", value=True)
+            with sub_col2:
+                st.markdown("#### ⚖️ 風險與合規稽核")
+                st.checkbox("跨國勞動法規與智財權合規遵循檢查", value=True)
+                st.checkbox("訴訟案件進度追蹤與律師費管理", value=True)
+                st.checkbox("企業內部反舞弊與合規舉報系統", value=True)
+            with sub_col3:
+                st.markdown("#### ✍️ 授權與用印管理")
+                st.checkbox("公司大小章與用印申請電子化審核", value=True)
+                st.checkbox("授權書 (POA) 管理與效期控管", value=True)
+                st.checkbox("法務專屬電子簽核與存證追蹤", value=True)
+
+        # 5. 資訊安全與稽核中心
+        elif "資訊安全" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 🛡️ 資安防護與監控")
+                st.checkbox("全系統存取日誌 (Audit Log) 監控", value=True)
+                st.checkbox("異常登入行為攔截與 IP 白名單設定", value=True)
+                st.checkbox("資料庫加密與敏感個資遮罩防護", value=True)
+            with sub_col2:
+                st.markdown("#### 📋 內部稽核與權限")
+                st.checkbox("各部門使用者權限定期覆核與資安稽核", value=True)
+                st.checkbox("系統漏洞掃描與資安事件通報機制", value=True)
+                st.checkbox("跨國資料隔離 (RLS) 強制檢測", value=True)
+            with sub_col3:
+                st.markdown("#### 💾 備份與災難復原")
+                st.checkbox("資料庫自動化異地備份與還測試", value=True)
+                st.checkbox("伺服器運行健康狀態 (Health Check)", value=True)
+                st.checkbox("資訊安全緊急應變計畫 (BCP) 管理", value=True)
+
+        # 6. 財務與資本運作部
+        elif "財務" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 💵 資金與銀行調度")
+                st.checkbox("多銀行帳戶資金水位與存款總覽", value=True)
+                st.checkbox("企業融資、銀行授信額度與利息管理", value=True)
+                st.checkbox("外匯避險、匯率風險評估與遠期外汇", value=True)
+            with sub_col2:
+                st.markdown("#### 📊 資本預算與現金流")
+                st.checkbox("重大資本支出 (CapEx) 預算審核", value=True)
+                st.checkbox("中長期的現金流量預測模型", value=True)
+                st.checkbox("集團內部資金調撥與利息分摊", value=True)
+            with sub_col3:
+                st.markdown("#### 📑 投資與財報分析")
+                st.checkbox("子公司投資報酬率 (ROI) 分析", value=True)
+                st.checkbox("財務槓桿與財務比率分析指標", value=True)
+                st.checkbox("銀行融資文件與信用狀管理", value=True)
+
+        # 7. 會計與稅務管理部
+        elif "會計" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
                 st.markdown("#### 📒 總帳與傳票管理")
@@ -217,92 +295,242 @@ elif "樂高積木式模組拼圖與功能開關" in menu_choice:
                 st.checkbox("營利事業所得稅結算申報輔助", value=True)
                 st.checkbox("會計師專用查帳報表與財報產出", value=True)
 
-        elif "業務" in selected_department or "國貿" in selected_department:
+        # 8. 國內業務與通路發展部
+        elif "國內業務" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
-                st.markdown("#### 🤝 客戶與商機管理 (CRM)")
-                st.checkbox("客戶基本資料、拜訪與連絡人記錄", value=True)
-                st.checkbox("銷售商機追蹤與轉換率分析", value=True)
-                st.checkbox("客戶分級、信用額度與授信管理", value=True)
-                st.checkbox("客訴處理與售後服務追蹤工單", value=True)
+                st.markdown("#### 🤝 客戶關係管理 (CRM)")
+                st.checkbox("國內經銷商與終端客戶資料庫", value=True)
+                st.checkbox("銷售商機追蹤與拜訪記錄管理", value=True)
+                st.checkbox("客戶信用額度與授信審查", value=True)
             with sub_col2:
-                st.markdown("#### 📑 報價與訂單管理 (Sales)")
-                st.checkbox("產品規格、多幣別價格表與折扣管理", value=True)
-                st.checkbox("客戶詢價單 (RFQ) 與正式報價單製作", value=True)
-                st.checkbox("客戶訂單 (SO) 登記、確認與庫存連動", value=True)
-                st.checkbox("出貨通知單、銷貨退回與換貨處理", value=True)
+                st.markdown("#### 📑 國內報價與訂單")
+                st.checkbox("標準報價單與合約建立", value=True)
+                st.checkbox("客戶訂單 (SO) 輸入與庫存即時扣減", value=True)
+                st.checkbox("出貨通知、銷貨退回與換貨處理", value=True)
             with sub_col3:
-                st.markdown("#### 🚢 國際貿易與出口 (Global)")
-                st.checkbox("外銷合約、Proforma Invoice (PI)", value=True)
-                st.checkbox("海運/空運託運單與報關資料準備", value=True)
-                st.checkbox("信用狀 (L/C) 審查與押匯單據管理", value=True)
-                st.checkbox("業務員業績統計與佣金計算", value=True)
+                st.markdown("#### 🏆 業績與佣金")
+                st.checkbox("業務人員業績目標與達成率統計", value=True)
+                st.checkbox("業務獎金、分潤與佣金自動計算", value=True)
+                st.checkbox("國內競品市佔率與銷售戰情分析", value=True)
 
-        elif "供應鏈" in selected_department or "採購" in selected_department or "倉儲" in selected_department:
+        # 9. 國際貿易與海外業務部
+        elif "國際貿易" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
-                st.markdown("#### 🛒 採購與供應商管理 (Procurement)")
+                st.markdown("#### 🌍 海外客戶與外貿商機")
+                st.checkbox("海外代理商與跨國客戶 CRM 管理", value=True)
+                st.checkbox("多語系外銷詢價與報價單製作", value=True)
+                st.checkbox("海外市場開發進度與商機追蹤", value=True)
+            with sub_col2:
+                st.markdown("#### 🚢 外銷出貨與押匯")
+                st.checkbox("外銷合約與 Proforma Invoice (PI)", value=True)
+                st.checkbox("海運/空運託運單與出貨排程管理", value=True)
+                st.checkbox("信用狀 (L/C) 審查與押匯單據製作", value=True)
+            with sub_col3:
+                st.markdown("#### 💱 貿易財務與合規")
+                st.checkbox("多幣別收款、匯兌損益自動結算", value=True)
+                st.checkbox("海關出口報關資料與檢驗證明管理", value=True)
+                st.checkbox("海外子公司往來帳款對帳", value=True)
+
+        # 10. 市場行銷與品牌企劃部
+        elif "市場行銷" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 📢 品牌與行銷活動")
+                st.checkbox("行銷活動專案與預算費用管考", value=True)
+                st.checkbox("線上/線下廣告投放成效與 ROI 分析", value=True)
+                st.checkbox("公关公關稿件、媒體聯絡與品牌資產管理", value=True)
+            with sub_col2:
+                st.markdown("#### 🎯 數位行銷與線索")
+                st.checkbox("數位行銷潛在客戶 (Leads) 收集與清洗", value=True)
+                st.checkbox("官網、社群媒體與 EDM 行銷成效追蹤", value=True)
+                st.checkbox("跨國多語系行銷文案與多媒體素材庫", value=True)
+            with sub_col3:
+                st.markdown("#### 📊 市場研究")
+                st.checkbox("產業趨勢、競品動態與市調報告歸檔", value=True)
+                st.checkbox("客戶滿意度調查與品牌聲量分析", value=True)
+                st.checkbox("行銷轉換漏斗 (Conversion Funnel) 分析", value=True)
+
+        # 11. 客戶成功與售後服務部
+        elif "客戶成功" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 🎧 客服工單與問題追蹤")
+                st.checkbox("客戶報修、客訴與諮詢工單系統", value=True)
+                st.checkbox("客服人員派工、處理進度與SLA追蹤", value=True)
+                st.checkbox("多語系客服知識庫與常見問題解答", value=True)
+            with sub_col2:
+                st.markdown("#### 🌟 客戶成功與維護")
+                st.checkbox("客戶健康度評分與續約提醒機制", value=True)
+                st.checkbox("售後維護合約 (AMC) 與定期保養排程", value=True)
+                st.checkbox("客戶回訪紀錄與滿意度調查 (CSAT)", value=True)
+            with sub_col3:
+                st.markdown("#### 📦 備品與維修管理")
+                st.checkbox("售後維修備品庫存與耗損管理", value=True)
+                st.checkbox("保固期追蹤與收費維修報價單", value=True)
+                st.checkbox("客服數據分析與產品瑕疵回饋", value=True)
+
+        # 12. 供應鏈與全球採購部
+        elif "供應鏈" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 🛒 採購與供應商管理")
                 st.checkbox("請購單 (PR) 審核與自動轉採購單", value=True)
                 st.checkbox("供應商詢比議價、歷史採購價金分析", value=True)
                 st.checkbox("採購訂單 (PO) 發出、交期追蹤與催貨", value=True)
                 st.checkbox("供應商交期、品質與配合度評鑑", value=True)
             with sub_col2:
+                st.markdown("#### 🚢 全球供應鏈與物流")
+                st.checkbox("全球供應商交期與風險預警管理", value=True)
+                st.checkbox("跨國海空運物流與進口報關協調", value=True)
+                st.checkbox("供應鏈成本優化與大宗採購合約", value=True)
+            with sub_col3:
+                st.markdown("#### 📋 採購合約與發票")
+                st.checkbox("長約採購定價與分批交貨管理", value=True)
+                st.checkbox("採購發票三way matching (三向勾稽)", value=True)
+                st.checkbox("供應商對帳單與付款條件管理", value=True)
+
+        # 13. 倉儲物流與庫存管理部
+        elif "倉儲物流" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
                 st.markdown("#### 📦 倉儲與庫存管理 (WMS)")
                 st.checkbox("多倉庫、多倉位與儲位即時庫存查詢", value=True)
                 st.checkbox("入庫驗收、上架、撥號與條盤管理", value=True)
                 st.checkbox("領料、出貨、調撥與庫存異動明細", value=True)
                 st.checkbox("期末庫存盤點計畫、盤點單與差異調整", value=True)
                 st.checkbox("安全庫存水位警示與自動補貨建議", value=True)
-            with sub_col3:
+            with sub_col2:
                 st.markdown("#### 🏷️ 條碼與物流追蹤")
                 st.checkbox("條碼 (Barcode) / QR Code 列印與貼標", value=True)
                 st.checkbox("PDA 手持終端機掃描收發貨作業", value=True)
                 st.checkbox("批號管理 (Batch/Lot) 與效期追蹤", value=True)
                 st.checkbox("物流配送單據與快遞追蹤管理", value=True)
+            with sub_col3:
+                st.markdown("#### 🚛 運輸與車隊管理")
+                st.checkbox("自有車隊派車與路線規劃管理", value=True)
+                st.checkbox("外部物流承攬商 (3PL) 費用與績效", value=True)
+                st.checkbox("貨品運送簽收與回单管理", value=True)
 
-        elif "生產" in selected_department or "廠務" in selected_department:
+        # 14. 生產製造與廠務管理部
+        elif "生產製造" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
-                st.markdown("#### 🏭 生產排程與BOM表 (PMC)")
-                st.checkbox("產品結構樹 (BOM) 多階層建立與維護", value=True)
-                st.checkbox("主生產排程 (MPS) 與物料需求計畫 (MRP)", value=True)
-                st.checkbox("工單 (MO) 開立、下達與進度追蹤", value=True)
-                st.checkbox("產能分析、機台負荷與人員排班", value=True)
-            with sub_col2:
-                st.markdown("#### ⚙️ 現場作業與製程 (MES)")
+                st.markdown("#### 🏭 生產製造執行 (MES)")
                 st.checkbox("現場報工、條碼刷卡開工與完工回報", value=True)
                 st.checkbox("製程站點流向管制與 WIP 在製品查詢", value=True)
                 st.checkbox("模具管理、設備保養與維修履歷", value=True)
-                st.checkbox("廠務物聯網 (IoT) 能源與電力監控", value=True)
+                st.checkbox("產線人員出勤與現場效率看板", value=True)
+            with sub_col2:
+                st.markdown("#### ⚡ 廠務與設施管理")
+                st.checkbox("廠務水、電、氣、空調能源監控", value=True)
+                st.checkbox("工廠廠房設備資產與定期巡檢維護", value=True)
+                st.checkbox("廠區環境安全與環保廢棄物管理", value=True)
             with sub_col3:
-                st.markdown("#### 🔍 品質保證 (QA / QC)")
-                st.checkbox("進料檢驗 (IQC) 標準與抽驗結果記錄", value=True)
-                st.checkbox("製程巡檢 (IPQC) 與成品檢驗 (FQC)", value=True)
-                st.checkbox("不良品 (NC) 原因分析與矯正預防 (CAPA)", value=True)
-                st.checkbox("客訴矯正與品質良率統計報表", value=True)
+                st.markdown("#### 📊 生產數據看板")
+                st.checkbox("OEE 設備綜合效率即時監控", value=True)
+                st.checkbox("產線瓶頸分析與產能產值報表", value=True)
+                st.checkbox("製造成本分攤與實際工時結算", value=True)
 
-        else:
-            # 其他通用部門或研發/資訊部
+        # 15. 工程與技術服務部
+        elif "工程與技術" in selected_department:
             sub_col1, sub_col2, sub_col3 = st.columns(3)
             with sub_col1:
-                st.markdown("#### 💻 系統與研發核心")
-                st.checkbox("研發專案管理與版本控制 (PLM)", value=True)
-                st.checkbox("圖面文件管理與工程變更通知 (ECN)", value=True)
-                st.checkbox("系統使用者權限與角色控制 (RBAC)", value=True)
+                st.markdown("#### ⚙️ 工程專案與施工")
+                st.checkbox("工程案場專案立項與工作分解 (WBS)", value=True)
+                st.checkbox("工程估驗計價、合約與請款管理", value=True)
+                st.checkbox("現場施工日報表、點工與點料回報", value=True)
             with sub_col2:
-                st.markdown("#### 🔌 整合與自動化")
-                st.checkbox("外部 API 閘道與異質系統資料交換", value=True)
-                st.checkbox("自動化備份、日誌監控與資安防護", value=True)
-                st.checkbox("跨國多語系動態翻譯與語音轉譯", value=True)
+                st.markdown("#### 🛠️ 技術支援與維修")
+                st.checkbox("設備安裝、調試與技術服務工單", value=True)
+                st.checkbox("工程圖面、施工規範與技術文件庫", value=True)
+                st.checkbox("外包商派工與計價審核管理", value=True)
             with sub_col3:
-                st.markdown("#### 🤖 AI 與輔助工具")
-                st.checkbox("AI 智慧助理問答與自動化工作流", value=True)
-                st.checkbox("行動裝置端 (Mobile-First) 適配模組", value=True)
-                st.checkbox("電子公文與簽核流程引擎 (BPM)", value=True)
+                st.markdown("#### 📐 設備與安全")
+                st.checkbox("工程機具、手工具與儀器設備管理", value=True)
+                st.checkbox("工地現場安全衛生查核與工安事件記錄", value=True)
+                st.checkbox("竣工驗收與保固期追蹤管理", value=True)
+
+        # 16. 生產管制與物料控制部
+        elif "生產管制" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 📅 生產排程 (MPS/MRP)")
+                st.checkbox("主生產排程 (MPS) 擬定與調整", value=True)
+                st.checkbox("物料需求計畫 (MRP) 計算與缺料分析", value=True)
+                st.checkbox("產能負荷分析與排程優化模擬", value=True)
+            with sub_col2:
+                st.markdown("#### 📋 工單與物料控制")
+                st.checkbox("工單下達、優先級排序與急單插單管理", value=True)
+                st.checkbox("齊料率分析與備料狀況即時追蹤", value=True)
+                st.checkbox("生產進度落後警示與交期預測", value=True)
+            with sub_col3:
+                st.markdown("#### 🔄 呆滯與庫存優化")
+                st.checkbox("呆滯物料 (Slow-moving) 分析與處理", value=True)
+                st.checkbox("安全庫存動態調整與經濟訂購量 (EOQ)", value=True)
+                st.checkbox("物料異動週轉率與庫存成本分析", value=True)
+
+        # 17. 品質保證與品管中心
+        elif "品質保證" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 🔍 進料與製程品管")
+                st.checkbox("進料檢驗 (IQC) 標準與檢驗單管理", value=True)
+                st.checkbox("製程巡檢 (IPQC) 與首件檢驗記錄", value=True)
+                st.checkbox("成品檢驗 (FQC/OQC) 與出貨放行審核", value=True)
+            with sub_col2:
+                st.markdown("#### 📉 不良與矯正預防")
+                st.checkbox("不良品 (NC) 隔離、原因分析與統計", value=True)
+                st.checkbox("矯正與預防措施 (CAPA) 追蹤管考", value=True)
+                st.checkbox("8D 報告製作與客戶客訴品質回覆", value=True)
+            with sub_col3:
+                st.markdown("#### 📐 度量衡與標準")
+                st.checkbox("檢驗儀器、量具定期校驗與履歷管理", value=True)
+                st.checkbox("統計製程管制 (SPC) 與 Cp/Cpk 分析", value=True)
+                st.checkbox("ISO 品質管理系統文件與稽核追蹤", value=True)
+
+        # 18. 研發設計與創新中心
+        elif "研發設計" in selected_department:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 🔬 產品研發與 PLM")
+                st.checkbox("新產品開發專案 (NPD) 與階段 gate 管理", value=True)
+                st.checkbox("產品生命週期管理 (PLM) 與版本控制", value=True)
+                st.checkbox("產品規格書、技術參數與研發文檔庫", value=True)
+            with sub_col2:
+                st.markdown("#### 🌳 BOM表與工程變更")
+                st.checkbox("工程 BOM (EBOM) 建立與結構維護", value=True)
+                st.checkbox("工程變更通知 (ECN / ECO) 簽核與發布", value=True)
+                st.checkbox("研發打樣、試作工單與測試報告管理", value=True)
+            with sub_col3:
+                st.markdown("#### 💡 智財與創新")
+                st.checkbox("專利申請、智財權與技術文件管理", value=True)
+                st.checkbox("研發費用預算、工時與專案成本核算", value=True)
+                st.checkbox("技術移轉與量產交接 (Transfer to MP)", value=True)
+
+        # 19. 資訊技術與系統開發部
+        else:
+            sub_col1, sub_col2, sub_col3 = st.columns(3)
+            with sub_col1:
+                st.markdown("#### 💻 系統與軟體開發")
+                st.checkbox("ERP 核心模組維護與原始碼管理", value=True)
+                st.checkbox("系統使用者權限、角色 (RBAC) 與組織樹", value=True)
+                st.checkbox("客製化表單、欄位元數據 (Metadata) 設定", value=True)
+            with sub_col2:
+                st.markdown("#### 🔌 系統整合與 API")
+                st.checkbox("外部資料庫與異質系統 API 閘道管理", value=True)
+                st.checkbox("第三方 API 金鑰、Webhook 與路由設定", value=True)
+                st.checkbox("跨國多語系自動翻譯引擎維護", value=True)
+            with sub_col3:
+                st.markdown("#### 🤖 AI 與基礎設施")
+                st.checkbox("AI 模型串接、Function Calling 與提示詞管理", value=True)
+                st.checkbox("雲端伺服器運行監控、日誌與效能調優", value=True)
+                st.checkbox("系統自動化測試、部署與版本回滾", value=True)
 
         st.markdown("---")
-        if st.button(f"💾 儲存【{dept_name_only}】的完整專業功能設定", type="primary", use_container_width=True):
-            st.success(f"✅ 已成功將該部門的所有專業細分功能設定儲存至資料庫！系統權限已即時生效。")
+        if st.button(f"💾 儲存【{dept_name_only}】的專屬專業功能設定", type="primary", use_container_width=True):
+            st.success(f"✅ 已成功將該部門專屬的細分功能設定儲存至資料庫！系統權限已即時生效。")
 
 elif "企業組織與部門樹狀管理" in menu_choice:
     st.markdown("## 🏢 企業組織與部門樹狀管理 (Dynamic Org Chart)")
