@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 
 # 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise AI-ERP Control Center",
+    page_title="SaaS Enterprise Multi-Tenant AI-ERP",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -33,226 +33,221 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化全系統資料庫中心 (Data Hub Session State)
-if "org_nodes" not in st.session_state:
-    st.session_state.org_nodes = [
-        {"id": "node_01", "name": "👑 董事長室 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "集團綜合損益(P&L)"]},
-        {"id": "node_02", "name": "👥 人力資源與總務行政部", "type": "行政支援", "parent": "👑 董事長室 / 總經理室", "modules": ["AI人臉辨識打卡", "廠區車牌辨識(ANPR)"]},
-        {"id": "node_03", "name": "💰 財務會計與應付帳款部", "type": "財務中心", "parent": "👑 董事長室 / 總經理室", "modules": ["越南紅發票自動讀取", "應付帳款(AP)連動"]}
-    ]
-
-if "iot_devices" not in st.session_state:
-    st.session_state.iot_devices = [
-        {"dev_id": "DEV-001", "name": "大門口 AI 人臉辨識打卡機", "type": "人臉辨識", "ip": "192.168.1.110", "status": "🟢 連線中 (自動同步人事)"},
-        {"dev_id": "DEV-002", "name": "廠區車道車牌辨識攝影機 (ANPR)", "type": "車牌辨識", "ip": "192.168.1.115", "status": "🟢 運作中 (同步保全與總務)"}
-    ]
-
-# 模擬全系統自動串聯的發票與應付帳款資料庫
-if "ap_invoices" not in st.session_state:
-    st.session_state.ap_invoices = [
-        {
-            "invoice_no": "00012345", 
-            "supplier": "越南平陽水電材料有限公司 (Công ty TNHH Vina Material)", 
-            "items": "PVC 電線管 50mm, 銅線 2.0", 
-            "qty": "120 卷 / 支", 
-            "amount_vnd": "16,500,000", 
-            "status": "🔴 待付款 (已自動列入應付帳款與負債表)"
+# 3. 初始化多租戶資料庫中心 (Multi-Tenant Data Hub)
+if "tenants_db" not in st.session_state:
+    st.session_state.tenants_db = {
+        "tenant_master": {
+            "name": "SaaS 總控台 (平台運營商)",
+            "org_nodes": [],
+            "iot_devices": [],
+            "ap_invoices": []
+        },
+        "tenant_vina_水电": {
+            "name": "🇻🇳 越南平陽水電工程有限公司",
+            "org_nodes": [
+                {"id": "n_1", "name": "👑 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球戰情室", "P&L"]},
+                {"id": "n_2", "name": "⚙️ 工程部", "type": "營運部門", "parent": "👑 總經理室", "modules": ["工程估驗", "施工日報"]},
+                {"id": "n_3", "name": "🏭 生產製造廠務部", "type": "製造中心", "parent": "👑 總經理室", "modules": ["MES報工"]},
+                {"id": "n_4", "name": "📦 平陽廠原物料倉庫", "type": "實體據點/庫位", "parent": "🏭 生產製造廠務部", "modules": ["PDA收發貨", "庫存管理"]}
+            ],
+            "iot_devices": [
+                {"dev_id": "DEV-01", "name": "平陽廠大門人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}
+            ],
+            "ap_invoices": [
+                {"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "qty": "50支", "amount_vnd": "15,000,000", "status": "🔴 待付款"}
+            ]
+        },
+        "tenant_taipei_wash": {
+            "name": "🇹🇼 台北極速智慧洗車坊",
+            "org_nodes": [
+                {"id": "w_1", "name": "👑 台北總店長室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["營收戰情"]},
+                {"id": "w_2", "name": "🚗 洗車美容部", "type": "營運部門", "parent": "👑 台北總店長室", "modules": ["會員預約", "水刀聯動"]}
+            ],
+            "iot_devices": [
+                {"dev_id": "W-01", "name": "入口車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}
+            ],
+            "ap_invoices": []
         }
-    ]
-
-if "app_store_subscriptions" not in st.session_state:
-    st.session_state.app_store_subscriptions = {
-        "vn_tax": True,
-        "iot_bridge": True,
-        "car_wash": False,
-        "coffee_pos": False,
-        "mfg_mes": True,
-        "bi_market": True
     }
 
-# 4. 側邊欄導覽
+# 4. 側邊欄：多租戶切換器與導覽選單
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
-    st.markdown("### 🌐 SaaS AI-ERP 總控台")
+    st.markdown("### 🌐 SaaS 多租戶 AI-ERP 平台")
     
     lang = st.selectbox("選擇語系 / Select Language", ["繁體中文", "English", "Tiếng Việt (越南語)", "简体中文"])
     
     st.markdown("---")
-    st.markdown("👤 **目前登入者**: `System Admin` (全系統自動串聯)")
-    st.markdown("🏢 **目前租戶**: `SaaS Global Control`")
+    st.markdown("🏢 **[多租戶環境切換模擬器]**")
+    current_tenant_key = st.selectbox(
+        "選擇登入視角 (Tenant Switcher)",
+        options=list(st.session_state.tenants_db.keys()),
+        format_func=lambda x: st.session_state.tenants_db[x]["name"]
+    )
+    
+    # 取得當前切換的租戶資料
+    current_tenant = st.session_state.tenants_db[current_tenant_key]
+    
+    st.markdown(f"👤 **目前身份**: `Tenant Admin`")
+    st.markdown(f"🏢 **目前所屬公司**: `{current_tenant['name']}`")
     
     st.markdown("---")
     st.markdown("### 📌 系統導覽選單")
-    menu_choice = st.radio(
-        "選擇管理模組",
-        [
-            "🖱️ 滑鼠流視覺化組織與據點拼圖",
-            "🤖 AI 硬體與智慧門禁/車牌辨識掛接 (IoT & Biometrics)",
-            "🇻🇳 跨國在地化與越南財稅模組 (VN Localization & AP)",
-            "👑 董事長高階戰情室與財務連動預覽 (Executive P&L)",
-            "📦 模組市集與功能授權設定 (App Store)",
-            "📊 系統運行與跨庫數據監控"
-        ]
-    )
+    
+    if current_tenant_key == "tenant_master":
+        # 總控台只能看平台級設定與模組市集
+        menu_choice = st.radio(
+            "選擇管理模組 (Master)",
+            [
+                "📦 SaaS 平台模組市集 (App Store & Licensing)",
+                "📊 平台運行狀態與跨租戶監控"
+            ]
+        )
+    else:
+        # 客戶自己的獨立租戶後台 (IT 自行設定)
+        menu_choice = st.radio(
+            "選擇客戶內部模組 (Tenant IT Panel)",
+            [
+                "🖱️ 本公司組織與實體據點 IT 自行設定",
+                "🤖 本公司 AI 硬體與車牌/人臉辨識掛接",
+                "🇻🇳 本公司越南紅發票與應付帳款 (AP)",
+                "👑 董事長高階戰情室與 P&L 預覽",
+                "📊 本公司系統數據監控"
+            ]
+        )
     
     st.markdown("---")
     if st.button("🚪 登出系統", use_container_width=True):
         st.info("已安全登出系統。")
 
 # 5. 主畫面邏輯路由
-if "滑鼠流視覺化組織與據點拼圖" in menu_choice:
-    st.markdown("## 🖱️ 滑鼠流視覺化組織與實體據點拼圖 (Mouse-First Org Builder)")
-    st.info("💡 *完全免打字！滑鼠點擊按鈕即可一鍵掛載部門或倉庫據點。*")
-    
-    st.markdown("### ⚡ 滑鼠一鍵快速掛載矩陣 (Click-to-Add)")
-    m_c1, m_c2, m_c3, m_c4, m_c5 = st.columns(5)
-    with m_c1:
-        if st.button("👑 加入：董事長室", use_container_width=True):
-            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": "👑 董事長室 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "綜合損益表"]})
-            st.rerun()
-    with m_c2:
-        if st.button("💰 加入：財務會計部", use_container_width=True):
-            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": "💰 財務會計與越南稅務部", "type": "行政支援", "parent": "👑 董事長室 / 總經理室", "modules": ["總帳會計", "越南紅發票自動讀取"]})
-            st.rerun()
-    with m_c3:
-        if st.button("⚙️ 加入：工程設計部", use_container_width=True):
-            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": "⚙️ 工程與設計中心", "type": "營運部門", "parent": "👑 董事長室 / 總經理室", "modules": ["工程估驗計價", "施工日報表"]})
-            st.rerun()
-    with m_c4:
-        if st.button("🏭 加入：生產製造部", use_container_width=True):
-            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": "🏭 生產製造廠務部", "type": "製造中心", "parent": "👑 董事長室 / 總經理室", "modules": ["MES現場報工", "BOM表管控"]})
-            st.rerun()
-    with m_c5:
-        if st.button("📦 加入：倉庫(掛生產部)", use_container_width=True):
-            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": "📦 廠內原物料倉庫", "type": "實體據點/庫位", "parent": "🏭 生產製造廠務部", "modules": ["多倉儲位查詢", "條碼PDA收發貨"]})
-            st.rerun()
-
-    st.markdown("---")
-    col_picker, col_tree = st.columns([1, 1])
-    with col_picker:
-        st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 🛠️ 自訂模組與據點快速拼裝")
-        preset_dept = st.selectbox("選擇要新增的部門或實體據點：", ["👥 人力資源與總務行政部", "🌍 國際貿易與海外業務部", "🛒 供應鏈與全球採購部"])
-        existing_parents = [node["name"] for node in st.session_state.org_nodes]
-        target_parent = st.selectbox("指定其上級掛載點 (Parent):", existing_parents)
-        if st.button("🖱️ 滑鼠一鍵確認掛載", type="primary", use_container_width=True):
-            st.session_state.org_nodes.append({"id": f"n_{len(st.session_state.org_nodes)+1}", "name": preset_dept, "type": "營運/行政部門", "parent": target_parent, "modules": ["日常作業"]})
-            st.success(f"🎉 成功將 [{preset_dept}] 掛載至 [{target_parent}]！")
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col_tree:
-        st.markdown("### 🌳 目前企業組織樹狀拼圖總覽")
-        for node in st.session_state.org_nodes:
-            st.markdown(f"""
-                <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #3b82f6;">
-                    <b>📂 {node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
-                    <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span>
-                </div>
-            """, unsafe_allow_html=True)
-
-elif "AI 硬體與智慧門禁/車牌辨識掛接" in menu_choice:
-    st.markdown("## 🤖 AI 硬體與智慧門禁/車牌辨識掛接 (IoT & Biometrics Plug & Play)")
-    st.info("💡 *車牌辨識 (ANPR) 影像與進出紀錄將自動即時推播至【保全室】與【總務/人事部】。*")
+if current_tenant_key == "tenant_master":
+    # ==================== SaaS 總控台 (我們自己看的) ====================
+    st.markdown("## 📦 SaaS 平台總控台：模組市集與全球授權管理 (Master Control)")
+    st.info("💡 *此處為總公司平台運營商視角。您可以管理全平台的模組市集，決定哪些行業（製造業、水電、洗車場、咖啡廳）可以使用哪些擴充拼圖。*")
     
     with st.container():
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 🚗 即時車牌辨識與門禁聯動模擬 (ANPR Live Event Bus)")
-        mock_anpr_df = pd.DataFrame([
-            {"時間": "2026-10-20 15:30:12", "車牌號碼": "61C-888.66", "車輛類型": "外包工程貨車", "分發狀態": "✅ 已同步推播至保全室門禁系統"},
-            {"時間": "2026-10-20 14:15:05", "車牌號碼": "51A-123.45", "車輛類型": "總務公務車", "分發狀態": "✅ 已同步推播至總務/人事考勤記錄"},
-            {"時間": "2026-10-20 11:02:40", "車牌號碼": "61B-555.11", "車輛類型": "供應商送貨車", "分發狀態": "✅ 已同步推播至保全與倉庫收貨端"}
-        ])
-        st.dataframe(mock_anpr_df, use_container_width=True)
+        st.markdown("### 🛒 全球模組市集與訂閱授權總表 (Global App Store)")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.toggle("越南紅發票自動解析與 VAT 稅務模組", value=True)
+            st.toggle("製造業 MES 現場報工與 OEE 設備監控", value=True)
+            st.toggle("高階董事會戰情室 (股市/原物料/匯率/P&L)", value=True)
+        with c2:
+            st.toggle("AI 人臉辨識與車牌辨識 (ANPR) 閘道", value=True)
+            st.toggle("洗車場專用：會員儲值與水刀聯動模組", value=True)
+            st.toggle("連鎖咖啡廳專用：POS 點餐與原料扣減", value=True)
         st.markdown('</div>', unsafe_allow_html=True)
-
-elif "跨國在地化與越南財稅模組" in menu_choice:
-    st.markdown("## 🇻🇳 跨國在地化與越南財稅模組 (Vietnam Localization & AP Automation)")
-    st.info("💡 *上傳越南紅發票後，系統會【全自動】將品項、數量、金額、供應商與發票號碼寫入財務應付帳款，並即時反映在負債表與董事長戰情室中！*")
-    
-    with st.container():
-        st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 📄 越南電子發票解析與自動上下游串聯")
-        uploaded_invoice = st.file_uploader("請上傳越南紅發票 (XML 或 PDF)", type=["xml", "pdf"])
         
-        if uploaded_invoice or st.button("⚡ 模擬一鍵上傳並自動解析發票 (測試串聯)", type="primary"):
-            st.success("🎉 發票解析成功！系統已自動完成全系統下游串聯：")
-            col_iv1, col_iv2 = st.columns(2)
-            with col_iv1:
-                st.markdown("- **發票號碼**: `00099887`")
-                st.markdown("- **開立公司 (供應商)**: `Công ty CP Thiết bị Điện Sài Gòn`")
-                st.markdown("- **購買品項**: `工業級不斷電系統 (UPS) 5KVA`")
-            with col_iv2:
-                st.markdown("- **數量**: `2 台`")
-                st.markdown("- **總金額 (含 VAT 10%)**: `35,200,000 VND`")
-                st.markdown("- **串聯狀態**: 🟢 已自動寫入應付帳款與負債總額！")
-                
-            new_inv = {
-                "invoice_no": "00099887",
-                "supplier": "Công ty CP Thiết bị Điện Sài Gòn",
-                "items": "工業級不斷電系統 (UPS) 5KVA",
-                "qty": "2 台",
-                "amount_vnd": "35,200,000",
-                "status": "🔴 待付款 (已連動至負債與董事長戰情)"
-            }
-            if not any(d['invoice_no'] == '00099887' for d in st.session_state.ap_invoices):
-                st.session_state.ap_invoices.append(new_inv)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("### 📚 目前財務應付帳款總表 (AP Ledger - 跨部門連動即時檢視)")
-    st.dataframe(pd.DataFrame(st.session_state.ap_invoices), use_container_width=True)
-
-elif "董事長高階戰情室與財務連動預覽" in menu_choice:
-    st.markdown("## 👑 董事長高階戰情室與財務聯動預覽 (Executive Dashboard & P&L)")
-    st.info("💡 *此處展示董事長或董事會登入時看到的即時戰情：發票金額自動加總、應付帳款負債水位、綜合損益表 (P&L) 與國際原物料/匯率行情。*")
-    
-    total_ap_amount = "51,700,000 VND"
-    
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1:
-        st.metric("📊 本月應付帳款總負債 (AP)", total_ap_amount, delta="即時連動發票資料庫", delta_color="inverse")
-    with kpi2:
-        st.metric("💵 集團現金流水位", "2,450,000,000 VND", delta="+5.2%")
-    with kpi3:
-        st.metric("💱 美金/越幣即時匯率", "25,400 VND", delta="-15 VND")
-    with kpi4:
-        st.metric("📈 銅價/原物料指數", "9,850 USD/T", delta="+1.4%")
-        
-    st.markdown("---")
-    st.markdown("### 📑 集團綜合損益表與應付帳款連動摘要 (P&L Summary)")
-    mock_pl = pd.DataFrame([
-        {"財務科目": "營業收入淨額 (Revenue)", "金額 (VND)": "850,000,000", "狀態": "🟢 正常"},
-        {"財務科目": "營業成本 (Cost of Goods Sold)", "金額 (VND)": "420,000,000", "狀態": "🟢 正常"},
-        {"財務科目": "流動負債 - 應付帳款總額 (Accounts Payable)", "金額 (VND)": total_ap_amount, "狀態": "🔴 即時來自發票自動加總"},
-        {"財務科目": "本期淨利 (Net Profit)", "金額 (VND)": "378,300,000", "狀態": "🟢 營運健康"}
+    st.markdown("### 🏢 目前平台已註冊的獨立租戶 (Tenants List)")
+    tenant_summary_df = pd.DataFrame([
+        {"租戶代碼": "tenant_vina_水电", "公司名稱": "越南平陽水電工程有限公司", "方案": "跨國製造/工程版", "狀態": "🟢 正常營運"},
+        {"租戶代碼": "tenant_taipei_wash", "公司名稱": "台北極速智慧洗車坊", "方案": "智慧零售/服務版", "狀態": "🟢 正常營運"}
     ])
-    st.dataframe(mock_pl, use_container_width=True)
-
-elif "模組市集與功能授權設定" in menu_choice:
-    st.markdown("## 📦 模組市集與功能授權設定 (App Store)")
-    st.info("💡 *在此處您可以像逛 App Store 一樣，用滑鼠隨選隨開，為您的企業或跨界業務即時解鎖強大功能。*")
-    
-    with st.container():
-        st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 🛒 跨業態與核心模組雲端市集")
-        c_app1, c_app2 = st.columns(2)
-        with c_app1:
-            sub_vn = st.toggle("越南紅發票自動解析與 VAT 稅務模組", value=st.session_state.app_store_subscriptions["vn_tax"])
-            sub_mfg = st.toggle("製造業 MES 現場報工與 OEE 設備監控", value=st.session_state.app_store_subscriptions["mfg_mes"])
-            sub_bi = st.toggle("高階董事會戰情室 (股市/原物料/匯率/P&L)", value=st.session_state.app_store_subscriptions["bi_market"])
-        with c_app2:
-            sub_iot = st.toggle("AI 人臉辨識、指紋與車牌辨識 (ANPR) 閘道", value=st.session_state.app_store_subscriptions["iot_bridge"])
-            sub_wash = st.toggle("洗車場專用：會員儲值、預約與水刀聯動模組", value=st.session_state.app_store_subscriptions["car_wash"])
-            sub_cafe = st.toggle("連鎖咖啡廳專用：POS 點餐與原料自動扣減", value=st.session_state.app_store_subscriptions["coffee_pos"])
-            
-        if st.button("💾 儲存並即時更新本租戶模組授權", type="primary", use_container_width=True):
-            st.session_state.app_store_subscriptions.update({
-                "vn_tax": sub_vn, "mfg_mes": sub_mfg, "bi_market": sub_bi,
-                "iot_bridge": sub_iot, "car_wash": sub_wash, "coffee_pos": sub_cafe
-            })
-            st.success("🎉 模組市集授權已即時更新！")
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.dataframe(tenant_summary_df, use_container_width=True)
 
 else:
-    st.markdown("## 📊 系統運行與跨庫數據監控")
-    st.info("💡 說明：即時監控各個已掛接外部資料庫與 API 來源的同步狀態。")
+    # ==================== 獨立客戶租戶後台 (客戶 IT 自行設定) ====================
+    if "組織與實體據點" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與實體據點自助設定 (Tenant IT Panel)")
+        st.info("💡 *這是客戶自己的 IT 後台。貴公司的 IT 人員可以隨時透過滑鼠新增部門、指定上級（例如將倉庫掛在生產部下方），完全不需要透過我們！*")
+        
+        # 快速掛載按鈕
+        st.markdown("### ⚡ 客戶 IT 自助快速掛載矩陣 (Click-to-Add)")
+        c_k1, c_k2, c_k3 = st.columns(3)
+        with c_k1:
+            if st.button("➕ 新增：財務會計部", use_container_width=True):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "💰 財務會計部", "type": "行政支援", "parent": "👑 總經理室", "modules": ["總帳", "應付帳款"]})
+                st.rerun()
+        with c_k2:
+            if st.button("➕ 新增：採購部", use_container_width=True):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "🛒 全球採購部", "type": "營運部門", "parent": "👑 總經理室", "modules": ["請購", "採購單"]})
+                st.rerun()
+        with c_k3:
+            if st.button("➕ 新增：工廠倉庫(掛生產部)", use_container_width=True):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "📦 廠內零組件倉庫", "type": "實體據點/庫位", "parent": "🏭 生產製造廠務部", "modules": ["庫存", "PDA"]})
+                st.rerun()
+                
+        st.markdown("---")
+        col_set, col_view = st.columns([1, 1])
+        
+        with col_set:
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.markdown("### 🛠️ 自訂新增部門或據點")
+            new_dept = st.text_input("輸入部門或據點名稱", placeholder="例：越南美福二廠 / 業務部")
+            existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
+            chosen_parent = st.selectbox("指定上級掛載點", existing_parents)
+            
+            if st.button("🧱 確認加入公司組織樹", type="primary", use_container_width=True):
+                if new_dept:
+                    current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": new_dept, "type": "自訂部門", "parent": chosen_parent, "modules": ["日常作業"]})
+                    st.success(f"🎉 成功在貴公司組織下新增 [{new_dept}]！")
+                    st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        with col_view:
+            st.markdown("### 🌳 貴公司目前的組織與據點樹狀圖")
+            for node in current_tenant["org_nodes"]:
+                is_loc = "實體據點" in node['type']
+                indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 📦 " if is_loc else ("&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 " if node["parent"] != "無 (頂層)" else "👑 ")
+                st.markdown(f"""
+                    <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 8px; border-left: 4px solid #3b82f6;">
+                        <b>{indent}{node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
+                        <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+
+    elif "AI 硬體與車牌" in menu_choice:
+        st.markdown(f"## 🤖 {current_tenant['name']}：AI 硬體與車牌/人臉辨識自助掛接")
+        st.info("💡 *貴公司的 IT 可以在此自行輸入硬體 IP，將人臉辨識機或車牌辨識攝影機直接連進公司系統。*")
+        
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            with st.form("tenant_iot_form"):
+                d_name = st.text_input("硬體裝置名稱", placeholder="例：大門口車牌辨識攝影機")
+                d_ip = st.text_input("裝置 IP 位址", placeholder="例：192.168.1.200")
+                if st.form_submit_button("🔌 註冊硬體並連線", type="primary"):
+                    if d_name and d_ip:
+                        current_tenant["iot_devices"].append({"dev_id": f"DEV-{len(current_tenant['iot_devices']+1)}", "name": d_name, "type": "智慧感測", "ip": d_ip, "status": "🟢 聯機中"})
+                        st.success(f"🎉 成功為貴公司掛接硬體 [{d_name}]！")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        st.markdown("### 📋 貴公司目前已連線的硬體設備")
+        if current_tenant["iot_devices"]:
+            st.dataframe(pd.DataFrame(current_tenant["iot_devices"]), use_container_width=True)
+        else:
+            st.info("目前尚未連線任何硬體裝置。")
+
+    elif "越南紅發票" in menu_choice:
+        st.markdown(f"## 🇻🇳 {current_tenant['name']}：越南紅發票與應付帳款 (AP)")
+        st.info("💡 *上傳越南發票後，系統自動串聯應付帳款與董事長戰情室。*")
+        
+        up_file = st.file_uploader("上傳越南電子發票 (XML / PDF)", type=["xml", "pdf"])
+        if up_file or st.button("⚡ 模擬一鍵上傳發票並自動串聯", type="primary"):
+            new_inv = {"invoice_no": "999888", "supplier": "越南在地供應商", "items": "辦公耗材與五金", "qty": "10式", "amount_vnd": "8,500,000", "status": "🔴 待付款"}
+            if not any(x["invoice_no"] == "999888" for x in current_tenant["ap_invoices"]):
+                current_tenant["ap_invoices"].append(new_inv)
+            st.success("🎉 發票解析成功，已自動連動至貴公司的應付帳款與負債表！")
+            
+        st.markdown("### 📚 貴公司目前的應付帳款總表 (AP Ledger)")
+        if current_tenant["ap_invoices"]:
+            st.dataframe(pd.DataFrame(current_tenant["ap_invoices"]), use_container_width=True)
+        else:
+            st.info("目前尚無應付帳款紀錄。")
+
+    elif "董事長高階戰情室" in menu_choice:
+        st.markdown(f"## 👑 {current_tenant['name']}：高階戰情室與 P&L 預覽")
+        st.info("💡 *戰情數字即時反映該租戶內部的發票與營運數據。*")
+        
+        k1, k2, k3 = st.columns(3)
+        with k1:
+            st.metric("📊 本月應付帳款總額", "23,500,000 VND", delta="自動連動")
+        with k2:
+            st.metric("💵 公司現金流水位", "1,200,000,000 VND", delta="+3.1%")
+        with k2:
+            st.metric("💱 匯率與原物料", "25,400 VND / USD", delta="正常")
+            
+    else:
+        st.markdown(f"## 📊 {current_tenant['name']}：系統運行監控")
+        st.info("💡 即時監控貴公司專屬資料庫與 API 連結狀態。")
