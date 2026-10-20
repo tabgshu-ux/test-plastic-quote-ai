@@ -3,11 +3,11 @@ import pandas as pd
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (含完整企業級部門屬性分類與標準組織圖)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (拼圖式一鍵點選組織架構器)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Full Departments",
+    page_title="SaaS Enterprise Modular AI-ERP & Puzzle Org Builder",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -31,6 +31,7 @@ st.markdown("""
     .stButton>button {
         border-radius: 6px;
         font-weight: 600;
+        width: 100%;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -42,50 +43,6 @@ if "global_pricing" not in st.session_state:
 if "global_fx_rates" not in st.session_state:
     st.session_state.global_fx_rates = {"USD": 1.0, "TWD": 31.50, "VND": 25400.00, "RMB": 7.20}
 
-# 完整市面上標準企業部門與據點分類清單
-ENTERPRISE_DEPARTMENT_CATEGORIES = [
-    # 1. 決策與治理層
-    "👑 董事會 / 董事長室 (Board / Chairman)",
-    "👑 總經理室 / 執行長室 (CEO / President)",
-    "👑 副總經理室 (Vice President)",
-    "👑 總經理特助 / 秘書室 (Executive Office)",
-    
-    # 2. 財務與會計中心
-    "💰 財務部 (Finance Department)",
-    "💰 會計部 (Accounting Department)",
-    "💰 稅務與稽核部 (Tax & Audit)",
-    
-    # 3. 行政、人事與法務
-    "👥 人力資源部 (HR Department)",
-    "👥 總務行政部 (General Administration)",
-    "👥 法務暨合規部 (Legal & Compliance)",
-    "👥 資訊科技與網管部 (IT & Network Admin)",
-    
-    # 4. 業務、行銷與客服
-    "🌍 業務營業部 (Sales Department)",
-    "🌍 國際貿易與海外業務部 (International Trade)",
-    "🌍 行銷企劃部 (Marketing Department)",
-    "🌍 客戶服務部 (Customer Service)",
-    
-    # 5. 工程、研發與技術
-    "⚙️ 工程技術部 (Engineering)",
-    "⚙️ 研發設計中心 (R&D Center)",
-    "⚙️ 專案管理部 (Project Management)",
-    "⚙️ 品質保證與安衛部 (QA / QC & EHS)",
-    
-    # 6. 生產製造與供應鏈
-    "🏭 生產製造廠務部 (Manufacturing & Plant)",
-    "🏭 生產車間 / 生產部 (Production Line)",
-    "🛒 供應鏈與全球採購部 (Supply Chain & Procurement)",
-    "📦 倉儲物流部 (Warehouse & Logistics)",
-    
-    # 7. 實體營業據點與分店
-    "🏢 營運據點 / 總店 (Branch / Flagship Store)",
-    "🏢 分公司 / 辦事處 (Branch Office)",
-    "🏢 門市 / 營業所 (Retail Store / Service Center)",
-    "📦 實體原物料倉庫 / 庫位 (Inventory Warehouse)"
-]
-
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
         "tenant_vina_水电": {
@@ -95,11 +52,9 @@ if "tenants_db" not in st.session_state:
             "price_usd": 170,
             "expiry_date": "2027-10-20",
             "org_nodes": [
-                {"id": "n_1", "name": "董事長室", "type": "👑 董事會 / 董事長室 (Board / Chairman)", "parent": "無 (頂層)", "modules": ["全球戰情室"]},
-                {"id": "n_2", "name": "總經理室", "type": "👑 總經理室 / 執行長室 (CEO / President)", "parent": "董事長室", "modules": ["全域戰情"]},
-                {"id": "n_3", "name": "工程技術部", "type": "⚙️ 工程技術部 (Engineering)", "parent": "總經理室", "modules": ["工程估驗"]},
-                {"id": "n_4", "name": "平陽美福營業所", "type": "🏢 門市 / 營業所 (Retail Store / Service Center)", "parent": "總經理室", "modules": ["門市收發貨"]},
-                {"id": "n_5", "name": "財務會計部", "type": "💰 財務部 (Finance Department)", "parent": "總經理室", "modules": ["總帳管理"]}
+                {"id": "n_1", "name": "董事長室", "type": "👑 董事會 / 董事長室", "parent": "無 (頂層)", "modules": ["全球戰情室"]},
+                {"id": "n_2", "name": "工程技術部", "type": "⚙️ 工程技術部", "parent": "董事長室", "modules": ["工程估驗"]},
+                {"id": "n_3", "name": "平陽美福營業所", "type": "🏢 門市 / 營業所", "parent": "董事長室", "modules": ["門市收發貨"]}
             ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
@@ -113,9 +68,9 @@ if "tenants_db" not in st.session_state:
             "price_usd": 80,
             "expiry_date": "2026-11-05",
             "org_nodes": [
-                {"id": "w_1", "name": "董事長室", "type": "👑 董事會 / 董事長室 (Board / Chairman)", "parent": "無 (頂層)", "modules": ["營收戰情"]},
-                {"id": "w_2", "name": "台北旗艦總店", "type": "🏢 營運據點 / 總店 (Branch / Flagship Store)", "parent": "董事長室", "modules": ["會員預約"]},
-                {"id": "w_3", "name": "洗車美容作業部", "type": "🏭 生產製造廠務部 (Manufacturing & Plant)", "parent": "台北旗艦總店", "modules": ["水刀聯動"]}
+                {"id": "w_1", "name": "董事長室", "type": "👑 董事會 / 董事長室", "parent": "無 (頂層)", "modules": ["營收戰情"]},
+                {"id": "w_2", "name": "台北旗艦總店", "type": "🏢 營運據點 / 總店", "parent": "董事長室", "modules": ["會員預約"]},
+                {"id": "w_3", "name": "洗車美容作業部", "type": "🏭 生產製造廠務部", "parent": "台北旗艦總店", "modules": ["水刀聯動"]}
             ],
             "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
@@ -161,7 +116,7 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 公司組織樹與營業據點管理 (含組織圖與CRUD)",
+                "🖱️ 拼圖式組織與據點一鍵掛載 (Click-to-Add)",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -178,7 +133,7 @@ if st.session_state.current_portal == "Master":
     # ==================== SaaS 總控台 ====================
     if "全球企業租戶動態總覽" in menu_choice:
         st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與管理中心")
-        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶，並可直接點擊進入該公司的獨立模組後台，隨時協助客戶核對組織圖！*")
+        st.info("💡 *在此處檢視所有企業客戶，並可直接點擊進入該公司後台協助核對組織圖！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -255,74 +210,124 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：組織樹 CRUD 與完整部門分類 ====================
+    # ==================== 個別租戶後台：拼圖式一鍵點選組織架構器 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "公司組織樹與營業據點管理" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與營業據點管理 (完整企業部門庫)")
-        st.info("💡 *在此處您可以自由設定公司組織。屬性分類已內建所有主流企業部門（財務、人資、工程、生產、採購、分店據點等），下方即時呈現標準組織架構圖！*")
+    if "拼圖式組織與據點一鍵掛載" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：拼圖式組織與營業據點一鍵掛載")
+        st.info("💡 *完全免打字！滑鼠直接點擊下方對應的部門或據點積木按鈕，即可瞬間為公司新增該組織並掛載至指定上級！*")
         
-        col_set, col_edit = st.columns([1, 1])
+        # 選擇要掛載在哪個現有節點下方
+        existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
+        selected_parent_target = st.selectbox("📌 步驟一：請先選擇要將新部門掛載在哪個上級下方 (Parent Target)", existing_parents)
         
-        with col_set:
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ 新增組織節點或實體據點")
-            with st.form("dept_add_form"):
-                node_name = st.text_input("名稱*", placeholder="例：財務會計部 / 台北旗艦總店")
-                node_type = st.selectbox("屬性分類 (豐富企業部門庫)", ENTERPRISE_DEPARTMENT_CATEGORIES)
-                existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
-                chosen_parent = st.selectbox("指定上級掛載點 (Parent)", existing_parents)
+        st.markdown("---")
+        st.markdown("### 🧩 步驟二：用滑鼠直接點擊積木按鈕一鍵新增部門/據點")
+        
+        # 區塊化拼圖積木面版
+        p1, p2, p3, p4 = st.columns(4)
+        
+        with p1:
+            st.markdown("#### 👑 決策與高階管理")
+            if st.button("➕ 加入：董事長室 / 董事會"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "董事長室", "type": "👑 董事會 / 董事長室", "parent": selected_parent_target, "modules": ["戰情室"]})
+                st.success("🎉 成功新增 [董事長室]！")
+                st.rerun()
+            if st.button("➕ 加入：總經理室 / CEO"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "總經理室", "type": "👑 總經理室 / 執行長室", "parent": selected_parent_target, "modules": ["全域營運"]})
+                st.success("🎉 成功新增 [總經理室]！")
+                st.rerun()
+            if st.button("➕ 加入：副總經理室"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "副總經理室", "type": "👑 副總經理室", "parent": selected_parent_target, "modules": ["督導管理"]})
+                st.success("🎉 成功新增 [副總經理室]！")
+                st.rerun()
                 
-                if st.form_submit_button("🧱 確認新增並掛載", type="primary", use_container_width=True):
-                    if node_name:
-                        current_tenant["org_nodes"].append({
-                            "id": f"n_{len(current_tenant['org_nodes'])+1}",
-                            "name": node_name,
-                            "type": node_type,
-                            "parent": chosen_parent,
-                            "modules": ["日常作業"]
-                        })
-                        st.success(f"🎉 成功新增 [{node_name}]！")
-                        st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-        with col_edit:
+        with p2:
+            st.markdown("#### 💰 財務與行政後勤")
+            if st.button("➕ 加入：財務部"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "財務部", "type": "💰 財務部", "parent": selected_parent_target, "modules": ["資金與AP"]})
+                st.success("🎉 成功新增 [財務部]！")
+                st.rerun()
+            if st.button("➕ 加入：會計部"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "會計部", "type": "💰 會計部", "parent": selected_parent_target, "modules": ["總帳管理"]})
+                st.success("🎉 成功新增 [會計部]！")
+                st.rerun()
+            if st.button("➕ 加入：人力資源部 (HR)"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "人力資源部", "type": "👥 人力資源部", "parent": selected_parent_target, "modules": ["人事考勤"]})
+                st.success("🎉 成功新增 [人力資源部]！")
+                st.rerun()
+            if st.button("➕ 加入：總務行政部"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "總務行政部", "type": "👥 總務行政部", "parent": selected_parent_target, "modules": ["總務採購"]})
+                st.success("🎉 成功新增 [總務行政部]！")
+                st.rerun()
+                
+        with p3:
+            st.markdown("#### ⚙️ 工程、研發與生產")
+            if st.button("➕ 加入：工程技術部"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "工程技術部", "type": "⚙️ 工程技術部", "parent": selected_parent_target, "modules": ["工程估驗"]})
+                st.success("🎉 成功新增 [工程技術部]！")
+                st.rerun()
+            if st.button("➕ 加入：研發設計中心"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "研發設計中心", "type": "⚙️ 研發設計中心", "parent": selected_parent_target, "modules": ["BOM與研發"]})
+                st.success("🎉 成功新增 [研發設計中心]！")
+                st.rerun()
+            if st.button("➕ 加入：生產製造廠務部"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "生產製造廠務部", "type": "🏭 生產製造廠務部", "parent": selected_parent_target, "modules": ["MES報工"]})
+                st.success("🎉 成功新增 [生產製造廠務部]！")
+                st.rerun()
+            if st.button("➕ 加入：供應鏈與採購部"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "供應鏈與採購部", "type": "🛒 供應鏈與全球採購部", "parent": selected_parent_target, "modules": ["採購與PR"]})
+                st.success("🎉 成功新增 [供應鏈與採購部]！")
+                st.rerun()
+                
+        with p4:
+            st.markdown("#### 🏢 實體據點與倉庫")
+            if st.button("➕ 加入：營運據點/旗艦總店"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "台北旗艦總店", "type": "🏢 營運據點 / 總店", "parent": selected_parent_target, "modules": ["門市收發"]})
+                st.success("🎉 成功新增 [台北旗艦總店]！")
+                st.rerun()
+            if st.button("➕ 加入：分公司 / 辦事處"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "海外辦事處", "type": "🏢 分公司 / 辦事處", "parent": selected_parent_target, "modules": ["海外業務"]})
+                st.success("🎉 成功新增 [海外辦事處]！")
+                st.rerun()
+            if st.button("➕ 加入：原物料倉庫"):
+                current_tenant["org_nodes"].append({"id": f"n_{len(current_tenant['org_nodes'])+1}", "name": "廠內原物料倉庫", "type": "📦 實體原物料倉庫", "parent": selected_parent_target, "modules": ["PDA庫存"]})
+                st.success("🎉 成功新增 [廠內原物料倉庫]！")
+                st.rerun()
+
+        # 節點刪除與修改管理
+        st.markdown("---")
+        with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ✏️ 修改或刪除現有節點 / 據點")
+            st.markdown("### ✏️ 管理現有部門與據點 (修改名稱或刪除)")
             if current_tenant["org_nodes"]:
                 node_names_list = [n["name"] for n in current_tenant["org_nodes"]]
-                target_node_name = st.selectbox("選擇要修改或刪除的節點", node_names_list, key="edit_select")
-                
+                target_node_name = st.selectbox("選擇要管理的節點", node_names_list, key="puzzle_edit_select")
                 target_node = next((n for n in current_tenant["org_nodes"] if n["name"] == target_node_name), None)
                 
                 if target_node:
-                    with st.form("edit_node_form"):
-                        new_edit_name = st.text_input("修改名稱", value=target_node["name"])
-                        new_edit_type = st.selectbox("修改屬性分類", ENTERPRISE_DEPARTMENT_CATEGORIES, index=ENTERPRISE_DEPARTMENT_CATEGORIES.index(target_node["type"]) if target_node["type"] in ENTERPRISE_DEPARTMENT_CATEGORIES else 0)
-                        new_edit_parent = st.selectbox("修改上級掛載點", existing_parents, index=existing_parents.index(target_node["parent"]) if target_node["parent"] in existing_parents else 0)
+                    with st.form("edit_puzzle_node"):
+                        up_name = st.text_input("修改名稱", value=target_node["name"])
+                        up_parent = st.selectbox("修改上級掛載點", existing_parents, index=existing_parents.index(target_node["parent"]) if target_node["parent"] in existing_parents else 0)
                         
-                        col_e1, col_e2 = st.columns(2)
-                        with col_e1:
-                            submitted_update = st.form_submit_button("💾 儲存修改", type="primary", use_container_width=True)
-                        with col_e2:
-                            submitted_delete = st.form_submit_button("🗑️ 刪除此節點", use_container_width=True)
+                        col_bt1, col_bt2 = st.columns(2)
+                        with col_bt1:
+                            sub_up = st.form_submit_button("💾 儲存變更", type="primary", use_container_width=True)
+                        with col_bt2:
+                            sub_del = st.form_submit_button("🗑️ 刪除此節點", use_container_width=True)
                             
-                        if submitted_update:
-                            target_node["name"] = new_edit_name
-                            target_node["type"] = new_edit_type
-                            target_node["parent"] = new_edit_parent
-                            st.success(f"🎉 節點已成功更新！")
+                        if sub_up:
+                            target_node["name"] = up_name
+                            target_node["parent"] = up_parent
+                            st.success("🎉 節點更新成功！")
                             st.rerun()
-                            
-                        if submitted_delete:
+                        if sub_del:
                             if target_node["parent"] == "無 (頂層)":
-                                st.error("❌ 無法刪除公司頂層最高決策層！")
+                                st.error("❌ 無法刪除公司頂層節點！")
                             else:
                                 current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["name"] != target_node_name]
-                                st.success(f"🗑️ 節點 [{target_node_name}] 已成功刪除！")
+                                st.success("🗑️ 節點已刪除！")
                                 st.rerun()
-            else:
-                st.info("目前尚無組織節點。")
             st.markdown('</div>', unsafe_allow_html=True)
 
         # ==================== 下方標準方塊連線組織圖 (Graphviz Org Chart) ====================
@@ -341,17 +346,17 @@ else:
                 n_type = node["type"]
                 
                 if "董事" in n_type or "總經理" in n_type or "執行長" in n_type:
-                    color = "#2563eb" # 寶藍色
+                    color = "#2563eb"
                 elif "財務" in n_type or "會計" in n_type:
-                    color = "#059669" # 墨綠色
+                    color = "#059669"
                 elif "工程" in n_type or "研發" in n_type:
-                    color = "#d97706" # 橘黃色
-                elif "據點" in n_type or "分店" in n_type or "門市" in n_type:
-                    color = "#10b981" # 綠色
+                    color = "#d97706"
+                elif "據點" in n_type or "分店" in n_type or "門市" in n_type or "倉庫" in n_type:
+                    color = "#10b981"
                 else:
-                    color = "#3b82f6" # 標準藍
+                    color = "#3b82f6"
                     
-                org_dot.node(n_name, label=f"{n_name}\n({n_type.split()[1] if len(n_type.split())>1 else n_type})", fillcolor=color, fontcolor="white")
+                org_dot.node(n_name, label=f"{n_name}\n({n_type.split()[0] if len(n_type.split())>0 else n_type})", fillcolor=color, fontcolor="white")
                 
             for node in current_tenant["org_nodes"]:
                 if node["parent"] != "無 (頂層)" and node["parent"]:
