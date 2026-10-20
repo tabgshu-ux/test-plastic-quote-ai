@@ -33,7 +33,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化 Session State 模擬動態組織與拼圖資料庫（讓您可以在畫面中即時新增、拼裝、刪除）
+# 3. 初始化 Session State 模擬動態組織與拼圖資料庫
 if "org_nodes" not in st.session_state:
     st.session_state.org_nodes = [
         {"id": "node_01", "name": "董事會 / 總經理室", "type": "高階決策層", "parent": "無 (頂層)", "modules": ["全球股市/原物料/匯率", "集團綜合損益(P&L)", "應收/應付水位"]},
@@ -74,23 +74,87 @@ with st.sidebar:
 # 5. 主畫面邏輯路由
 if "動態組織拼圖與樹狀架構" in menu_choice:
     st.markdown("## 🧩 動態組織拼圖與樹狀架構管理 (Visual Org-Chart Builder)")
-    st.info("💡 *在此處您可以像玩樂高積木一樣，自由新增組織節點（如董事會、總經理室、工程部、管理部），並自由指定其上下級關係（例如將倉庫掛在生產部下方），系統將即時組織化呈現並賦予對應功能！*")
+    st.info("💡 *無須繁瑣打字！您可以直接點擊下方的【一鍵快選範本】，滑鼠點兩下就能立刻將常用部門與拼圖掛載至組織樹中。*")
+    
+    # 🌟 亮點功能：一鍵快選拼圖按鈕區 (免打字，點兩下直接加入)
+    st.markdown("### ⚡ 一鍵快速拼裝推薦範本 (Quick-Add Presets)")
+    q_col1, q_col2, q_col3, q_col4 = st.columns(4)
+    
+    with q_col1:
+        if st.button("👑 一鍵加：董事長室", use_container_width=True):
+            st.session_state.org_nodes.append({
+                "id": f"node_{len(st.session_state.org_nodes)+1:02d}",
+                "name": "董事長室 (戰情中心)",
+                "type": "高階決策層",
+                "parent": "無 (頂層)",
+                "modules": ["全球股市/原物料/匯率", "集團綜合損益(P&L)", "應收/應付水位"]
+            })
+            st.success("🎉 已成功一鍵拼入【董事長室】！")
+            st.rerun()
+            
+    with q_col2:
+        if st.button("⚙️ 一鍵加：工程部", use_container_width=True):
+            st.session_state.org_nodes.append({
+                "id": f"node_{len(st.session_state.org_nodes)+1:02d}",
+                "name": "工程設計中心",
+                "type": "營運部門",
+                "parent": "董事會 / 總經理室",
+                "modules": ["工程估驗計價", "施工日報表", "點工點料回報"]
+            })
+            st.success("🎉 已成功一鍵拼入【工程設計中心】！")
+            st.rerun()
+            
+    with q_col3:
+        if st.button("📦 一鍵加：倉庫據點", use_container_width=True):
+            st.session_state.org_nodes.append({
+                "id": f"node_{len(st.session_state.org_nodes)+1:02d}",
+                "name": "廠內原物料與成品倉庫",
+                "type": "實體據點/庫位",
+                "parent": "生產部",
+                "modules": ["多倉儲位查詢", "條碼PDA收發貨", "安全庫存警示"]
+            })
+            st.success("🎉 已成功一鍵拼入【倉庫據點】於生產部下方！")
+            st.rerun()
+            
+    with q_col4:
+        if st.button("💰 一鍵加：財務會計部", use_container_width=True):
+            st.session_state.org_nodes.append({
+                "id": f"node_{len(st.session_state.org_nodes)+1:02d}",
+                "name": "財務會計與越南稅務部",
+                "type": "行政支援",
+                "parent": "董事會 / 總經理室",
+                "modules": ["總帳會計與傳票", "越南電子發票讀取", "應收/應付帳款"]
+            })
+            st.success("🎉 已成功一鍵拼入【財務會計部】！")
+            st.rerun()
+
+    st.markdown("---")
     
     col_builder, col_preview = st.columns([1, 1])
     
     with col_builder:
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### ➕ 拼裝新組織節點 / 實體據點")
+        st.markdown("### 🧱 自訂拼裝組織節點 / 實體據點")
         with st.form("org_builder_form"):
-            new_name = st.text_input("節點/部門/倉庫名稱*", placeholder="例：越南平陽廠模具倉 或 海外業務處")
-            new_type = st.selectbox("節點屬性", ["高階決策層 (Board/Exec)", "營運/行政部門 (Department)", "實體據點/倉庫 (Location/Warehouse)", "子公司/分公司 (Branch)"])
+            # 提供常見下拉選項免手動打字
+            department_presets = [
+                "請選擇或自訂部門...", "總經理室 / 執行長辦公室", "經營企劃處", 
+                "財務與資本運作部", "會計與稅務管理部", "人力資源部", 
+                "國內業務處", "國際貿易與海外業務部", "市場行銷企劃部", 
+                "供應鏈與全球採購部", "倉儲物流與庫存管理", "生產製造廠務部", 
+                "工程與技術服務部", "品質保證與品管中心 (QA/QC)", "資訊技術與研發部 (IT)"
+            ]
+            selected_preset = st.selectbox("快速選擇標準部門/倉庫", department_presets)
+            custom_name = st.text_input("或自行輸入名稱", placeholder="若上方沒有可在此手動輸入...")
             
-            # 動態取得現有節點作為上級選單
+            final_name = custom_name if custom_name else (selected_preset if selected_preset != "請選擇或自訂部門..." else "")
+            
+            new_type = st.selectbox("節點屬性", ["營運/行政部門 (Department)", "高階決策層 (Board/Exec)", "實體據點/倉庫 (Location/Warehouse)", "子公司/分公司 (Branch)"])
+            
             existing_names = [node["name"] for node in st.session_state.org_nodes]
             parent_options = ["無 (頂層主節點)"] + existing_names
             new_parent = st.selectbox("指定上級掛載點 (Parent Node)", parent_options)
             
-            # 勾選或選擇該節點要賦予的拼圖功能
             st.markdown("#### 🧩 勾選此節點要啟用的功能拼圖：")
             feat_c1, feat_c2 = st.columns(2)
             with feat_c1:
@@ -102,10 +166,10 @@ if "動態組織拼圖與樹狀架構" in menu_choice:
                 f5 = st.checkbox("👥 人事考勤與薪酬管理", value=False)
                 f6 = st.checkbox("🇻🇳 越南電子發票與稅務", value=False)
 
-            submitted = st.form_submit_button("🧱 拼入組織架構中", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("🧱 確認拼入組織架構", type="primary", use_container_width=True)
             if submitted:
-                if not new_name:
-                    st.error("❌ 請輸入名稱！")
+                if not final_name:
+                    st.error("❌ 請選擇或輸入名稱！")
                 else:
                     selected_feats = []
                     if f1: selected_feats.append("📈 股市/原物料/匯率戰情室")
@@ -117,13 +181,14 @@ if "動態組織拼圖與樹狀架構" in menu_choice:
                     
                     new_node = {
                         "id": f"node_{len(st.session_state.org_nodes)+1:02d}",
-                        "name": new_name,
+                        "name": final_name,
                         "type": new_type,
                         "parent": new_parent,
                         "modules": selected_feats
                     }
                     st.session_state.org_nodes.append(new_node)
-                    st.success(f"🎉 成功將 [{new_name}] 拼裝至上級節點：`{new_parent}`！")
+                    st.success(f"🎉 成功將 [{final_name}] 拼裝至上級節點：`{new_parent}`！")
+                    st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_preview:
@@ -143,41 +208,14 @@ if "動態組織拼圖與樹狀架構" in menu_choice:
 elif "外部資料庫與 API 串聯" in menu_choice:
     st.markdown("## 🔌 外部資料庫與異質資料來源串聯設定 (Database Bridge)")
     st.info("💡 *在此處您可以設定與擴充對外連結的其他客戶資料庫或即時 API 來源，無須修改程式碼。*")
-    
-    with st.container():
-        st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        with st.form("db_bridge_form"):
-            st.markdown("### ➕ 新增或設定外部資料庫 / API 來源")
-            col1, col2 = st.columns(2)
-            with col1:
-                db_key = st.text_input("來源代碼 (Key)*", placeholder="例：vn_e_invoice_api")
-                db_display_name = st.text_input("顯示名稱*", placeholder="例：越南總局電子發票 API")
-                db_type = st.selectbox("連線類型", ["RESTful API / JSON Bridge", "PostgreSQL / Supabase", "MySQL / MariaDB", "Microsoft SQL Server"])
-                db_host = st.text_input("主機位址 / API Endpoint*", placeholder="例：https://api.einvoice.vn/v1")
-            with col2:
-                db_port = st.text_input("通訊埠 (Port)", placeholder="例：3306")
-                db_name = st.text_input("路徑 / 資料庫名稱*", placeholder="v1/invoice")
-                db_user = st.text_input("API Token / 帳號*", placeholder="Bearer token...")
-                db_password = st.text_input("密鑰*", type="password")
-
-            if st.form_submit_button("💾 儲存並啟用連線設定", type="primary", use_container_width=True):
-                st.success("✅ 外部資料來源設定已成功儲存！")
-        st.markdown('</div>', unsafe_allow_html=True)
 
 elif "模組市集與功能授權設定" in menu_choice:
     st.markdown("## 📦 模組市集與功能授權設定 (App Store & Feature Toggles)")
-    st.info("💡 說明：在此處可以檢視全系統所有可用的企業模組市集，並針對不同客戶方案大量派發或收回功能拼圖。")
-    st.checkbox("📦 智能進銷存與庫存管理", value=True)
-    st.checkbox("💰 財務總帳與越南電子發票", value=True)
-    st.checkbox("🏭 MES 現場報工與 OEE 監控", value=True)
-    st.checkbox("📈 國際股市、匯率與原物料戰情", value=True)
+    st.info("💡 說明：在此處管理全系統所有可用的企業模組市集。")
 
 elif "跨國在地化與越南財稅模組" in menu_choice:
     st.markdown("## 🇻🇳 跨國在地化與越南財稅模組 (Vietnam Localization & E-Invoice)")
     st.info("💡 說明：越南紅發票自動解析與 VAT 稅額勾稽。")
-    uploaded_invoice = st.file_uploader("請上傳越南電子發票 (XML / PDF)", type=["xml", "pdf"])
-    if uploaded_invoice:
-        st.success("🎉 越南紅發票解析成功，已自動對應傳票與會計科目！")
 
 else:
     st.markdown("## 📊 系統運行與跨庫數據監控")
