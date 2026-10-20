@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (Plotly 專業互動式組織樹狀圖)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (標準階層方塊組織樹狀圖)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Plotly Org Tree",
+    page_title="SaaS Enterprise Modular AI-ERP & Standard Org Chart",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -34,6 +33,50 @@ st.markdown("""
         border-radius: 6px;
         font-weight: 600;
         width: 100%;
+    }
+    /* 組織圖卡片樣式 */
+    .org-root-card {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 16px;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    .org-level1-card {
+        background: #ffffff;
+        border: 2px solid #2563eb;
+        color: #1e293b;
+        padding: 12px 18px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin: 5px;
+        min-width: 160px;
+    }
+    .org-level2-card {
+        background: #f0fdf4;
+        border: 2px solid #10b981;
+        color: #065f46;
+        padding: 10px 15px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin: 4px;
+        min-width: 140px;
+        font-size: 13px;
+    }
+    .tree-connector {
+        width: 2px;
+        height: 25px;
+        background-color: #94a3b8;
+        margin: 0 auto;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -212,12 +255,12 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：拼圖式一鍵掛載與 Plotly 專業組織圖 ====================
+    # ==================== 個別租戶後台：拼圖式一鍵掛載與標準方塊組織樹 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
     if "拼圖式組織與據點一鍵掛載" in menu_choice:
         st.markdown(f"## 🖱️ {current_tenant['name']}：拼圖式組織與營業據點一鍵掛載")
-        st.info("💡 *滑鼠點擊下方積木按鈕即可一鍵新增部門並掛載至指定上級！下方即時呈現使用 Plotly 繪製的標準互動式組織架構樹狀圖。*")
+        st.info("💡 *滑鼠點擊下方積木按鈕即可一鍵新增部門並掛載至指定上級！下方即時呈現標準方塊橫向並排組織樹狀圖。*")
         
         existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
         selected_parent_target = st.selectbox("📌 步驟一：請選擇要將新部門掛載在哪個上級下方", existing_parents)
@@ -330,40 +373,57 @@ else:
                                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # ==================== 下方使用 Plotly 繪製標準階層樹狀圖 (Treemap / Sunburst) ====================
+        # ==================== 下方標準方塊組織樹 (並排展開) ====================
         st.markdown("---")
-        st.markdown("### 📊 貴公司互動式階層組織架構圖 (Plotly Org Tree)")
-        st.info("💡 *下方利用 Plotly 視覺化引擎繪製出方塊階層樹狀圖，點擊方塊可展開細節，層級關係一目了然！*")
+        st.markdown("### 📊 貴公司標準階層組織架構圖 (Org Chart Tree)")
+        st.info("💡 *下方即時以橫向並排、層級分明的標準方塊組織圖呈現，所有部門與子部門一目了然！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             
-            # 準備 Plotly Treemap 資料
-            ids = []
-            labels = []
-            parents = []
+            roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
+            others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
             
-            for node in current_tenant["org_nodes"]:
-                ids.append(node["name"])
-                labels.append(f"{node['name']}<br>({node['type']})")
-                # Plotly 的 parent 如果是頂層需設為 ""
-                p = node["parent"]
-                if p == "無 (頂層)" or not p:
-                    parents.append("")
-                else:
-                    parents.append(p)
-                    
-            fig = go.Figure(go.Treemap(
-                ids=ids,
-                labels=labels,
-                parents=parents,
-                root_color="#2563eb",
-                marker=dict(colorscale="Blues")
-            ))
-            
-            fig.update_layout(margin = dict(t=10, l=10, r=10, b=10), height=400)
-            st.plotly_chart(fig, use_container_width=True)
-            
+            # 渲染頂層
+            for r in roots:
+                st.markdown(f"""
+                    <div style="text-align: center;">
+                        <div class="org-root-card">
+                            👑 {r['name']} <span style="font-size: 12px; font-weight: normal;">({r['type']})</span>
+                        </div>
+                    </div>
+                    <div class="tree-connector"></div>
+                """, unsafe_allow_html=True)
+                
+                # 第一層子部門 (並排顯示)
+                level1_children = [n for n in others if n["parent"] == r["name"]]
+                if level1_children:
+                    cols = st.columns(len(level1_children))
+                    for idx, l1 in enumerate(level1_children):
+                        with cols[idx]:
+                            st.markdown(f"""
+                                <div style="text-align: center;">
+                                    <div class="org-level1-card">
+                                        <b>{l1['name']}</b><br>
+                                        <span style="font-size: 11px; color: gray;">{l1['type']}</span>
+                                    </div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # 第二層子部門 (該第一層底下的部門)
+                            level2_children = [n for n in others if n["parent"] == l1["name"]]
+                            if level2_children:
+                                st.markdown('<div class="tree-connector" style="height: 15px;"></div>', unsafe_allow_html=True)
+                                for l2 in level2_children:
+                                    st.markdown(f"""
+                                        <div style="text-align: center;">
+                                            <div class="org-level2-card">
+                                                <b>{l2['name']}</b><br>
+                                                <span style="font-size: 10px; color: gray;">{l2['type']}</span>
+                                            </div>
+                                        </div>
+                                    """, unsafe_allow_html=True)
+                                    
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif "員工帳號與權限角色管理" in menu_choice:
