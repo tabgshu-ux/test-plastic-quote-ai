@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
-import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (穩定版：多層級組織樹與部門專屬功能自動掛載)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (全功能部門與樂高模組市集 App Store)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Stable Org",
+    page_title="SaaS Enterprise Modular AI-ERP & Feature App Store",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -32,73 +31,68 @@ st.markdown("""
     .stButton>button {
         border-radius: 6px;
         font-weight: 600;
-        width: 100%;
-    }
-    .org-root-card {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 16px;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-        display: inline-block;
-        margin-bottom: 15px;
-    }
-    .org-level1-card {
-        background: #ffffff;
-        border: 2px solid #2563eb;
-        color: #1e293b;
-        padding: 12px 18px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin: 5px;
-        min-width: 180px;
-    }
-    .org-level2-card {
-        background: #f8fafc;
-        border: 2px solid #0284c7;
-        color: #0369a1;
-        padding: 10px 15px;
-        border-radius: 6px;
-        text-align: center;
-        font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin: 4px;
-        min-width: 150px;
-        font-size: 13px;
-    }
-    .org-level3-card {
-        background: #f0fdf4;
-        border: 2px solid #10b981;
-        color: #065f46;
-        padding: 8px 12px;
-        border-radius: 6px;
-        text-align: center;
-        font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin: 3px;
-        min-width: 130px;
-        font-size: 12px;
-    }
-    .tree-connector {
-        width: 2px;
-        height: 25px;
-        background-color: #94a3b8;
-        margin: 0 auto;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # 3. 初始化全域資料
 if "global_pricing" not in st.session_state:
-    st.session_state.global_pricing = {"enterprise_base_fee": 150, "standard_base_fee": 80, "extra_dept_fee": 5}
+    st.session_state.global_pricing = {"base_fee": 150, "module_fee": 15}
 
 if "global_fx_rates" not in st.session_state:
     st.session_state.global_fx_rates = {"USD": 1.0, "TWD": 31.50, "VND": 25400.00, "RMB": 7.20}
+
+# 市面上所有企業主流部門清單
+ALL_ENTERPRISE_DEPARTMENTS = [
+    "👑 董事長室 / 總經理室 (Executive & Board Room)",
+    "📈 經營企劃與策略發展部 (Corporate Strategy)",
+    "👥 人力資源與行政管理部 (HR & Admin Dept)",
+    "⚖️ 法務與合規遵循部 (Legal & Compliance)",
+    "🔒 資訊安全與稽核中心 (Audit & Info Security)",
+    "💰 財務與資本運作部 (Finance Dept)",
+    "📊 會計與稅務管理部 (Accounting & Tax)",
+    "🌍 國內業務與通路發展部 (Domestic Sales)",
+    "🌐 國際貿易與海外業務部 (Global Export Sales)",
+    "📢 市場行銷與品牌企劃部 (Marketing Dept)",
+    "🤝 客戶成功與售後服務部 (Customer Success / CS)",
+    "🛒 供應鏈與全球採購部 (Supply Chain & Procurement)",
+    "📦 倉儲物流與庫存管理部 (Warehouse & Logistics)",
+    "🏭 生產製造與廠務管理部 (Manufacturing & Plant)",
+    "⚙️ 工程與技術服務部 (Engineering & Technical)",
+    "📊 生產管制與物料控制部 (PMC / Production Control)",
+    "🛡️ 品質保證與品管中心 (QA / QC Dept)",
+    "💡 研發設計與創新中心 (R&D / Design Center)",
+    "💻 資訊技術與系統開發部 (IT & Software Development)"
+]
+
+# 各部門對應的模組市集大合集
+DEPARTMENT_MODULE_CATALOG = {
+    "👑 董事長室 / 總經理室 (Executive & Board Room)": {
+        "col1": ["全球原物料即時行情看板", "國際匯率多幣別換算中心", "全球股市財經大盤監控", "綜合損益表與資產負債表", "企業 KPI 與多維度 BI 戰情室"],
+        "col2": ["智能進銷存與批號效期管理", "全球供應鏈採購比價系統", "倉儲物流與條碼掃描(WMS)", "供應商交期與品質評鑑系統", "進出口報關與海運物流追蹤", "條碼/QR Code與資產標籤列印"],
+        "col3": ["總帳會計、傳票與會計師報表", "生產排程、BOM表與製程智考", "CRM 客戶關係與外貿商機管理", "人事薪酬、勞健保與考勤排班", "電子簽核流程引擎 (BPM)", "AI 智慧語音助理與跨國翻譯"]
+    },
+    "👥 人力資源與行政管理部 (HR & Admin Dept)": {
+        "col1": ["人事組織架構與編制管理", "員工考勤打卡與GPS定位管理", "多國薪資計算與勞健保投保", "教育訓練與考核績效追蹤", "辦公資產與福委會管理系統"],
+        "col2": ["內部公告與員工公文簽核", "訪客預約與門禁人臉辨識對接", "會議室與公司車輛預約系統", "辦公用品請購與庫存申領", "勞安衛檢查與教育訓練紀錄"],
+        "col3": ["AI 履歷篩選與面試排程助手", "員工滿意度調查與離職分析", "法規合規與勞資糾紛預防資料庫", "多語言員工自助服務 App 介面", "跨國簽證與外籍員工管理"]
+    },
+    "💰 財務與資本運作部 (Finance Dept)": {
+        "col1": ["全球多幣別資金水位管理", "應收帳款(AR)與催收追蹤", "應付帳款(AP)與付款排程", "銀行融資與信用狀(LC)管理", "現金流量預測與財報分析模型"],
+        "col2": ["各子公司損益合併報表", "稅務申報試算與發票勾稽", "預算編列與部門費用控管", "資本支出(CAPEX)審核追蹤", "企業投資與資產配置戰情室"],
+        "col3": ["AI 異常財務交易自動預警", "電子發票與越南紅發票整合", "區塊鏈供應鏈金融融資對接", "自動化傳票生成與會計勾稽", "跨國利潤匯出與稅務合規分析"]
+    },
+    "⚙️ 工程與技術服務部 (Engineering & Technical)": {
+        "col1": ["水電工程專案與工項預算編號", "工程估驗與計價請款追蹤", "工地現場點工點料管理", "施工日報表與工時扣減聯動", "工程合約與外包商管理"],
+        "col2": ["設備維修履歷與保養排程", "CAD/BIM 圖檔雲端協同檢視", "工地現場安衛與檢驗查核", "工程材料進場驗收與檢驗", "外包商工班計價與應付帳款"],
+        "col3": ["AI 工程預算超支自動預警", "行動裝置 PDA 現場叫料系統", "工程現場物聯網(IoT)設備監控", "多國工程技術文件資料庫", "智能施工進度甘特圖與排程"]
+    },
+    "🏭 生產製造與廠務管理部 (Manufacturing & Plant)": {
+        "col1": ["MES 製造執行系統與動態報工", "BOM 表與多階用料清單管理", "產線排程與機台產能規劃", "製程工藝與標準作業程序(SOP)", "廠內在製品(WIP)即時追蹤"],
+        "col2": ["設備 OEE 稼動率與故障預警", "模具壽命與保養維護管理", "產線人員績效與計件薪資計算", "車間能源消耗與碳排監控", "製程異常與不良品追蹤處理"],
+        "col3": ["AI 產能瓶頸自動優化建議", "機器視覺(AI)瑕疵檢測對接", "AGV 無人搬運車派工整合", "智慧燈號與大螢幕產線看板", "多工廠產能平衡調度系統"]
+    }
+}
 
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
@@ -108,17 +102,13 @@ if "tenants_db" not in st.session_state:
             "plan": "旗艦版 (Enterprise)",
             "price_usd": 170,
             "expiry_date": "2027-10-20",
-            "org_nodes": [
-                {"id": "node_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)", "modules": ["全球戰情室", "高階決策審核"]},
-                {"id": "node_gen", "name": "總經理室", "type": "👑 一級部門 (CEO)", "parent": "董事長室", "modules": ["營運總控台", "跨部門協調"]},
-                {"id": "node_fin", "name": "財務會計部", "type": "💰 二級部門 (Finance)", "parent": "總經理室", "modules": ["總帳管理", "應付帳款(AP)", "多幣別與匯率"]},
-                {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 二級部門 (Engineering)", "parent": "總經理室", "modules": ["專案與工項預算", "工程估驗與計價"]},
-                {"id": "node_sub_site", "name": "平陽美福工地現場", "type": "📦 三級部門 (Site/Store)", "parent": "工程技術部", "modules": ["工地點工點料", "現場日報表"]}
-            ],
+            "active_department": "👑 董事長室 / 總經理室 (Executive & Board Room)",
+            "enabled_modules": ["全球原物料即時行情看板", "國際匯率多幣別換算中心", "水電工程專案與工項預算編號", "工程估驗與計價請款追蹤"],
+            "org_nodes": [{"id": "n_1", "name": "董事長室", "type": "👑 董事會", "parent": "無 (頂層)"}],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
             "staff": [{"name": "許福村", "email": "fuchun@vina.com", "role": "Tenant Admin"}],
-            "audit_logs": [{"time": "2026-10-20 14:10:22", "user": "許福村", "action": "初始化組織樹", "ip": "192.168.10.2"}]
+            "audit_logs": [{"time": "2026-10-20 14:10:22", "user": "許福村", "action": "初始化系統", "ip": "192.168.10.2"}]
         },
         "tenant_taipei_wash": {
             "name": "🇹🇼 台北極速智慧洗車坊",
@@ -126,15 +116,13 @@ if "tenants_db" not in st.session_state:
             "plan": "標準版 (Standard)",
             "price_usd": 80,
             "expiry_date": "2026-11-05",
-            "org_nodes": [
-                {"id": "w_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)", "modules": ["營收戰情"]},
-                {"id": "w_branch", "name": "台北旗艦總店", "type": "🏢 一級據點 (Branch)", "parent": "董事長室", "modules": ["門市收發貨", "會員預約"]},
-                {"id": "w_dept", "name": "洗車美容作業部", "type": "🏭 二級部門 (Operation)", "parent": "台北旗艦總店", "modules": ["水刀聯動控制", "車牌辨識(ANPR)"]}
-            ],
+            "active_department": "👥 人力資源與行政管理部 (HR & Admin Dept)",
+            "enabled_modules": ["人事組織架構與編制管理", "員工考勤打卡與GPS定位管理"],
+            "org_nodes": [{"id": "w_1", "name": "董事長室", "type": "👑 董事會", "parent": "無 (頂層)"}],
             "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
             "staff": [{"name": "張店長", "email": "manager@wash.com", "role": "Tenant Admin"}],
-            "audit_logs": [{"time": "2026-10-19 10:00:00", "user": "張店長", "action": "初始化組織樹", "ip": "1.2.3.4"}]
+            "audit_logs": [{"time": "2026-10-19 10:00:00", "user": "張店長", "action": "初始化系統", "ip": "1.2.3.4"}]
         }
     }
 
@@ -158,7 +146,7 @@ with st.sidebar:
     else:
         st.markdown("👑 **目前身分**: `SaaS 平台總管理員 (Master)`")
     
-    st.markdown("---")
+    st.markdown("---
     st.markdown("### 📌 系統導覽選單")
     
     if st.session_state.current_portal == "Master":
@@ -175,7 +163,8 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 拼圖式多層級組織與部門功能掛載",
+                "🧩 樂高積木式模組拼圖與功能開關 (App Store)",
+                "🖱️ 企業組織與部門階層圖管理",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -191,7 +180,7 @@ with st.sidebar:
 if st.session_state.current_portal == "Master":
     if "全球企業租戶動態總覽" in menu_choice:
         st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與管理中心")
-        st.info("💡 *在此處檢視所有企業客戶，並可直接點擊進入該公司後台協助核對組織圖！*")
+        st.info("💡 *在此處檢視所有企業客戶，並可直接點擊進入該公司後台協助核對與管理！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -216,8 +205,8 @@ if st.session_state.current_portal == "Master":
                 "地區位置": t_val["region"],
                 "訂閱方案": t_val["plan"],
                 "每月價格 (USD)": t_val["price_usd"],
-                "合約到期日": t_val["expiry_date"],
-                "組織節點數": len(t_val["org_nodes"]),
+                "啟用部門數": 1,
+                "啟用功能數": len(t_val.get("enabled_modules", [])),
                 "狀態": "🟢 正常營運"
             })
         df_tenants = pd.DataFrame(tenant_list_data)
@@ -230,7 +219,7 @@ if st.session_state.current_portal == "Master":
         st.markdown("### 📋 企業租戶列表")
         st.dataframe(df_tenants, use_container_width=True)
         
-        st.markdown("### 🚀 快速進入指定客戶租戶後台與組織圖核對")
+        st.markdown("### 🚀 快速進入指定客戶租戶後台與模組市集")
         quick_cols = st.columns(len(st.session_state.tenants_db))
         for idx, (t_key, t_val) in enumerate(st.session_state.tenants_db.items()):
             with quick_cols[idx]:
@@ -240,7 +229,7 @@ if st.session_state.current_portal == "Master":
                         <span style="font-size: 12px; color: gray;">{t_val['region']} | ${t_val['price_usd']}/月</span>
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"📂 進入並核對組織圖", key=f"btn_{t_key}", use_container_width=True):
+                if st.button(f"📂 進入模組市集", key=f"btn_{t_key}", use_container_width=True):
                     st.session_state.current_portal = t_key
                     st.rerun()
 
@@ -268,225 +257,99 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：精準路由判斷 ====================
+    # ==================== 個別租戶後台：樂高積木式模組拼圖市集 (App Store) ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "拼圖式多層級組織與部門功能掛載" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：拼圖式多層級組織與部門功能掛載")
-        st.info("💡 *點擊下方豐富的企業部門積木按鈕，選擇階層（一級/二級/三級部門）並掛載至指定上級，系統會自動帶入該部門專屬的 ERP 功能模組！*")
+    if "樂高積木式模組拼圖與功能開關" in menu_choice:
+        st.markdown(f"## 🧩 {current_tenant['name']}：樂高積木式模組拼圖與功能開關 (App Store)")
+        st.info("💡 *說明：此展示系統【全功能模組大合集】。您可以點選左側任意部門，並自由勾選或組合市面上所有企業管理、高階決策、財會與供應鏈所需的完整模組拼圖。*")
         
-        existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
+        col_left, col_right = st.columns([1, 2.5])
         
-        with st.container():
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 🧩 步驟一：設定掛載層級與上級主管，並一鍵點擊新增部門")
+        with col_left:
+            st.markdown("### 🏢 選擇目標部門 / 管理層")
+            st.markdown("<span style='font-size: 13px; color: gray;'>請點選要配置的部門：</span>", unsafe_allow_html=True)
             
-            c_lvl, c_par = st.columns(2)
-            with c_lvl:
-                dept_level = st.selectbox("選擇部門組織層級", ["👑 頂層 (Board / 董事會)", "👑 一級部門 (Headquarters / 總經理與高管室)", "💰 二級部門 (Functional Dept / 財務、工程、生產、採購等)", "📦 三級部門 (Site / Branch / 現場工務所、倉庫、分店)"])
-            with c_par:
-                selected_parent_target = st.selectbox("指定上級掛載點 (Parent)", existing_parents)
+            # 使用 radio 讓租戶點選左側部門
+            selected_dept = st.radio(
+                "部門選擇",
+                ALL_ENTERPRISE_DEPARTMENTS,
+                index=ALL_ENTERPRISE_DEPARTMENTS.index(current_tenant.get("active_department", ALL_ENTERPRISE_DEPARTMENTS[0])) if current_tenant.get("active_department") in ALL_ENTERPRISE_DEPARTMENTS else 0,
+                label_visibility="collapsed"
+            )
+            current_tenant["active_department"] = selected_dept
+            
+        with col_right:
+            st.markdown(f"### 🛒 【{selected_dept.split('(')[0].strip()}】的企業全功能模組市集 (App Store)")
+            st.markdown("<span style='font-size: 13px; color: gray;'>頻勾選此部門/高階角色可解鎖啟用的所有功能與價情儀表板：</span>", unsafe_allow_html=True)
+            
+            # 取得當前部門對應的模組清單，若不在預設字典則給予通用模組
+            cat_data = DEPARTMENT_MODULE_CATALOG.get(selected_dept, {
+                "col1": ["全局戰情室", "高階決策審核", "營運總控台", "跨部門協調", "督導管理"],
+                "col2": ["進銷存與批號效期管理", "供應鏈採購比價系統", "倉儲物流與條碼掃描(WMS)", "供應商交期與品質評鑑", "進出口報關與海運追蹤"],
+                "col3": ["總帳會計與報表", "生產排程與BOM管理", "CRM客戶關係與商機管理", "人事考勤與薪資計算", "電子簽核流程引擎(BPM)"]
+            })
+            
+            if "enabled_modules" not in current_tenant:
+                current_tenant["enabled_modules"] = []
                 
-            st.markdown("#### 請選擇要加入的企業部門積木：")
-            
-            dept_default_modules = {
-                "董事長室": ["全球戰情室", "高階決策審核"],
-                "總經理室": ["營運總控台", "跨部門協調"],
-                "副總經理室": ["督導管理", "績效考核"],
-                "財務部": ["總帳管理", "應付帳款(AP)", "多幣別與匯率"],
-                "會計部": ["會計傳票", "稅務報表"],
-                "人力資源部": ["人事考勤", "薪資計算"],
-                "總務行政部": ["總務採購", "辦公資產管理"],
-                "工程技術部": ["專案與工項預算", "工程估驗與計價"],
-                "研發設計中心": ["BOM表管理", "研發專案追蹤"],
-                "生產製造廠務部": ["MES報工系統", "產線排程管理"],
-                "供應鏈與採購部": ["採購單(PR/PO)", "供應商管理"],
-                "品保與安衛部": ["QA/QC檢驗", "工安環安追蹤"],
-                "營業據點/旗艦總店": ["門市收發貨", "會員預約系統"],
-                "海外分公司": ["海外業務管理", "跨國多幣別報表"],
-                "廠內原物料倉庫": ["PDA條碼庫存", "出入庫管理"],
-                "現場工務所": ["工地點工點料", "現場施工日報表"]
-            }
-            
-            d1, d2, d3, d4 = st.columns(4)
-            
-            def add_dept_node(name, dept_type_str):
-                mods = dept_default_modules.get(name, ["一般日常作業"])
-                current_tenant["org_nodes"].append({
-                    "id": f"node_{uuid.uuid4().hex[:8]}",
-                    "name": name,
-                    "type": dept_type_str,
-                    "parent": selected_parent_target,
-                    "modules": mods
-                })
-                st.success(f"🎉 成功新增 [{name}] 並自動掛載專屬功能：{', '.join(mods)}")
-                st.rerun()
-
-            with d1:
-                st.markdown("**👑 決策與高管**")
-                if st.button("➕ 董事長室"): add_dept_node("董事長室", dept_level)
-                if st.button("➕ 總經理室"): add_dept_node("總經理室", dept_level)
-                if st.button("➕ 副總經理室"): add_dept_node("副總經理室", dept_level)
-            with d2:
-                st.markdown("**💰 財務與行政**")
-                if st.button("➕ 財務部"): add_dept_node("財務部", dept_level)
-                if st.button("➕ 會計部"): add_dept_node("會計部", dept_level)
-                if st.button("➕ 人力資源部"): add_dept_node("人力資源部", dept_level)
-                if st.button("➕ 總務行政部"): add_dept_node("總務行政部", dept_level)
-            with d3:
-                st.markdown("**⚙️ 工程與生產**")
-                if st.button("➕ 工程技術部"): add_dept_node("工程技術部", dept_level)
-                if st.button("➕ 研發設計中心"): add_dept_node("研發設計中心", dept_level)
-                if st.button("➕ 生產製造廠務部"): add_dept_node("生產製造廠務部", dept_level)
-                if st.button("➕ 供應鏈與採購部"): add_dept_node("供應鏈與採購部", dept_level)
-            with d4:
-                st.markdown("**🏢 據點與現場**")
-                if st.button("➕ 營業據點/總店"): add_dept_node("營業據點/旗艦總店", dept_level)
-                if st.button("➕ 海外分公司"): add_dept_node("海外分公司", dept_level)
-                if st.button("➕ 原物料倉庫"): add_dept_node("廠內原物料倉庫", dept_level)
-                if st.button("➕ 現場工務所"): add_dept_node("現場工務所", dept_level)
+            with st.form("module_appstore_form"):
+                mc1, mc2, mc3 = st.columns(3)
                 
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # 現有部門管理與功能自訂修改區塊
-        with st.container():
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ✏️ 管理現有部門與專屬功能模組 (修改名稱、掛載點或自訂功能)")
-            if current_tenant["org_nodes"]:
-                node_options = {f"{n['name']} ({n['type']}) [ID: {n['id']}]": n for n in current_tenant["org_nodes"]}
-                selected_label = st.selectbox("選擇要管理的特定部門節點", list(node_options.keys()))
-                target_node = node_options[selected_label]
+                new_selected_mods = []
                 
-                if target_node:
-                    with st.form("edit_node_form"):
-                        up_name = st.text_input("修改部門名稱", value=target_node["name"])
-                        up_parent = st.selectbox("修改上級掛載點", existing_parents, index=existing_parents.index(target_node["parent"]) if target_node["parent"] in existing_parents else 0)
-                        
-                        st.markdown("#### 🛠️ 該部門啟用的 ERP 功能模組 (可自由勾選調整)")
-                        all_possible_modules = [
-                            "全球戰情室", "高階決策審核", "營運總控台", "跨部門協調", "督導管理", "績效考核",
-                            "總帳管理", "應付帳款(AP)", "多幣別與匯率", "會計傳票", "稅務報表",
-                            "人事考勤", "薪資計算", "總務採購", "辦公資產管理",
-                            "專案與工項預算", "工程估驗與計價", "工地點工點料", "現場施工日報表",
-                            "BOM表管理", "研發專案追蹤", "MES報工系統", "產線排程管理",
-                            "採購單(PR/PO)", "供應商管理", "QA/QC檢驗", "工安環安追蹤",
-                            "門市收發貨", "會員預約系統", "海外業務管理", "跨國多幣別報表", "PDA條碼庫存"
-                        ]
-                        current_assigned = target_node.get("modules", [])
-                        selected_mods = st.multiselect("勾選此部門所擁有的系統功能", all_possible_modules, default=[m for m in current_assigned if m in all_possible_modules])
-                        
-                        col_bt1, col_bt2 = st.columns(2)
-                        with col_bt1:
-                            sub_up = st.form_submit_button("💾 儲存變更", type="primary", use_container_width=True)
-                        with col_bt2:
-                            sub_del = st.form_submit_button("🗑️ 刪除此部門", use_container_width=True)
+                with mc1:
+                    st.markdown("#### 📈 高階決策與即時行情")
+                    for mod in cat_data["col1"]:
+                        is_checked = st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}")
+                        if is_checked:
+                            new_selected_mods.append(mod)
                             
-                        if sub_up:
-                            target_node["name"] = up_name
-                            target_node["parent"] = up_parent
-                            target_node["modules"] = selected_mods
-                            st.success("🎉 部門與專屬功能更新成功！")
-                            st.rerun()
-                        if sub_del:
-                            if target_node["parent"] == "無 (頂層)":
-                                st.error("❌ 無法刪除頂層最高決策層！")
-                            else:
-                                current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["id"] != target_node["id"]]
-                                st.success("🗑️ 該部門已刪除！")
-                                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        # ==================== 下方多層級標準方塊組織樹 ====================
-        st.markdown("---")
-        st.markdown("### 📊 貴公司多層級組織架構與專屬功能總覽 (Multi-Level Org Tree)")
-        st.info("💡 *下方即時呈現一級、二級、三級部門層級樹狀圖，並清楚標示每個部門所擁有的 ERP 功能模組！*")
-        
-        with st.container():
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            
-            roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
-            others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
-            
-            for r in roots:
-                r_mods = ", ".join(r.get("modules", []))
-                st.markdown(f"""
-                    <div style="text-align: center;">
-                        <div class="org-root-card">
-                            👑 {r['name']} <span style="font-size: 12px; font-weight: normal;">({r['type']})</span><br>
-                            <span style="font-size: 11px; font-weight: normal; opacity: 0.9;">📦 專屬功能：{r_mods}</span>
-                        </div>
-                    </div>
-                    <div class="tree-connector"></div>
-                """, unsafe_allow_html=True)
-                
-                level1_children = [n for n in others if n["parent"] == r["name"]]
-                if level1_children:
-                    cols1 = st.columns(len(level1_children))
-                    for idx1, l1 in enumerate(level1_children):
-                        with cols1[idx1]:
-                            l1_mods = ", ".join(l1.get("modules", []))
-                            st.markdown(f"""
-                                <div style="text-align: center;">
-                                    <div class="org-level1-card">
-                                        <b>{l1['name']}</b><br>
-                                        <span style="font-size: 11px; color: gray;">{l1['type']}</span><br>
-                                        <span style="font-size: 10px; color: #2563eb;">📌 功能：{l1_mods}</span>
-                                    </div>
-                                </div>
-                            """, unsafe_allow_html=True)
+                with mc2:
+                    st.markdown("#### 📦 供應鏈與進銷存 (SCM)")
+                    for mod in cat_data["col2"]:
+                        is_checked = st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}")
+                        if is_checked:
+                            new_selected_mods.append(mod)
                             
-                            level2_children = [n for n in others if n["parent"] == l1["name"]]
-                            if level2_children:
-                                st.markdown('<div class="tree-connector" style="height: 15px;"></div>', unsafe_allow_html=True)
-                                for l2 in level2_children:
-                                    l2_mods = ", ".join(l2.get("modules", []))
-                                    st.markdown(f"""
-                                        <div style="text-align: center;">
-                                            <div class="org-level2-card">
-                                                <b>{l2['name']}</b><br>
-                                                <span style="font-size: 10px; color: gray;">{l2['type']}</span><br>
-                                                <span style="font-size: 9px; color: #0284c7;">📌 功能：{l2_mods}</span>
-                                            </div>
-                                        </div>
-                                    """, unsafe_allow_html=True)
-                                    
-                                    level3_children = [n for n in others if n["parent"] == l2["name"]]
-                                    if level3_children:
-                                        st.markdown('<div class="tree-connector" style="height: 10px;"></div>', unsafe_allow_html=True)
-                                        for l3 in level3_children:
-                                            l3_mods = ", ".join(l3.get("modules", []))
-                                            st.markdown(f"""
-                                                <div style="text-align: center;">
-                                                    <div class="org-level3-card">
-                                                        <b>{l3['name']}</b><br>
-                                                        <span style="font-size: 9px; color: gray;">{l3['type']}</span><br>
-                                                        <span style="font-size: 8px; color: #059669;">📌 功能：{l3_mods}</span>
-                                                    </div>
-                                                </div>
-                                            """, unsafe_allow_html=True)
-                                            
-            st.markdown('</div>', unsafe_allow_html=True)
+                with mc3:
+                    st.markdown("#### 💰 財會、生產與其他核心")
+                    for mod in cat_data["col3"]:
+                        is_checked = st.checkbox(mod, value=mod in current_tenant["enabled_modules"], key=f"mod_{mod}")
+                        if is_checked:
+                            new_selected_mods.append(mod)
+                            
+                st.markdown("---")
+                
+                # 計算動態價格
+                total_mods_count = len(set(new_selected_mods))
+                calculated_price = 80 + (total_mods_count * 5)
+                current_tenant["price_usd"] = calculated_price
+                
+                st.markdown(f"### 💳 目前配置計費試算：已選定 `{total_mods_count}` 項模組 ➔ 預估每月總訂閱費用：**`$ {calculated_price} USD`**")
+                
+                if st.form_submit_button(f"💾 儲存【{selected_dept.split('(')[0].strip()}】的全功能拼圖圈定", type="primary", use_container_width=True):
+                    current_tenant["enabled_modules"] = list(set(new_selected_mods))
+                    st.success(f"🎉 成功儲存 [{selected_dept.split('(')[0].strip()}] 的模組拼圖設定！當前總月費更新為 ${calculated_price} USD。")
+                    st.rerun()
+
+    elif "企業組織與部門階層圖管理" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：企業組織與部門階層圖管理")
+        st.info("💡 在此處檢視與管理您公司的組織架構圖與節點掛載。")
+        if current_tenant["org_nodes"]:
+            st.dataframe(pd.DataFrame(current_tenant["org_nodes"]), use_container_width=True)
 
     elif "員工帳號與權限角色管理" in menu_choice:
         st.markdown(f"## 👥 {current_tenant['name']}：員工帳號與權限角色管理 (RBAC)")
         st.info("💡 建立公司內部員工帳號與職務。")
-        with st.container():
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            with st.form("staff_form"):
-                s_name = st.text_input("員工姓名*", placeholder="例：陳大為")
-                s_email = st.text_input("電子郵件 (登入帳號)*", placeholder="例：david@company.com")
-                s_role = st.selectbox("指派權限角色", ["財務與會計專員", "現場工地主任", "總務與人事專員", "採購專員", "租戶系統管理員"])
-                if st.form_submit_button("👤 建立員工帳號", type="primary", use_container_width=True):
-                    if s_name and s_email:
-                        current_tenant["staff"].append({"name": s_name, "email": s_email, "role": s_role})
-                        st.success(f"🎉 成功建立員工 [{s_name}]！")
-            st.markdown('</div>', unsafe_allow_html=True)
-        st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
+        if current_tenant["staff"]:
+            st.dataframe(pd.DataFrame(current_tenant["staff"]), use_container_width=True)
 
-    elif "資安稽核日誌" in menu_choice:
+    elif "系統資安稽核日誌" in menu_choice:
         st.markdown(f"## 🔒 {current_tenant['name']}：系統資安稽核日誌")
         st.info("💡 記錄公司內部員工操作軌跡。")
-        st.dataframe(pd.DataFrame(current_tenant["audit_logs"]), use_container_width=True)
+        if current_tenant["audit_logs"]:
+            st.dataframe(pd.DataFrame(current_tenant["audit_logs"]), use_container_width=True)
 
     elif "AI 硬體與車牌" in menu_choice:
         st.markdown(f"## 🤖 {current_tenant['name']}：AI 硬體與車牌/人臉辨識自助掛接")
