@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (多層級組織樹與部門專屬功能自動掛載)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (穩定版：多層級組織樹與部門專屬功能自動掛載)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & Multi-Level Org",
+    page_title="SaaS Enterprise Modular AI-ERP & Stable Org",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -268,10 +268,10 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：拼圖式多層級部門與功能掛載 ====================
+    # ==================== 個別租戶後台：精準路由判斷 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "拼圖式組織與部門功能掛載" in menu_choice:
+    if "拼圖式多層級組織與部門功能掛載" in menu_choice:
         st.markdown(f"## 🖱️ {current_tenant['name']}：拼圖式多層級組織與部門功能掛載")
         st.info("💡 *點擊下方豐富的企業部門積木按鈕，選擇階層（一級/二級/三級部門）並掛載至指定上級，系統會自動帶入該部門專屬的 ERP 功能模組！*")
         
@@ -289,7 +289,6 @@ else:
                 
             st.markdown("#### 請選擇要加入的企業部門積木：")
             
-            # 定義各部門專屬的預設功能模組對應表
             dept_default_modules = {
                 "董事長室": ["全球戰情室", "高階決策審核"],
                 "總經理室": ["營運總控台", "跨部門協調"],
@@ -397,7 +396,7 @@ else:
                                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # ==================== 下方多層級標準方塊組織樹 (一、二、三級展開與功能展示) ====================
+        # ==================== 下方多層級標準方塊組織樹 ====================
         st.markdown("---")
         st.markdown("### 📊 貴公司多層級組織架構與專屬功能總覽 (Multi-Level Org Tree)")
         st.info("💡 *下方即時呈現一級、二級、三級部門層級樹狀圖，並清楚標示每個部門所擁有的 ERP 功能模組！*")
@@ -420,7 +419,6 @@ else:
                     <div class="tree-connector"></div>
                 """, unsafe_allow_html=True)
                 
-                # 一級部門
                 level1_children = [n for n in others if n["parent"] == r["name"]]
                 if level1_children:
                     cols1 = st.columns(len(level1_children))
@@ -437,7 +435,6 @@ else:
                                 </div>
                             """, unsafe_allow_html=True)
                             
-                            # 二級部門
                             level2_children = [n for n in others if n["parent"] == l1["name"]]
                             if level2_children:
                                 st.markdown('<div class="tree-connector" style="height: 15px;"></div>', unsafe_allow_html=True)
@@ -453,7 +450,6 @@ else:
                                         </div>
                                     """, unsafe_allow_html=True)
                                     
-                                    # 三級部門
                                     level3_children = [n for n in others if n["parent"] == l2["name"]]
                                     if level3_children:
                                         st.markdown('<div class="tree-connector" style="height: 10px;"></div>', unsafe_allow_html=True)
@@ -499,5 +495,6 @@ else:
 
     else:
         st.markdown(f"## 🇻🇳 {current_tenant['name']}：越南紅發票與應付帳款 (AP)")
+        st.info("💡 在此處管理越南進項發票與應付帳款。")
         if current_tenant["ap_invoices"]:
             st.dataframe(pd.DataFrame(current_tenant["ap_invoices"]), use_container_width=True)
