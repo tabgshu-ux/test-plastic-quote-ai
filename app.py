@@ -3,22 +3,16 @@ import pandas as pd
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 模組化架構設計說明 (Modular Architecture Concept)
-# ------------------------------------------------------------------------------
-# 為了因應未來不同客戶（租戶）的獨立銷售與部署，系統底層已劃分為：
-# 1. 平台總控模組 (Master Control Hub) -> 負責全球匯率、定價、租戶總覽
-# 2. 客戶獨立租戶模組 (Tenant Engine) -> 負責各公司自主組織樹、員工 RBAC、發票
+# 🧩 模組化企業級 SaaS AI-ERP 系統 (含完整 CRUD 組織與據點管理)
 # ==============================================================================
 
-# 1. 頁面基本設定 (Mobile-First & 企業級外觀)
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP",
+    page_title="SaaS Enterprise Modular AI-ERP & CRUD Org",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 自定義精緻企業風 CSS 美化
 st.markdown("""
     <style>
     .main {
@@ -41,21 +35,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化全域定價策略、匯率中樞與多租戶資料庫
+# 3. 初始化全域資料
 if "global_pricing" not in st.session_state:
-    st.session_state.global_pricing = {
-        "enterprise_base_fee": 150,
-        "standard_base_fee": 80,
-        "extra_dept_fee": 5
-    }
+    st.session_state.global_pricing = {"enterprise_base_fee": 150, "standard_base_fee": 80, "extra_dept_fee": 5}
 
 if "global_fx_rates" not in st.session_state:
-    st.session_state.global_fx_rates = {
-        "USD": 1.0,
-        "TWD": 31.50,
-        "VND": 25400.00,
-        "RMB": 7.20
-    }
+    st.session_state.global_fx_rates = {"USD": 1.0, "TWD": 31.50, "VND": 25400.00, "RMB": 7.20}
 
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
@@ -65,22 +50,15 @@ if "tenants_db" not in st.session_state:
             "plan": "旗艦版 (Enterprise)",
             "price_usd": 170,
             "expiry_date": "2027-10-20",
-            # 正確的組織樹：由最高決策層往下延伸，並包含實體營業據點
             "org_nodes": [
-                {"id": "n_1", "name": "👑 董事會 / 總經理室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["全球戰情室", "P&L"]},
-                {"id": "n_2", "name": "⚙️ 工程技術部", "type": "營運部門", "parent": "👑 董事會 / 總經理室", "modules": ["工程估驗", "施工日報"]},
-                {"id": "n_3", "name": "🏢 平陽美福營業所 (實體據點)", "type": "營運據點/分店", "parent": "👑 董事會 / 總經理室", "modules": ["門市收發貨"]},
-                {"id": "n_4", "name": "📦 廠內原物料倉庫", "type": "倉庫據點", "parent": "🏢 平陽美福營業所 (實體據點)", "modules": ["庫存管理"]}
+                {"id": "n_1", "name": "👑 董事會 / 總經理室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["全球戰情室"]},
+                {"id": "n_2", "name": "⚙️ 工程技術部", "type": "營運/行政部門", "parent": "👑 董事會 / 總經理室", "modules": ["工程估驗"]},
+                {"id": "n_3", "name": "🏢 平陽美福營業所", "type": "營運據點/分店", "parent": "👑 董事會 / 總經理室", "modules": ["門市收發貨"]}
             ],
-            "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠大門人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
-            "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "qty": "50支", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
-            "staff": [
-                {"name": "許福村 (公司老闆)", "email": "fuchun@vina.com", "role": "Tenant Admin (最高權限)"},
-                {"name": "阮文安 (越籍會計)", "email": "an.nguyen@vina.com", "role": "財務與會計專員"}
-            ],
-            "audit_logs": [
-                {"time": "2026-10-20 14:10:22", "user": "阮文安 (越籍會計)", "action": "上傳並解析越南紅發票 (編號: 000123)", "ip": "192.168.10.15"}
-            ]
+            "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
+            "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
+            "staff": [{"name": "許福村", "email": "fuchun@vina.com", "role": "Tenant Admin"}],
+            "audit_logs": [{"time": "2026-10-20 14:10:22", "user": "許福村", "action": "初始化組織樹", "ip": "192.168.10.2"}]
         },
         "tenant_taipei_wash": {
             "name": "🇹🇼 台北極速智慧洗車坊",
@@ -90,13 +68,12 @@ if "tenants_db" not in st.session_state:
             "expiry_date": "2026-11-05",
             "org_nodes": [
                 {"id": "w_1", "name": "👑 總管理處 / 董事長室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["營收戰情"]},
-                {"id": "w_2", "name": "🏢 台北旗艦總店 (營業據點)", "type": "營運據點/分店", "parent": "👑 總管理處 / 董事長室", "modules": ["會員預約"]},
-                {"id": "w_3", "name": "🚗 洗車美容作業部", "type": "營運部門", "parent": "🏢 台北旗艦總店 (營業據點)", "modules": ["水刀聯動"]}
+                {"id": "w_2", "name": "🏢 台北旗艦總店", "type": "營運據點/分店", "parent": "👑 總管理處 / 董事長室", "modules": ["會員預約"]}
             ],
-            "iot_devices": [{"dev_id": "W-01", "name": "入口車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
+            "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
             "staff": [{"name": "張店長", "email": "manager@wash.com", "role": "Tenant Admin"}],
-            "audit_logs": [{"time": "2026-10-19 10:00:00", "user": "張店長", "action": "初始化台北洗車坊租戶後台", "ip": "1.2.3.4"}]
+            "audit_logs": [{"time": "2026-10-19 10:00:00", "user": "張店長", "action": "初始化組織樹", "ip": "1.2.3.4"}]
         }
     }
 
@@ -137,7 +114,7 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 公司組織樹與營業據點自主設定",
+                "🖱️ 公司組織樹與營業據點管理 (含修改/刪除)",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -153,8 +130,8 @@ with st.sidebar:
 if st.session_state.current_portal == "Master":
     # ==================== SaaS 總控台 ====================
     if "全球企業租戶動態總覽" in menu_choice:
-        st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與搜尋中心")
-        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶。支援即時搜尋、價格與到期日排序，並可直接點擊進入該公司的獨立模組後台！*")
+        st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與管理中心")
+        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶，並可直接點擊進入該公司的獨立模組後台，隨時協助客戶檢視或核對組織架構！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -168,7 +145,7 @@ if st.session_state.current_portal == "Master":
             with s4:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("➕ 新增企業客戶租戶", type="primary", use_container_width=True):
-                    st.success("🎉 請引導客戶透過獨立模組註冊！")
+                    st.success("🎉 請引導客戶透過模組市集自助註冊！")
             st.markdown('</div>', unsafe_allow_html=True)
 
         tenant_list_data = []
@@ -193,7 +170,7 @@ if st.session_state.current_portal == "Master":
         st.markdown("### 📋 企業租戶列表")
         st.dataframe(df_tenants, use_container_width=True)
         
-        st.markdown("### 🚀 快速進入指定客戶租戶後台管理")
+        st.markdown("### 🚀 快速進入指定客戶租戶後台管理與組織圖核對")
         quick_cols = st.columns(len(st.session_state.tenants_db))
         for idx, (t_key, t_val) in enumerate(st.session_state.tenants_db.items()):
             with quick_cols[idx]:
@@ -203,7 +180,7 @@ if st.session_state.current_portal == "Master":
                         <span style="font-size: 12px; color: gray;">{t_val['region']} | ${t_val['price_usd']}/月</span>
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"📂 進入該公司後台", key=f"btn_{t_key}", use_container_width=True):
+                if st.button(f"📂 進入並核對組織圖", key=f"btn_{t_key}", use_container_width=True):
                     st.session_state.current_portal = t_key
                     st.rerun()
 
@@ -231,20 +208,20 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：自主組織樹與據點設定 ====================
+    # ==================== 個別租戶後台：組織樹完整 CRUD (新增、修改、刪除) ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
-    if "公司組織樹與營業據點自主設定" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與營業據點自主設定")
-        st.info("💡 *完全由貴公司自行掌控！您可以從頂層的『董事會/總經理室』出發，自由新增內部部門，或是建立實體營業據點（如分店、工廠）並指定其掛載歸屬。*")
+    if "公司組織樹與營業據點管理" in menu_choice:
+        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與營業據點管理 (完整 CRUD)")
+        st.info("💡 *在此處您可以新增、修改或刪除公司內部的組織節點與實體據點。下方即時呈現貴公司的完整視覺化組織架構圖，方便您與租戶雙向核對！*")
         
         col_set, col_view = st.columns([1, 1])
         
         with col_set:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### ➕ 自主新增組織節點或實體據點")
+            st.markdown("### ➕ 新增組織節點或實體據點")
             with st.form("dept_add_form"):
-                node_name = st.text_input("名稱*", placeholder="例：台北旗艦總店 / 財務會計部 / 美福工廠")
+                node_name = st.text_input("名稱*", placeholder="例：財務會計部 / 台北旗艦總店")
                 node_type = st.selectbox("屬性分類", [
                     "👑 最高決策層 (Board / CEO)",
                     "📂 營運/行政部門 (Department)", 
@@ -254,8 +231,7 @@ else:
                 existing_parents = [n["name"] for n in current_tenant["org_nodes"]]
                 chosen_parent = st.selectbox("指定上級掛載點 (Parent)", existing_parents)
                 
-                submitted_node = st.form_submit_button("🧱 確認新增並掛載", type="primary", use_container_width=True)
-                if submitted_node:
+                if st.form_submit_button("🧱 確認新增並掛載", type="primary", use_container_width=True):
                     if node_name:
                         current_tenant["org_nodes"].append({
                             "id": f"n_{len(current_tenant['org_nodes'])+1}",
@@ -266,7 +242,7 @@ else:
                         })
                         current_tenant["audit_logs"].insert(0, {
                             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "user": current_tenant["staff"][0]["name"],
+                            "user": "System Admin",
                             "action": f"新增{node_type}：{node_name} (掛載於 {chosen_parent})",
                             "ip": "192.168.10.5"
                         })
@@ -274,9 +250,59 @@ else:
                         st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
+            # 專屬的修改與刪除區塊 (CRUD)
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.markdown("### ✏️ 修改或刪除現有節點 / 據點")
+            if current_tenant["org_nodes"]:
+                node_names_list = [n["name"] for n in current_tenant["org_nodes"]]
+                target_node_name = st.selectbox("選擇要修改或刪除的節點", node_names_list, key="edit_select")
+                
+                # 找到當前選中的節點資料
+                target_node = next((n for n in current_tenant["org_nodes"] if n["name"] == target_node_name), None)
+                
+                if target_node:
+                    with st.form("edit_node_form"):
+                        new_edit_name = st.text_input("修改名稱", value=target_node["name"])
+                        new_edit_parent = st.selectbox("修改上級掛載點", existing_parents, index=existing_parents.index(target_node["parent"]) if target_node["parent"] in existing_parents else 0)
+                        
+                        col_e1, col_e2 = st.columns(2)
+                        with col_e1:
+                            submitted_update = st.form_submit_button("💾 儲存修改", type="primary", use_container_width=True)
+                        with col_e2:
+                            submitted_delete = st.form_submit_button("🗑️ 刪除此節點", use_container_width=True)
+                            
+                        if submitted_update:
+                            target_node["name"] = new_edit_name
+                            target_node["parent"] = new_edit_parent
+                            current_tenant["audit_logs"].insert(0, {
+                                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                "user": "System Admin",
+                                "action": f"修改組織節點：{new_edit_name}",
+                                "ip": "192.168.10.5"
+                            })
+                            st.success(f"🎉 節點已成功更新！")
+                            st.rerun()
+                            
+                        if submitted_delete:
+                            if target_node["parent"] == "無 (頂層)":
+                                st.error("❌ 無法刪除公司頂層最高決策層！")
+                            else:
+                                current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["name"] != target_node_name]
+                                current_tenant["audit_logs"].insert(0, {
+                                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    "user": "System Admin",
+                                    "action": f"刪除組織節點：{target_node_name}",
+                                    "ip": "192.168.10.5"
+                                })
+                                st.success(f"🗑️ 節點 [{target_node_name}] 已成功刪除！")
+                                st.rerun()
+            else:
+                st.info("目前尚無組織節點。")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
         with col_view:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 🌳 貴公司即時組織架構與據點分佈圖")
+            st.markdown("### 🌳 貴公司即時組織架構與據點分佈圖 (雙向核對)")
             
             for node in current_tenant["org_nodes"]:
                 is_branch = "據點" in node['type'] or "分店" in node['type'] or "倉庫" in node['type']
