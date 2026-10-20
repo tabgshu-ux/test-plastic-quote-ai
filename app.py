@@ -3,11 +3,11 @@ import pandas as pd
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 模組化企業級 SaaS AI-ERP 系統 (含完整 CRUD 組織與據點管理)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (含圖形化階層組織樹)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP & CRUD Org",
+    page_title="SaaS Enterprise Modular AI-ERP & Visual Org Chart",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -51,9 +51,10 @@ if "tenants_db" not in st.session_state:
             "price_usd": 170,
             "expiry_date": "2027-10-20",
             "org_nodes": [
-                {"id": "n_1", "name": "👑 董事會 / 總經理室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["全球戰情室"]},
-                {"id": "n_2", "name": "⚙️ 工程技術部", "type": "營運/行政部門", "parent": "👑 董事會 / 總經理室", "modules": ["工程估驗"]},
-                {"id": "n_3", "name": "🏢 平陽美福營業所", "type": "營運據點/分店", "parent": "👑 董事會 / 總經理室", "modules": ["門市收發貨"]}
+                {"id": "n_1", "name": "董事長 / 總經理室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["全球戰情室"]},
+                {"id": "n_2", "name": "工程技術部", "type": "營運/行政部門", "parent": "董事長 / 總經理室", "modules": ["工程估驗"]},
+                {"id": "n_3", "name": "平陽美福營業所", "type": "營運據點/分店", "parent": "董事長 / 總經理室", "modules": ["門市收發貨"]},
+                {"id": "n_4", "name": "財務會計部", "type": "營運/行政部門", "parent": "董事長 / 總經理室", "modules": ["總帳管理"]}
             ],
             "iot_devices": [{"dev_id": "DEV-01", "name": "平陽廠人臉辨識機", "type": "人臉辨識", "ip": "192.168.10.50", "status": "🟢 聯機中"}],
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
@@ -67,8 +68,9 @@ if "tenants_db" not in st.session_state:
             "price_usd": 80,
             "expiry_date": "2026-11-05",
             "org_nodes": [
-                {"id": "w_1", "name": "👑 總管理處 / 董事長室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["營收戰情"]},
-                {"id": "w_2", "name": "🏢 台北旗艦總店", "type": "營運據點/分店", "parent": "👑 總管理處 / 董事長室", "modules": ["會員預約"]}
+                {"id": "w_1", "name": "董事長室", "type": "最高決策層", "parent": "無 (頂層)", "modules": ["營收戰情"]},
+                {"id": "w_2", "name": "台北旗艦總店", "type": "營運據點/分店", "parent": "董事長室", "modules": ["會員預約"]},
+                {"id": "w_3", "name": "洗車美容作業部", "type": "營運部門", "parent": "台北旗艦總店", "modules": ["水刀聯動"]}
             ],
             "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
             "ap_invoices": [],
@@ -114,7 +116,7 @@ with st.sidebar:
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
-                "🖱️ 公司組織樹與營業據點管理 (含修改/刪除)",
+                "🖱️ 公司組織樹與營業據點管理 (含組織圖與CRUD)",
                 "👥 員工帳號與權限角色管理 (RBAC)",
                 "🔒 系統資安稽核日誌 (Audit Trail)",
                 "🤖 AI 硬體與車牌/人臉辨識掛接",
@@ -131,7 +133,7 @@ if st.session_state.current_portal == "Master":
     # ==================== SaaS 總控台 ====================
     if "全球企業租戶動態總覽" in menu_choice:
         st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽與管理中心")
-        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶，並可直接點擊進入該公司的獨立模組後台，隨時協助客戶檢視或核對組織架構！*")
+        st.info("💡 *在此處您可以檢視所有已註冊的企業客戶，並可直接點擊進入該公司的獨立模組後台，隨時協助客戶核對組織圖！*")
         
         with st.container():
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -144,7 +146,7 @@ if st.session_state.current_portal == "Master":
                 sort_by = st.selectbox("📊 排序依據", ["價格由高到低", "使用到期日最近", "公司名稱筆畫"])
             with s4:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("➕ 新增企業客戶租戶", type="primary", use_container_width=True):
+                if st.button("➕ 新選企業客戶租戶", type="primary", use_container_width=True):
                     st.success("🎉 請引導客戶透過模組市集自助註冊！")
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -170,7 +172,7 @@ if st.session_state.current_portal == "Master":
         st.markdown("### 📋 企業租戶列表")
         st.dataframe(df_tenants, use_container_width=True)
         
-        st.markdown("### 🚀 快速進入指定客戶租戶後台管理與組織圖核對")
+        st.markdown("### 🚀 快速進入指定客戶租戶後台與組織圖核對")
         quick_cols = st.columns(len(st.session_state.tenants_db))
         for idx, (t_key, t_val) in enumerate(st.session_state.tenants_db.items()):
             with quick_cols[idx]:
@@ -208,14 +210,14 @@ if st.session_state.current_portal == "Master":
         st.info("設定全平台的方案月費與部門加購價。")
 
 else:
-    # ==================== 個別租戶後台：組織樹完整 CRUD (新增、修改、刪除) ====================
+    # ==================== 個別租戶後台：組織樹 CRUD 與標準方塊連線組織圖 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
     if "公司組織樹與營業據點管理" in menu_choice:
-        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與營業據點管理 (完整 CRUD)")
-        st.info("💡 *在此處您可以新增、修改或刪除公司內部的組織節點與實體據點。下方即時呈現貴公司的完整視覺化組織架構圖，方便您與租戶雙向核對！*")
+        st.markdown(f"## 🖱️ {current_tenant['name']}：組織樹與營業據點管理 (含標準組織圖)")
+        st.info("💡 *在此處您可以新增、修改或刪除公司內部的組織節點與實體據點。畫面下方會完整呈現像 ProcessOn 那樣、帶有上下級方塊連線的標準組織架構圖！*")
         
-        col_set, col_view = st.columns([1, 1])
+        col_set, col_edit = st.columns([1, 1])
         
         with col_set:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -240,24 +242,17 @@ else:
                             "parent": chosen_parent,
                             "modules": ["日常作業"]
                         })
-                        current_tenant["audit_logs"].insert(0, {
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "user": "System Admin",
-                            "action": f"新增{node_type}：{node_name} (掛載於 {chosen_parent})",
-                            "ip": "192.168.10.5"
-                        })
                         st.success(f"🎉 成功新增 [{node_name}]！")
                         st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # 專屬的修改與刪除區塊 (CRUD)
+        with col_edit:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             st.markdown("### ✏️ 修改或刪除現有節點 / 據點")
             if current_tenant["org_nodes"]:
                 node_names_list = [n["name"] for n in current_tenant["org_nodes"]]
                 target_node_name = st.selectbox("選擇要修改或刪除的節點", node_names_list, key="edit_select")
                 
-                # 找到當前選中的節點資料
                 target_node = next((n for n in current_tenant["org_nodes"] if n["name"] == target_node_name), None)
                 
                 if target_node:
@@ -274,12 +269,6 @@ else:
                         if submitted_update:
                             target_node["name"] = new_edit_name
                             target_node["parent"] = new_edit_parent
-                            current_tenant["audit_logs"].insert(0, {
-                                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "user": "System Admin",
-                                "action": f"修改組織節點：{new_edit_name}",
-                                "ip": "192.168.10.5"
-                            })
                             st.success(f"🎉 節點已成功更新！")
                             st.rerun()
                             
@@ -288,33 +277,54 @@ else:
                                 st.error("❌ 無法刪除公司頂層最高決策層！")
                             else:
                                 current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["name"] != target_node_name]
-                                current_tenant["audit_logs"].insert(0, {
-                                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                    "user": "System Admin",
-                                    "action": f"刪除組織節點：{target_node_name}",
-                                    "ip": "192.168.10.5"
-                                })
                                 st.success(f"🗑️ 節點 [{target_node_name}] 已成功刪除！")
                                 st.rerun()
             else:
                 st.info("目前尚無組織節點。")
             st.markdown('</div>', unsafe_allow_html=True)
+
+        # ==================== 下方標準方塊連線組織圖 (Graphviz Org Chart) ====================
+        st.markdown("---")
+        st.markdown("### 📊 貴公司標準階層組織架構圖 (Org Chart Flowchart)")
+        st.info("💡 *下方即時透過圖形引擎繪製出如同 ProcessOn 標準方塊與連線的組織架構圖，讓您與租戶一眼看出上下級歸屬是否正確！*")
+        
+        # 使用 Graphviz 繪製階層組織圖
+        try:
+            import graphviz
+            org_dot = graphviz.Digraph(comment='Enterprise Org Chart', format='png')
+            org_dot.attr(rankdir='TB', size='12,12') # 由上往下排列 (Top to Bottom)
+            org_dot.attr('node', shape='box', style='filled,rounded', fontname='Microsoft JhengHei', fontsize='12', margin='0.2')
             
-        with col_view:
-            st.markdown('<div class="card-container">', unsafe_allow_html=True)
-            st.markdown("### 🌳 貴公司即時組織架構與據點分佈圖 (雙向核對)")
-            
+            # 依據節點屬性賦予不同顏色方塊
             for node in current_tenant["org_nodes"]:
-                is_branch = "據點" in node['type'] or "分店" in node['type'] or "倉庫" in node['type']
-                indent = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 🏢 " if is_branch else ("&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 " if node["parent"] != "無 (頂層)" else "👑 ")
-                border_color = "#10b981" if is_branch else "#3b82f6"
-                st.markdown(f"""
-                    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 5px solid {border_color}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                        <b>{indent}{node['name']}</b> <span style="font-size: 11px; color: gray;">({node['type']})</span><br>
-                        <span style="font-size: 11px; color: #0f766e;">📌 上級掛載：{node['parent']}</span>
-                    </div>
-                """, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                n_name = node["name"]
+                n_type = node["type"]
+                
+                if "最高決策層" in n_type:
+                    color = "#2563eb" # 寶藍色
+                    text_color = "white"
+                elif "部門" in n_type:
+                    color = "#3b82f6" # 藍色
+                    text_color = "white"
+                elif "據點" in n_type or "分店" in n_type:
+                    color = "#10b981" # 綠色
+                    text_color = "white"
+                else:
+                    color = "#64748b" # 灰色
+                    text_color = "white"
+                    
+                org_dot.node(n_name, label=f"{n_name}\n({n_type})", fillcolor=color, fontcolor=text_color)
+                
+            # 建立上下級連線關係
+            for node in current_tenant["org_nodes"]:
+                if node["parent"] != "無 (頂層)" and node["parent"]:
+                    org_dot.edge(node["parent"], node["name"], color="#64748b", penwidth="1.5")
+                    
+            st.graphviz_chart(org_dot)
+        except Exception as e:
+            st.warning("⚠️ 圖形引擎載入中，若未顯示請重新整理頁面。以下同步提供樹狀檢視：")
+            for node in current_tenant["org_nodes"]:
+                st.markdown(f"- 📂 **{node['name']}** ({node['type']}) ➔ 上級: `{node['parent']}`")
 
     elif "員工帳號與權限角色管理" in menu_choice:
         st.markdown(f"## 👥 {current_tenant['name']}：員工帳號與權限角色管理 (RBAC)")
