@@ -109,6 +109,13 @@ if "tenants_db" not in st.session_state:
         }
     }
 
+# 初始化總控台內部員工/財務帳號資料庫
+if "master_staff_db" not in st.session_state:
+    st.session_state.master_staff_db = [
+        {"name": "許福村", "account": "admin", "role": "👑 平台老闆 (Master Admin)", "status": "啟用中"},
+        {"name": "財務部專員", "account": "finance", "role": "💰 總控台財務專員 (Master Finance)", "status": "啟用中"}
+    ]
+
 if "current_portal" not in st.session_state:
     st.session_state.current_portal = "Master"
 
@@ -116,7 +123,7 @@ if "master_logged_in" not in st.session_state:
     st.session_state.master_logged_in = False
 
 if "master_role" not in st.session_state:
-    st.session_state.master_role = None  # 可為 "admin" 或 "finance"
+    st.session_state.master_role = None
 
 ALL_ENTERPRISE_DEPARTMENTS = [
     "👑 董事長室 / 總經理室 (Executive & Board Room)",
@@ -140,7 +147,7 @@ ALL_ENTERPRISE_DEPARTMENTS = [
     "💻 資訊技術與系統開發部 (IT & Software Development)"
 ]
 
-# ==================== 側邊欄導覽 (含全域多語言動態切換) ====================
+# ==================== 側邊欄導覽 ====================
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
     st.markdown("### 🌐 企業級 AI-ERP 平台總控")
@@ -172,7 +179,7 @@ with st.sidebar:
         st.markdown(f"{i18n_current}: `{st.session_state.tenants_db[st.session_state.current_portal]['name']}`")
     else:
         if st.session_state.master_logged_in:
-            role_title = "👑 平台最高管理者 (Master Admin)" if st.session_state.master_role == "admin" else "💰 總控台財務專員 (Master Finance)"
+            role_title = "👑 平台最高管理者" if st.session_state.master_role == "admin" else "💰 總控台財務專員"
             st.markdown(f"**目前身分**: `{role_title}`")
             if st.button("🔒 登出總控台 (Lock Master)", use_container_width=True):
                 st.session_state.master_logged_in = False
@@ -188,8 +195,12 @@ with st.sidebar:
         if st.session_state.master_logged_in:
             if st.session_state.master_role == "admin":
                 menu_choice = st.radio(
-                    "選擇總控台模組 (老闆完整權限)",
-                    ["🏢 全球企業租戶總覽", "⚙️ 全球定價策略與方案模組自訂 (Pricing App Store)"]
+                    "選擇總控台模組",
+                    [
+                        "🏢 全球企業租戶總覽", 
+                        "⚙️ 全球定價策略與方案模組自訂", 
+                        "👥 總控台帳號與權限管理"
+                    ]
                 )
             else:
                 menu_choice = "💰 平台財務營收與租戶帳單清單"
@@ -209,31 +220,30 @@ with st.sidebar:
 # ==================== 路由分發與資安登入鎖邏輯 ====================
 if st.session_state.current_portal == "Master":
     if not st.session_state.master_logged_in:
-        st.markdown("## 🔐 總控台安全登入 (Master Portal Gate)")
-        st.info("💡 *請輸入對應帳號密碼登入。老闆帳號可管理全平台與定價；財務帳號僅能檢視各租戶訂閱費用與營收報表。*")
+        # 乾淨俐落的登入畫面，拿掉所有冗長說明
+        st.markdown("## 🔐 總控台安全登入")
         
         with st.form("master_login_form"):
-            login_role_choice = st.selectbox("登入身分角色 (Select Role)", ["👑 平台老闆 (Master Admin)", "💰 財務專員 (Master Finance)"])
-            m_pass = st.text_input("密碼 (Password)", type="password", placeholder="請輸入密碼 (預設: admin123 或 finance123)...")
+            login_role_choice = st.selectbox("登入身分角色", ["👑 平台老闆 (Master Admin)", "💰 財務專員 (Master Finance)"])
+            m_pass = st.text_input("密碼", type="password", placeholder="請輸入密碼...")
             
             if st.form_submit_button("🔓 登入總控台", type="primary", use_container_width=True):
                 if "平台老闆" in login_role_choice and m_pass == "admin123":
                     st.session_state.master_logged_in = True
                     st.session_state.master_role = "admin"
-                    st.success("🎉 老闆身分驗證成功，正在進入總控台...")
+                    st.success("🎉 登入成功！")
                     st.rerun()
                 elif "財務專員" in login_role_choice and m_pass == "finance123":
                     st.session_state.master_logged_in = True
                     st.session_state.master_role = "finance"
-                    st.success("🎉 財務身分驗證成功，正在進入營收帳單中心...")
+                    st.success("🎉 登入成功！")
                     st.rerun()
                 else:
-                    st.error("❌ 密碼錯誤或身分不符！(老闆密碼: admin123 / 財務密碼: finance123)")
+                    st.error("❌ 密碼錯誤或身分不符！")
     else:
         if st.session_state.master_role == "admin":
             if "全球企業租戶總覽" in menu_choice:
                 st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽與快速切換")
-                st.info("💡 *身為平台總管理員，您可以在下方檢視所有租戶，並隨時點擊按鈕直接切換進入該租戶的內部後台。*")
                 
                 for t_id, t_data in st.session_state.tenants_db.items():
                     with st.container():
@@ -249,17 +259,50 @@ if st.session_state.current_portal == "Master":
                                 st.session_state.current_portal = t_id
                                 st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
-            else:
+            elif "全球定價策略" in menu_choice:
                 render_pricing_hub()
+            else:
+                # 總控台專屬的員工帳號與權限管理模組
+                st.markdown("## 👥 總控台內部員工與權限管理")
+                st.info("💡 *在此管理平台總控台內部的管理者與財務人員帳號，您可以隨時新增或調整成員權限。*")
+                
+                with st.container():
+                    st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                    st.markdown("### ➕ 新增總控台內部帳號")
+                    with st.form("add_master_staff"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            new_name = st.text_input("姓名 (Name)", placeholder="例：王小明")
+                            new_account = st.text_input("登入帳號 (Account)", placeholder="例：finance_02")
+                        with col2:
+                            new_role = st.selectbox("指派角色 (Role)", ["💰 總控台財務專員 (Master Finance)", "👑 平台最高管理者 (Master Admin)"])
+                            new_pass_input = st.text_input("設定密碼 (Password)", type="password", placeholder="請設定初始密碼...")
+                        
+                        if st.form_submit_button("👤 建立總控台帳號", type="primary", use_container_width=True):
+                            if new_name and new_account:
+                                st.session_state.master_staff_db.append({
+                                    "name": new_name,
+                                    "account": new_account,
+                                    "role": new_role,
+                                    "status": "啟用中"
+                                })
+                                st.success(f"🎉 成功為 [{new_name}] 建立總控台帳號！")
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ 請填寫完整姓名與帳號。")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                
+                st.markdown("### 📋 現有總控台帳號清單")
+                with st.container():
+                    st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                    st.dataframe(pd.DataFrame(st.session_state.master_staff_db), use_container_width=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
         else:
-            # 財務專員專屬視角：只能看訂閱戶、月費與營收報表，不能改定價
+            # 財務專員專屬視角
             st.markdown("## 💰 總控台：平台財務營收與租戶帳單結算中心")
-            st.info("💡 *此為財務專員專屬視角。您可在此檢視各租戶的訂閱方案與月費金額，以便將營收數據填入公司內部會計 ERP 系統中。*")
             
-            # 計算總 MRR (經常性營收)
             total_mrr = sum([v["price_usd"] for v in st.session_state.tenants_db.values()])
             
-            col1, col2 = st.metrics if hasattr(st, "columns") else (None, None)
             c1, c2 = st.columns(2)
             with c1:
                 st.metric("📊 本月總訂閱營收 (MRR)", f"$ {total_mrr:,.2f} USD")
