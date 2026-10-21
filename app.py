@@ -184,12 +184,23 @@ with st.sidebar:
 # ==================== 路由分發邏輯 ====================
 if st.session_state.current_portal == "Master":
     if "全球企業租戶總覽" in menu_choice:
-        st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽")
-        tenant_list = [{"代碼": k, "公司名稱": v["name"], "方案": v["plan"], "月費(USD)": v["price_usd"]} for k, v in st.session_state.tenants_db.items()]
-        st.dataframe(pd.DataFrame(tenant_list), use_container_width=True)
-        if st.button("📂 進入越南平陽控股集團後台"):
-            st.session_state.current_portal = "tenant_vina_group"
-            st.rerun()
+        st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽與快速切換")
+        st.info("💡 *身為平台總管理員，您可以在下方檢視所有租戶，並隨時點擊按鈕直接切換進入該租戶的內部後台進行檢視或協助設定。*")
+        
+        for t_id, t_data in st.session_state.tenants_db.items():
+            with st.container():
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                col_info, col_btn = st.columns([3, 1])
+                with col_info:
+                    st.markdown(f"### 🏢 {t_data['name']}")
+                    st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
+                    st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
+                with col_btn:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button(f"🚀 進入該租戶後台", key=f"enter_{t_id}", type="primary", use_container_width=True):
+                        st.session_state.current_portal = t_id
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
     else:
         render_pricing_hub()
 else:
