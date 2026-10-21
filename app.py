@@ -6,11 +6,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# 初始化全域路由狀態
 if "active_portal" not in st.session_state:
     st.session_state.active_portal = None
 
-# 如果尚未選擇入口，才顯示首頁閘道選擇器
 if st.session_state.active_portal is None:
     st.markdown("""
         <style>
@@ -22,7 +20,7 @@ if st.session_state.active_portal is None:
     """, unsafe_allow_html=True)
 
     st.markdown("<h1 style='text-align: center;'>🌐 SaaS 企業級多租戶 AI-ERP 平台</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #64748b;'>嚴格資安隔離：平台總控與企業租戶獨立運行</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #64748b;'>多租戶獨立雲端架構</p>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
@@ -30,7 +28,7 @@ if st.session_state.active_portal is None:
     with col1:
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
         st.markdown("### 👑 平台總控台 (Master)")
-        st.markdown("專屬平台開發商與財務人員<br>管理全球租戶、定價與伺服器 IP", unsafe_allow_html=True)
+        st.markdown("管理全球租戶、訂閱與伺服器路由", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🚀 進入總控台", type="primary", use_container_width=True):
             st.session_state.active_portal = "master"
@@ -39,8 +37,8 @@ if st.session_state.active_portal is None:
 
     with col2:
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 🏭 企業租戶 ERP (Tenant)", unsafe_allow_html=True)
-        st.markdown("專屬企業內部員工與主管<br>執行裕豐電機製造、報價與 MES", unsafe_allow_html=True)
+        st.markdown("### 🏭 企業租戶 ERP (Tenant)")
+        st.markdown("各企業租戶專屬登入與多維度作業系統", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🚀 進入租戶系統", type="primary", use_container_width=True):
             st.session_state.active_portal = "tenant"
@@ -48,7 +46,6 @@ if st.session_state.active_portal is None:
         st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # 進入對應系統後，完全阻斷閘道首頁，實現實體隔離
     if st.session_state.active_portal == "master":
         import master_portal
         master_portal.render_master_portal()
