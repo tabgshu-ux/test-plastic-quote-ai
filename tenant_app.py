@@ -51,6 +51,7 @@ def render_tenant_app():
         "☕ 智慧零售、POS 收銀與會員行銷生態系 (Smart Retail & POS)",
         "🏭 生產製造與廠務管理部 (Manufacturing & Plant)",
         "📦 倉儲物流與庫存管理部 (Warehouse & Logistics)"
+        "🏢 企業部門與廠區動態管理 (Departments)"
     ]
 
     # ==================== 側邊欄導覽 (支援動態 Logo 與公司名稱) ====================
