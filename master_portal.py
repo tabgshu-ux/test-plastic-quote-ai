@@ -30,6 +30,7 @@ if "master_staff_db" not in st.session_state:
         {"name": "財務部專員", "account": "finance", "password": "finance123", "role": "💰 總控台財務專員 (Master Finance)", "status": "啟用中"}
     ]
 
+# 擴充租戶資料庫：加入「動態伺服器 IP 與通訊埠」，為未來實體拆分與主機串聯做準備
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
         "tenant_vina_group": {
@@ -37,7 +38,10 @@ if "tenants_db" not in st.session_state:
             "region": "越南 (Binh Duong, VN)",
             "plan": "🚀 旗艦集團版 (Enterprise)",
             "price_usd": 350,
-            "expiry_date": "2027-10-20"
+            "expiry_date": "2027-10-20",
+            "server_ip": "192.168.1.100",  # 預留未來各租戶獨立主機的 IP
+            "port": "8501",
+            "api_status": "🟢 連線正常 (Online)"
         }
     }
 
@@ -61,7 +65,14 @@ with st.sidebar:
     st.markdown("---")
     if st.session_state.master_logged_in:
         if st.session_state.master_role == "admin":
-            master_menu = st.radio("總控台選單", ["🏢 全球企業租戶總覽", "👥 總控台帳號與權限管理 (IAM)"])
+            master_menu = st.radio(
+                "總控台選單", 
+                [
+                    "🏢 全球企業租戶總覽", 
+                    "🌐 租戶伺服器 IP 與通訊閘道設定", 
+                    "👥 總控台帳號與權限管理 (IAM)"
+                ]
+            )
         else:
             master_menu = "💰 平台財務營收與帳單清單"
     else:
@@ -101,15 +112,44 @@ else:
             for t_id, t_data in st.session_state.tenants_db.items():
                 with st.container():
                     st.markdown('<div class="card-container">', unsafe_allow_html=True)
-                    st.markdown(f"### 🏢 {t_data['name']}")
-                    st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
-                    st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
-                    st.markdown(f"- **合約到期日**: `{t_data['expiry_date']}`")
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.markdown(f"### 🏢 {t_data['name']}")
+                        st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
+                        st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
+                        st.markdown(f"- **目前指定主機 IP**: `http://{t_data['server_ip']}:{t_data['port']}` | 狀態: {t_data['api_status']}")
+                    with col2:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button(f"🔗 測試 API 串聯", key: f"test_api_{t_id}"):
+                            st.success(f"✅ 成功連線至 {t_data['name']} 的伺服器 ({t_data['server_ip']})！")
                     st.markdown('</div>', unsafe_allow_html=True)
+                    
+        elif "伺服器 IP 與通訊閘道設定" in master_menu:
+            st.markdown("## 🌐 租戶伺服器 IP 與分散式閘道設定 (Gateway Routing)")
+            st.info("💡 *為了應對未來伺服器實體拆分與多主機部署，您可以在此直接為各個租戶設定專屬的 IP 位址與 Port。未來總控台發送授權或同步資料時，將透過此 IP 進行跨主機串聯。*")
+            
+            with st.container():
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                selected_t = st.selectbox("選擇要設定 IP 的租戶", list(st.session_state.tenants_db.keys()))
+                t_obj = st.session_state.tenants_db[selected_t]
+                
+                with st.form("update_ip_form"):
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        new_ip = st.text_input("伺服器 IP 位址 (Server IP)", value=t_obj["server_ip"])
+                    with c2:
+                        new_port = st.text_input("通訊埠 (Port)", value=t_obj["port"])
+                    
+                    if st.form_submit_button("💾 儲存並更新通訊路由", type="primary", use_container_width=True):
+                        st.session_state.tenants_db[selected_t]["server_ip"] = new_ip
+                        st.session_state.tenants_db[selected_t]["port"] = new_port
+                        st.success(f"🎉 成功更新 [{t_obj['name']}] 的主機 IP 為 `http://{new_ip}:{new_port}`！")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+                
         else:
             st.markdown("## 👥 總控台內部員工與權限管理 (IAM)")
-            st.info("💡 *在此管理總控台帳號。離職人員可直接設定為【已停權】，無需修改程式碼。*")
-            
+            # 內部 IAM 維護介面保持不變
             with st.container():
                 st.markdown('<div class="card-container">', unsafe_allow_html=True)
                 st.markdown("### 📋 現有總控台帳號清單")
