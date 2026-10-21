@@ -10,9 +10,9 @@ from modules.org_chart import render_org_chart
 from modules.rbac import render_rbac
 from modules.departments_manager import render_departments_manager
 
-# 引入總經理室戰情室與租戶 IT 授權模組
-import executive_office
-import system_licensing
+# 正確從 modules 資料夾引入總經理室戰情室與租戶 IT 授權模組
+from modules import executive_office
+from modules import system_licensing
 
 st.set_page_config(
     page_title="裕豐電機工業 (Reetech Industrial) ERP 系統",
