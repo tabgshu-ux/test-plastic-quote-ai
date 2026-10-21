@@ -27,8 +27,6 @@ with col1:
     st.markdown("### 👑 平台總控台 (Master)")
     st.markdown("專屬平台開發商與財務人員<br>管理全球租戶、定價與權限", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # 點擊後透過載入並執行 master_portal.py 的內容來切換
     if st.button("🚀 進入總控台", type="primary", use_container_width=True):
         st.session_state.active_portal = "master"
         st.rerun()
@@ -39,19 +37,17 @@ with col2:
     st.markdown("### 🏭 企業租戶 ERP (Tenant)")
     st.markdown("專屬企業內部員工與主管<br>執行進銷存、POS、戰情室與 MES", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    
     if st.button("🚀 進入租戶系統", type="primary", use_container_width=True):
         st.session_state.active_portal = "tenant"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 路由狀態檢查與動態載入
+# 路由狀態檢查與安全載入
 if "active_portal" in st.session_state:
+    st.markdown("---")
     if st.session_state.active_portal == "master":
-        st.markdown("---")
-        # 執行總控台模組
         import master_portal
+        master_portal.render_master_portal()
     elif st.session_state.active_portal == "tenant":
-        st.markdown("---")
-        # 執行租戶端模組
         import tenant_app
+        tenant_app.render_tenant_app()
