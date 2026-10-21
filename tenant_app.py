@@ -24,26 +24,15 @@ def render_tenant_app():
     if "current_tenant_user" not in st.session_state:
         st.session_state.current_tenant_user = None
 
-    # 多租戶資料庫初始化（支援多個不同的租戶切換）
     if "multi_tenants_db" not in st.session_state:
         st.session_state.multi_tenants_db = {
             "tenant_reetech": {
                 "name": "裕豐電機工業 (Reetech Industrial)",
                 "logo_url": "https://img.icons8.com/color/96/factory.png",
-                "plan": "🚀 旗艦集團版 (Enterprise)",
+                "plan": "企業旗艦版",
                 "staff": [
-                    {"name": "許福村", "account": "boss", "password": "123", "role": "Tenant Admin (老闆)", "dept": "董事長室"}
-                ],
-                "org_nodes": [{"id": "n1", "name": "董事長室", "type": "👑 頂層", "parent": "無"}]
-            },
-            "tenant_vina_group": {
-                "name": "🇻🇳 越南平陽控股集團",
-                "logo_url": "https://img.icons8.com/color/96/company.png",
-                "plan": "💼 標準商業版",
-                "staff": [
-                    {"name": "Trần Văn Minh", "account": "admin", "password": "123", "role": "Tenant Admin (老闆)", "dept": "總管理處"}
-                ],
-                "org_nodes": [{"id": "n2", "name": "總管理處", "type": "👑 頂層", "parent": "無"}]
+                    {"name": "許福村", "account": "boss", "password": "123", "role": "總經理 / 管理員", "dept": "總經理室"}
+                ]
             }
         }
 
@@ -52,52 +41,44 @@ def render_tenant_app():
 
     tenant_info = st.session_state.multi_tenants_db[st.session_state.active_tenant_id]
 
-    ALL_ENTERPRISE_DEPARTMENTS = [
-        "👑 董事長室 / 總經理室",
-        "🏭 生產製造與廠務管理部",
-        "💼 商務與業務管理部"
-    ]
-
     with st.sidebar:
         logo = tenant_info.get("logo_url", "https://img.icons8.com/color/96/factory.png")
         st.image(logo, width=64)
-        st.markdown(f"### 🏭 {tenant_info['name']}")
-        st.markdown(f"**方案**: `{tenant_info.get('plan')}`")
+        st.markdown(f"### {tenant_info['name']}")
         st.markdown("---")
         
         if st.session_state.tenant_logged_in:
             user_info = st.session_state.current_tenant_user
             st.markdown(f"**登入員工**: `{user_info['name']}`")
-            if st.button("🔒 登出當前租戶", use_container_width=True):
+            if st.button("登出系統", use_container_width=True):
                 st.session_state.tenant_logged_in = False
                 st.session_state.current_tenant_user = None
                 st.rerun()
         else:
-            st.markdown("🔒 **身分**: `未登入`")
+            st.markdown("狀態: 未登入")
             
         st.markdown("---")
         if st.session_state.tenant_logged_in:
+            st.markdown("讀取選擇一個部門/系統：")
             tenant_menu = st.radio(
-                "企業內部模組選單",
+                "部門選單",
                 [
-                    "👑 老闆級即時經營戰情室 (Executive BI)",
-                    "💼 商務接單與多幣別報價",
-                    "🏭 MES 電機製造與車間排程",
-                    "🏢 組織架構與部門管理",
-                    "🛒 拼圖式模組市集 (App Store)",
-                    "👥 員工帳號與權限管理 (RBAC)",
-                    "🎨 企業品牌識別與 Logo 自訂"
-                ]
+                    "總經理室 (Executive Office)",
+                    "管理部 (Management Dept)",
+                    "全方位電子簽核中心 (Approval Center)",
+                    "工程與設計管理中心 (Engineering & Design Center)",
+                    "生產部 (Production Dept)",
+                    "資訊管理部 (IT & System)"
+                ],
+                label_visibility="collapsed"
             )
         else:
-            tenant_menu = "🔒 請先登入"
+            tenant_menu = "請先登入"
 
     if not st.session_state.tenant_logged_in:
-        st.markdown("## 🔐 企業租戶 ERP 系統登入")
-        
-        # 允許選擇要登入哪一家租戶
+        st.markdown("## 企業 ERP 系統登入")
         selected_tenant_key = st.selectbox(
-            "選擇目標企業租戶 (Select Tenant)",
+            "選擇企業租戶",
             list(st.session_state.multi_tenants_db.keys()),
             format_func=lambda x: st.session_state.multi_tenants_db[x]["name"]
         )
@@ -105,37 +86,26 @@ def render_tenant_app():
         curr_t = st.session_state.multi_tenants_db[selected_tenant_key]
 
         with st.form("tenant_login_form"):
-            t_acc = st.text_input("帳號 (Account)", placeholder="請輸入帳號...")
-            t_pass = st.text_input("密碼 (Password)", type="password", placeholder="請輸入密碼...")
-            if st.form_submit_button("🔓 登入該企業 ERP", type="primary", use_container_width=True):
+            t_acc = st.text_input("帳號", placeholder="請輸入帳號...")
+            t_pass = st.text_input("密碼", type="password", placeholder="請輸入密碼...")
+            if st.form_submit_button("登入系統", type="primary", use_container_width=True):
                 matched = next((s for s in curr_t["staff"] if s["account"] == t_acc and s["password"] == t_pass), None)
                 if matched:
                     st.session_state.tenant_logged_in = True
                     st.session_state.current_tenant_user = matched
-                    st.success("🎉 登入成功！")
                     st.rerun()
                 else:
-                    st.error("❌ 帳號或密碼錯誤！")
+                    st.error("帳號或密碼錯誤")
     else:
-        if "老闆級即時經營戰情室" in tenant_menu:
+        if "總經理室" in tenant_menu:
             render_executive_bi(tenant_info)
-        elif "商務接單" in tenant_menu:
+        elif "管理部" in tenant_menu:
             render_pos_retail(tenant_info)
-        elif "MES" in tenant_menu:
+        elif "全方位電子簽核" in tenant_menu:
+            render_app_store(tenant_info, [])
+        elif "工程與設計" in tenant_menu:
             render_mes_factory(tenant_info)
-        elif "組織架構與部門管理" in tenant_menu:
-            render_departments_manager(tenant_info)
-        elif "拼圖式模組市集" in tenant_menu:
-            render_app_store(tenant_info, ALL_ENTERPRISE_DEPARTMENTS)
-        elif "員工帳號與權限管理" in tenant_menu:
-            render_rbac(tenant_info)
+        elif "生產部" in tenant_menu:
+            render_org_chart(tenant_info)
         else:
-            st.markdown("## 🎨 企業品牌識別與 Logo 自訂")
-            with st.form("branding_form"):
-                new_name = st.text_input("公司顯示名稱", value=tenant_info["name"])
-                new_logo = st.text_input("Logo 圖片網址", value=tenant_info["logo_url"])
-                if st.form_submit_button("💾 儲存", type="primary", use_container_width=True):
-                    tenant_info["name"] = new_name
-                    tenant_info["logo_url"] = new_logo
-                    st.success("🎉 更新成功！")
-                    st.rerun()
+            render_rbac(tenant_info)
