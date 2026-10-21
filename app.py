@@ -100,12 +100,20 @@ if "tenants_db" not in st.session_state:
             "org_nodes": [
                 {"id": "node_root", "name": "集團董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
                 {"id": "node_eng", "name": "越南平陽廠區", "type": "🏭 製造廠區", "parent": "集團董事長室"}
+            ],
+            "staff": [
+                {"name": "Trần Văn Minh", "email": "minh.tv@vina.com", "role": "Tenant Admin (租戶管理員/老闆)", "dept": "董事長室", "lang": "Tiếng Việt"},
+                {"name": "Nguyễn Thị Hạnh", "email": "hanh.nt@vina.com", "role": "Department Manager (部門主管)", "dept": "財務部", "lang": "Tiếng Việt"},
+                {"name": "Le Van Hung", "email": "hung.lv@vina.com", "role": "Field Worker (現場作業人員)", "dept": "工程技術部", "lang": "Tiếng Việt"}
             ]
         }
     }
 
 if "current_portal" not in st.session_state:
     st.session_state.current_portal = "Master"
+
+if "master_logged_in" not in st.session_state:
+    st.session_state.master_logged_in = False
 
 ALL_ENTERPRISE_DEPARTMENTS = [
     "👑 董事長室 / 總經理室 (Executive & Board Room)",
@@ -160,49 +168,70 @@ with st.sidebar:
             st.rerun()
         st.markdown(f"{i18n_current}: `{st.session_state.tenants_db[st.session_state.current_portal]['name']}`")
     else:
-        st.markdown("👑 **目前身分**: `AI ERP 首席架構師 / Master`")
+        st.markdown("👑 **目前身分**: `平台最高管理者 / Master`")
+        if st.session_state.master_logged_in:
+            if st.button("🔒 登出總控台 (Lock Master)", use_container_width=True):
+                st.session_state.master_logged_in = False
+                st.rerun()
     
     st.markdown("---")
     st.markdown(f"### {i18n_menu}")
     
     if st.session_state.current_portal == "Master":
-        menu_choice = st.radio(
-            "選擇總控台模組",
-            ["🏢 全球企業租戶總覽", "⚙️ 全球定價策略與方案模組自訂 (Pricing App Store)"]
-        )
+        if st.session_state.master_logged_in:
+            menu_choice = st.radio(
+                "選擇總控台模組",
+                ["🏢 全球企業租戶總覽", "⚙️ 全球定價策略與方案模組自訂 (Pricing App Store)"]
+            )
+        else:
+            menu_choice = "🔒 請先登入"
     else:
         current_t_name = st.session_state.tenants_db[st.session_state.current_portal]["name"]
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
             [
                 "🧩 樂高積木式模組市集 (App Store)", 
-                "🖱️ ProcessOn 組織架構圖與節點管理",
+                "🖱️ 組織架構圖與節點管理",
                 "👥 員工帳號與權限管理 (RBAC)"
             ]
         )
 
-# ==================== 路由分發邏輯 ====================
+# ==================== 路由分發與資安登入鎖邏輯 ====================
 if st.session_state.current_portal == "Master":
-    if "全球企業租戶總覽" in menu_choice:
-        st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽與快速切換")
-        st.info("💡 *身為平台總管理員，您可以在下方檢視所有租戶，並隨時點擊按鈕直接切換進入該租戶的內部後台進行檢視或協助設定。*")
+    if not st.session_state.master_logged_in:
+        st.markdown("## 🔐 平台最高管理者安全登入 (Master Portal Security Gate)")
+        st.info("💡 *為了確保 SaaS 核心數據與全平台租戶隱私安全，請輸入管理員密碼以解鎖總控台。* (預設密碼: `admin123`)")
         
-        for t_id, t_data in st.session_state.tenants_db.items():
-            with st.container():
-                st.markdown('<div class="card-container">', unsafe_allow_html=True)
-                col_info, col_btn = st.columns([3, 1])
-                with col_info:
-                    st.markdown(f"### 🏢 {t_data['name']}")
-                    st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
-                    st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
-                with col_btn:
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    if st.button(f"🚀 進入該租戶後台", key=f"enter_{t_id}", type="primary", use_container_width=True):
-                        st.session_state.current_portal = t_id
-                        st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+        with st.form("master_login_form"):
+            m_pass = st.text_input("最高管理員密碼 (Master Password)", type="password", placeholder="請輸入密碼...")
+            if st.form_submit_button("🔓 解鎖總控台", type="primary"):
+                if m_pass == "admin123":
+                    st.session_state.master_logged_in = True
+                    st.success("🎉 身分驗證成功，正在進入總控台...")
+                    st.rerun()
+                else:
+                    st.error("❌ 密碼錯誤，請重新輸入！")
     else:
-        render_pricing_hub()
+        if "全球企業租戶總覽" in menu_choice:
+            st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽與快速切換")
+            st.info("💡 *身為平台總管理員，您可以在下方檢視所有租戶，並隨時點擊按鈕直接切換進入該租戶的內部後台進行檢視或協助設定。*")
+            
+            for t_id, t_data in st.session_state.tenants_db.items():
+                with st.container():
+                    st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                    col_info, col_btn = st.columns([3, 1])
+                    with col_info:
+                        st.markdown(f"### 🏢 {t_data['name']}")
+                        st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
+                        st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button(f"🚀 進入該租戶後台", key=f"enter_{t_id}", type="primary", use_container_width=True):
+                            st.session_state.current_portal = t_id
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            render_pricing_hub()
 else:
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     if "樂高積木式模組市集" in menu_choice:
