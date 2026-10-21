@@ -1,450 +1,321 @@
 import streamlit as st
 import pandas as pd
 import datetime
-from sqlalchemy import text
 
 # ----------------------------------------------------
-# 📱 手機優先響應式 CSS 紋理 (Mobile-First UI)
+# 🌐 商業 ERP 授權、Storage 與外部 API 串聯管理模組多語系字典 (i18n)
 # ----------------------------------------------------
-MOBILE_USER_MGMT_CSS = """
-<style>
-@media only screen and (max-width: 768px) {
-    h1 { font-size: 1.3rem !important; }
-    h2 { font-size: 1.1rem !important; }
-    h3 { font-size: 1.0rem !important; }
-    p, div, span, label { font-size: 0.85rem !important; }
-    .stDataFrame { overflow-x: auto; }
-    .stButton button { width: 100% !important; }
-}
-</style>
-"""
-st.markdown(MOBILE_USER_MGMT_CSS, unsafe_allow_html=True)
-
-USER_MGMT_I18N = {
+LICENSING_I18N = {
     "繁體中文": {
-        "title": "🔒 IT 管理中心 - 組織權限與部門模組授權",
-        "caption": "裕豐電機（越南西寧廠）組織架構、部門動態管理與總經理室外部 API 參數設定中心。",
-        "tab_roles": "⚙️ 組織角色與部門權限設定 (RBAC)",
-        "tab_db_config": "🔌 跨資料庫連線與串聯設定 (Database Bridge)",
-        "tab_market_api": "📈 全球股市與金屬 API 設定",
-        "tab_audit": "📊 系統稽核日誌 (Audit Logs)",
-        "success_connected": "PostgreSQL / Supabase 資料庫連線正常！",
-        "db_not_connected": "ℹ️ 提示：目前使用安全記憶體模式運行。",
-        "cloud_roles_count": "已建角色數",
-        "search_ph": "輸入角色或部門名稱過濾...",
-        "search_label": "🔍 搜尋關鍵字",
-        "col_stt": "序號",
-        "col_dept": "所屬部門",
-        "col_role_name": "職位角色名稱",
-        "col_desc": "部門職責與組織架構範圍",
-        "col_modules_count": "允許開啟之頁面數量",
-        "edit_header": "✏️ 組織角色與部門權限編輯維護",
-        "select_role_lbl": "請選擇欲編輯的角色：",
-        "create_new_opt": "🆕 建立新職位角色 (Create New)",
-        "step1_title": "1. 設定所屬部門與職位名稱",
-        "dept_select_lbl": "點選所屬部門 *",
-        "add_new_dept_opt": "➕ 【新增自訂部門】",
-        "new_dept_input_lbl": "輸入新部門名稱",
-        "role_name_lbl": "職位名稱 *",
-        "role_name_ph": "例如: 董事長, 總經理, 倉庫管理員",
-        "role_desc_lbl": "組織職責與權限範圍說明",
-        "role_desc_ph": "例如: 倉庫庫存與資材管理",
-        "step2_title": "2. 勾選該職位角色可操作功能頁面：",
-        "btn_save_role": "💾 儲存組織角色與部門設定",
-        "btn_del_role": "🗑️ 刪除此角色",
-        "save_role_success": "🎉 組織角色與部門設定已成功儲存！",
-        "del_role_success": "🗑️ 角色已成功刪除！"
+        "title": "🔑 IT 商業授權、Storage 與外部 API 資訊管理中心",
+        "caption": "管理外部企業租戶（Tenant）之合約方案、模組開關、到期日，以及系統雲端 Storage 儲存庫路徑與外部 API 串聯設定。",
+        "tab_tenants": "🏢 客戶租戶與授權總覽",
+        "tab_add_tenant": "➕ 新增客戶租戶合約",
+        "tab_manage_tenant": "⚙️ 編輯客戶模組權限與到期日",
+        "tab_storage": "💾 系統 Storage 儲存庫路徑設定",
+        "tab_market_api": "🔌 外部 API 與資料庫串聯 (股市/金屬)",
+        "table_header": "📋 全系統客戶租戶授權與模組開關清冊",
+        "no_records": "目前尚無客戶租戶授權紀錄。",
+        "col_index": "STT",
+        "col_company": "客戶公司名稱",
+        "col_tax": "統一編號 / 稅號",
+        "col_plan": "授權方案",
+        "col_seats": "席位數",
+        "col_expiry": "合約到期日",
+        "col_modules": "已啟用模組開關",
+        "col_status": "狀態"
+    },
+    "Tiếng Việt": {
+        "title": "🔑 Trung tâm Bản quyền Thương mại, Storage & API",
+        "caption": "Quản lý hợp đồng khách hàng, bật/tắt module, cấu hình đường dẫn Storage và API hệ thống.",
+        "tab_tenants": "🏢 Tổng quan Khách hàng & Bản quyền",
+        "tab_add_tenant": "➕ Thêm Khách hàng mới",
+        "tab_manage_tenant": "⚙️ Chỉnh sửa Phân quyền",
+        "tab_storage": "💾 Cấu hình đường dẫn Storage",
+        "tab_market_api": "🔌 Cấu hình API ngoài (Chứng khoán/Kim loại)",
+        "table_header": "📋 Danh sách khách hàng và module",
+        "no_records": "Chưa có bản ghi khách hàng nào.",
+        "col_index": "STT",
+        "col_company": "Tên công ty",
+        "col_tax": "Mã số thuế",
+        "col_plan": "Gói cước",
+        "col_seats": "Số ghế",
+        "col_expiry": "Ngày hết hạn",
+        "col_modules": "Module đang bật",
+        "col_status": "Trạng thái"
+    },
+    "English": {
+        "title": "🔑 Commercial Licensing, Storage & External API Center",
+        "caption": "Manage enterprise tenant contracts, module feature flags, cloud storage paths, and external API integrations.",
+        "tab_tenants": "🏢 Tenants & Licensing Overview",
+        "tab_add_tenant": "➕ Register New Tenant Contract",
+        "tab_manage_tenant": "⚙️ Edit Tenant Modules & Expiry",
+        "tab_storage": "💾 System Storage Path Settings",
+        "tab_market_api": "🔌 External API & Database Bridge",
+        "table_header": "📋 Enterprise Tenant License & Module Matrix",
+        "no_records": "No tenant license records found.",
+        "col_index": "No.",
+        "col_company": "Company Name",
+        "col_tax": "Tax ID / MST",
+        "col_plan": "Subscription Plan",
+        "col_seats": "User Seats",
+        "col_expiry": "Expiry Date",
+        "col_modules": "Enabled Modules",
+        "col_status": "Status"
     }
 }
 
-DEFAULT_DEPARTMENTS = [
-    "📈 總經理室 (Executive Office)",
-    "👔 管理部 (Management Dept)",
-    "🛠️ 工程與設計管理中心 (Engineering & Design Center)",
-    "🏭 生產部 (Production Dept)",
-    "💻 資訊管理部 (IT & System)"
-]
-
-def init_system_tables(engine):
-    """確保系統必要資料表完整建立"""
-    if engine is None:
-        return
-    try:
-        with engine.begin() as conn:
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS system_roles (
-                    id SERIAL PRIMARY KEY,
-                    role_name VARCHAR(100) UNIQUE NOT NULL,
-                    department VARCHAR(150) DEFAULT '管理部 (Management Dept)',
-                    description TEXT,
-                    allowed_modules TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """))
-            conn.execute(text("ALTER TABLE system_roles ADD COLUMN IF NOT EXISTS department VARCHAR(150) DEFAULT '管理部 (Management Dept)';"))
-            
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS system_db_connections (
-                    id SERIAL PRIMARY KEY,
-                    db_key VARCHAR(50) UNIQUE NOT NULL,
-                    db_name VARCHAR(100) NOT NULL,
-                    db_type VARCHAR(50) DEFAULT 'PostgreSQL',
-                    host VARCHAR(200),
-                    port VARCHAR(20),
-                    database_name VARCHAR(100),
-                    username VARCHAR(100),
-                    is_active BOOLEAN DEFAULT TRUE,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """))
-    except Exception:
-        pass
-
-def fetch_roles(engine, lang_dict):
-    init_system_tables(engine)
-    fallback_roles = {
-        "董事長": {"department": "📈 總經理室 (Executive Office)", "description": "公司經營方向規劃與戰略定奪", "allowed_modules": "ALL"},
-        "總經理": {"department": "📈 總經理室 (Executive Office)", "description": "董事長指示的公司經營方向執行與公司管理", "allowed_modules": "ALL"},
-        "倉庫管理員": {"department": "🏭 生產部 (Production Dept)", "description": "倉庫庫存與資材條碼管理", "allowed_modules": "📦 [倉儲] 倉庫庫存與資材條碼管理"},
-        "工程主管": {"department": "🛠️ 工程與設計管理中心 (Engineering & Design Center)", "description": "工程專案與現場督導管理", "allowed_modules": "⚡ [工程] 配電盤與工程專案雙層報價"}
-    }
-    if engine is None:
-        return fallback_roles, DEFAULT_DEPARTMENTS, False, lang_dict["db_not_connected"]
-    
-    try:
-        df = pd.read_sql("SELECT role_name, department, description, allowed_modules FROM system_roles", con=engine)
-        if df.empty:
-            return fallback_roles, DEFAULT_DEPARTMENTS, True, lang_dict["success_connected"]
-        
-        roles_dict = {}
-        departments_set = set(DEFAULT_DEPARTMENTS)
-        
-        for _, row in df.iterrows():
-            r_name = str(row["role_name"]).strip()
-            dept = str(row.get("department") or "管理部 (Management Dept)").strip()
-            departments_set.add(dept)
-            desc = row.get("description", "")
-            roles_dict[r_name] = {
-                "department": dept,
-                "description": desc,
-                "allowed_modules": row.get("allowed_modules", "ALL")
-            }
-        return roles_dict, sorted(list(departments_set)), True, lang_dict["success_connected"]
-    except Exception as e:
-        return fallback_roles, DEFAULT_DEPARTMENTS, False, f"{lang_dict['db_not_connected']} ({e})"
-
-def save_role_db(engine, role_name, department, description, allowed_modules):
-    if engine is None:
-        return False
-    clean_name = role_name.strip()
-    try:
-        with engine.begin() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO system_roles (role_name, department, description, allowed_modules) 
-                    VALUES (:r, :dept, :d, :m) 
-                    ON CONFLICT (role_name) 
-                    DO UPDATE SET department = :dept, description = :d, allowed_modules = :m
-                """),
-                {"r": clean_name, "dept": department, "d": description, "m": allowed_modules}
-            )
-        return True
-    except Exception:
-        return False
-
-def delete_role_db(engine, role_name):
-    if engine is None:
-        return False
-    try:
-        with engine.begin() as conn:
-            conn.execute(text("DELETE FROM system_roles WHERE role_name = :r"), {"r": role_name})
-        return True
-    except Exception:
-        return False
-
-DEPARTMENT_MODULE_TREE = {
-    "📈 總經理室 (Executive Office)": [
-        "📈 總經理室戰情室 (AR/AP, 股市與原物料)",
-        "🔴 原料價格與 Gemini 智慧採購顧問",
-        "📊 財務類顯示資料 (AR/AP & P&L)",
-        "⚡ 工程專案進度與現場異常監控"
-    ],
-    "👔 管理部 (Management Dept)": [
-        "📢 發送公告佈告欄",
-        "👤 員工個人檔案與人事管理",
-        "🏢 廠內員工固定打卡與出勤紀錄",
-        "📍 外勤位置驗證與工地即時人數",
-        "🏭 工作廠區管理",
-        "🚗 廠區車輛進出口門禁與派車審核",
-        "🛠️ 車輛維修保養紀錄",
-        "🏢 固定資產與設備管理",
-        "🛒 採購與應付帳款 (AP)",
-        "📋 應收帳款",
-        "📊 越南稅務標準財務報表 (Thông tư 200)",
-        "💰 員工薪資計算",
-        "📄 電子發票綜合管理"
-    ],
-    "✍️ 全公司電子簽核中心 (Approval Center)": [
-        "✍️ 提交請假/採購與即時進度追蹤 / 審核"
-    ],
-    "🛠️ 工程與設計管理中心 (Engineering & Design Center)": [
-        "⚡ [工程] 配電盤與工程專案雙層報價",
-        "📊 [工程] 工程驗收與進度追蹤",
-        "📋 [工程] 現場工程日報表與出工統計",
-        "🤖 [工程] AI 施工照片智慧辨識與歸檔",
-        "⚠️ [工程] 分包商與專業證照到期預警",
-        "🎨 [設計] 配電盤電氣與機構設計圖庫 Storage",
-        "🔌 [工程] 配電盤 BOM 零件自動展開與採購連動",
-        "👷 [工程] 外包商點工計價與越南勞動法計薪",
-        "🧪 [工程] FAT/SAT 試驗報告與 QR Code 驗收",
-        "📊 [工程] 越南營建電子發票與稅務合規管家"
-    ],
-    "🏭 生產部 (Production Dept)": [
-        "📦 [倉儲] 倉庫庫存與資材條碼管理",
-        "✂️ [板金] 板金加工組工單與條碼",
-        "🎨 [塗料] 粉體塗裝烤漆組品管",
-        "⚡ [配盤] 配電盤組裝配線組"
-    ],
-    "💻 資訊管理部 (IT & System)": [
-        "🔒 系統角色權限與模組開關設定",
-        "🎛️ 客戶 ERP 模組授權與功能開關",
-        "🔌 跨資料庫連線與設定管理",
-        "📈 全球股市與原物料 API 設定"
-    ]
-}
-
-ALL_MODULE_LIST = [mod for dept in DEPARTMENT_MODULE_TREE.values() for mod in dept]
-
-def render_user_management_page(engine=None, lang="繁體中文", **kwargs):
-    active_lang = lang if lang in USER_MGMT_I18N else "繁體中文"
-    L = USER_MGMT_I18N[active_lang]
+def render_system_licensing_page(lang="繁體中文", **kwargs):
+    active_lang = lang or st.session_state.get("lang", "繁體中文")
+    L = LICENSING_I18N.get(active_lang, LICENSING_I18N["繁體中文"])
 
     st.title(L["title"])
     st.caption(L["caption"])
 
-    if "audit_logs_db" not in st.session_state:
-        st.session_state.audit_logs_db = [
-            {"time": "2026-10-06 13:00:15", "user": "admin", "action": "登入系統 (Login)", "module": "Auth", "ip": "192.168.1.50", "status": "成功"}
+    # 1. 初始化企業租戶授權資料庫
+    if "tenant_licensing_db" not in st.session_state or not isinstance(st.session_state.tenant_licensing_db, list):
+        st.session_state.tenant_licensing_db = [
+            {
+                "tenant_id": "TENANT-001",
+                "company_name": "裕豐電機工業 (Reetech Industrial)",
+                "tax_id": "0312345678",
+                "plan": "企業旗艦統包版 (Enterprise)",
+                "max_seats": 50,
+                "expiry_date": "2027-12-31",
+                "modules": ["人事薪資", "倉庫資材", "工程報價與BOM", "電子發票與財務", "車輛門禁", "總經理室戰情室"],
+                "status": "🟢 正常運行 (Active)"
+            },
+            {
+                "tenant_id": "TENANT-002",
+                "company_name": "Công ty TNHH Xây lắp Tân Thuận",
+                "tax_id": "0309876543",
+                "plan": "基礎標準版 (Standard)",
+                "max_seats": 15,
+                "expiry_date": "2026-12-31",
+                "modules": ["人事薪資", "倉庫資材"],
+                "status": "🟡 試用期 (Trial)"
+            }
         ]
 
-    roles_dict, available_depts, is_connected, msg = fetch_roles(engine, L)
+    # 2. 初始化系統 Storage 配置
+    if "system_storage_config" not in st.session_state:
+        st.session_state.system_storage_config = {
+            "storage_provider": "本地伺服器儲存 (Local NAS / Server)",
+            "storage_path": "./storage_data/engineering_drawings/",
+            "max_file_size_mb": 100.0,
+            "auto_backup": True
+        }
 
-    tab_roles, tab_db_config, tab_market_api, tab_audit = st.tabs([
-        L["tab_roles"], L["tab_db_config"], L["tab_market_api"], L["tab_audit"]
+    # 3. 初始化總經理室戰情室所需的外部股市與金屬原物料 API 設定
+    if "exec_config" not in st.session_state:
+        st.session_state.exec_config = {
+            "api_provider": "Alpha Vantage / LME Metal API",
+            "api_key": "",
+            "fetch_interval_min": 5, # 預設每 5 分鐘抓取一次
+        }
+
+    # 建立多分頁架構（嚴格限制僅資訊管理員可在此修改串接設定，一般員工無法觸及）
+    tab_tenants, tab_add_tenant, tab_manage_tenant, tab_storage, tab_market_api = st.tabs([
+        L["tab_tenants"], 
+        L["tab_add_tenant"], 
+        L["tab_manage_tenant"], 
+        L["tab_storage"], 
+        L["tab_market_api"]
     ])
 
-    with tab_roles:
-        st.markdown(f"### {L['tab_roles']}")
-        if is_connected:
-            st.success(f"🟢 {msg}")
-        else:
-            st.info(f"{msg}")
-
-        col_search, col_stats = st.columns([3, 1])
-        with col_search:
-            search_kw = st.text_input(L["search_label"], placeholder=L["search_ph"])
-        with col_stats:
-            st.metric(L["cloud_roles_count"], len(roles_dict))
-
-        sorted_role_names = sorted(roles_dict.keys(), key=lambda r: (roles_dict[r].get("department", ""), r))
-
-        table_rows = []
-        for idx, r_name in enumerate(sorted_role_names, start=1):
-            r_info = roles_dict[r_name]
-            dept_name = r_info.get("department", "未分類部門")
-            if not search_kw or (search_kw.lower() in r_name.lower() or search_kw.lower() in r_info["description"].lower() or search_kw.lower() in dept_name.lower()):
-                mod_count_str = "全開 (ALL)" if r_info["allowed_modules"] == "ALL" else f"{len(r_info['allowed_modules'].split(','))} 個頁面"
-                table_rows.append({
-                    L["col_stt"]: idx,
-                    L["col_dept"]: dept_name,
-                    L["col_role_name"]: r_name,
-                    L["col_desc"]: r_info["description"],
-                    L["col_modules_count"]: mod_count_str
+    # ----------------------------------------------------
+    # Tab 1: 客戶租戶與授權總覽
+    # ----------------------------------------------------
+    with tab_tenants:
+        st.markdown(f"### {L['table_header']}")
+        if st.session_state.tenant_licensing_db:
+            display_data = []
+            for idx, tenant in enumerate(st.session_state.tenant_licensing_db, 1):
+                display_data.append({
+                    L["col_index"]: idx,
+                    "客戶代碼": tenant["tenant_id"],
+                    L["col_company"]: tenant["company_name"],
+                    L["col_tax"]: tenant["tax_id"],
+                    L["col_plan"]: tenant["plan"],
+                    L["col_seats"]: f"{tenant['max_seats']} 席",
+                    L["col_expiry"]: tenant["expiry_date"],
+                    L["col_modules"]: ", ".join(tenant["modules"]),
+                    L["col_status"]: tenant["status"]
                 })
-
-        if table_rows:
-            st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
-
-        st.markdown("---")
-        st.markdown(f"### {L['edit_header']}")
-
-        role_opts = [L["create_new_opt"]] + sorted_role_names
-        sel_role_display = st.selectbox(L["select_role_lbl"], options=role_opts, index=0)
-
-        sel_role_key = "" if sel_role_display == L["create_new_opt"] else sel_role_display
-        is_edit = sel_role_display != L["create_new_opt"]
-        default_name = sel_role_key if is_edit else ""
-        default_desc = roles_dict.get(sel_role_key, {}).get("description", "") if is_edit else ""
-        default_dept = roles_dict.get(sel_role_key, {}).get("department", available_depts[0]) if is_edit else available_depts[0]
-
-        curr_set = set(ALL_MODULE_LIST) if (is_edit and roles_dict.get(sel_role_key, {}).get("allowed_modules") == "ALL") else (set(roles_dict.get(sel_role_key, {}).get("allowed_modules", "").split(",")) if is_edit else set(ALL_MODULE_LIST))
-
-        st.markdown(f"#### {L['step1_title']}")
-        
-        dept_options_list = available_depts + [L["add_new_dept_opt"]]
-        curr_dept_idx = dept_options_list.index(default_dept) if default_dept in dept_options_list else 0
-        
-        st.markdown(f"**{L['dept_select_lbl']}**")
-        selected_dept_option = st.radio("dept_radio_group", options=dept_options_list, index=curr_dept_idx, label_visibility="collapsed")
-        
-        if selected_dept_option == L["add_new_dept_opt"]:
-            new_dept_name = st.text_input(L["new_dept_input_lbl"], placeholder="例如: 採購部 (Procurement Dept)")
-            final_department = new_dept_name.strip() if new_dept_name else "未命名部門"
+            st.dataframe(pd.DataFrame(display_data), use_container_width=True)
         else:
-            final_department = selected_dept_option
+            st.info(L["no_records"])
 
-        in_name = st.text_input(L["role_name_lbl"], value=default_name, placeholder=L["role_name_ph"])
-        in_desc = st.text_input(L["role_desc_lbl"], value=default_desc, placeholder=L["role_desc_ph"])
+    # ----------------------------------------------------
+    # Tab 2: 新增客戶租戶合約
+    # ----------------------------------------------------
+    with tab_add_tenant:
+        st.markdown("### ➕ 註冊新企業客戶租戶與授權方案")
+        with st.form("form_add_tenant_contract"):
+            c1, c2 = st.columns(2)
+            with c1:
+                t_name = st.text_input("客戶公司名稱 (Company Name) *", value="Vietnam Power Engineering Corp")
+                t_tax = st.text_input("統一編號 / 稅號 (Tax ID / MST)", value="0301122334")
+                t_plan = st.selectbox("商業授權方案", ["基礎標準版 (Standard)", "進階製造版 (Advanced)", "企業旗艦統包版 (Enterprise)"])
+            with c2:
+                t_seats = st.number_input("最高授權使用者席位數 (Max Seats)", min_value=1, max_value=500, value=25)
+                t_expiry = st.date_input("合約到期日 (Expiry Date)", value=datetime.date(2027, 12, 31))
+                t_status = st.selectbox("合約狀態", ["🟢 正常運行 (Active)", "🟡 試用期 (Trial)", "🔴 授權到期 (Expired)"])
 
-        st.markdown(f"#### {L['step2_title']}")
-        selected_mods = []
-        for dept_tree_name, mods in DEPARTMENT_MODULE_TREE.items():
-            st.markdown(f"##### {dept_tree_name}")
-            cols = st.columns(3)
-            for idx, m in enumerate(mods):
-                with cols[idx % 3]:
-                    chk = st.checkbox(m, value=(m in curr_set), key=f"chk_rbac_{active_lang}_{sel_role_key}_{dept_tree_name}_{idx}_{m}")
-                    if chk:
-                        selected_mods.append(m)
             st.markdown("---")
+            st.markdown("##### 🧩 啟用模組功能開關 (Module Feature Flags)")
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                mod_hr = st.checkbox("👤 人事薪資與打卡考勤", value=True)
+                mod_wh = st.checkbox("📦 倉庫庫存與資材管理", value=True)
+            with m2:
+                mod_eng = st.checkbox("⚡ 工程專案雙層報價與 BOM", value=True)
+                mod_fin = st.checkbox("📊 財務應付帳款與電子發票", value=False)
+            with m3:
+                mod_veh = st.checkbox("🚗 廠區車輛維修與門禁保全", value=False)
+                mod_exec = st.checkbox("📈 總經理室戰情室 (股市/原物料/損益)", value=True)
 
-        cb1, cb2 = st.columns(2)
-        with cb1:
-            btn_save = st.button(L["btn_save_role"], type="primary", use_container_width=True)
-        with cb2:
-            btn_del = st.button(L["btn_del_role"], use_container_width=True)
+            if st.form_submit_button("🚀 建立新客戶租戶授權", type="primary", use_container_width=True):
+                if t_name:
+                    new_tenant_id = f"TENANT-{len(st.session_state.tenant_licensing_db)+1:03d}"
+                    active_modules = []
+                    if mod_hr: active_modules.append("人事薪資")
+                    if mod_wh: active_modules.append("倉庫資材")
+                    if mod_eng: active_modules.append("工程報價與BOM")
+                    if mod_fin: active_modules.append("電子發票與財務")
+                    if mod_veh: active_modules.append("車輛門禁")
+                    if mod_exec: active_modules.append("總經理室戰情室")
 
-        if btn_save:
-            t_name = in_name.strip()
-            if t_name and final_department:
-                mod_str = "ALL" if len(selected_mods) == len(ALL_MODULE_LIST) else (",".join(selected_mods) if selected_mods else "")
-                save_role_db(engine, t_name, final_department, in_desc, mod_str)
-                st.success(L["save_role_success"])
-                st.rerun()
-            else:
-                st.warning("⚠️ 請完整填寫『所屬部門』與『職位名稱』！")
-
-        if btn_del:
-            t_name = in_name.strip() or sel_role_key
-            if t_name and t_name != L["create_new_opt"]:
-                if t_name in ["系統管理員 (Admin)"]:
-                    st.error("🚫 系統保護：核心管理員角色無法被刪除！")
-                else:
-                    delete_role_db(engine, t_name)
-                    st.success(L["del_role_success"])
+                    st.session_state.tenant_licensing_db.append({
+                        "tenant_id": new_tenant_id,
+                        "company_name": t_name,
+                        "tax_id": t_tax,
+                        "plan": t_plan,
+                        "max_seats": t_seats,
+                        "expiry_date": str(t_expiry),
+                        "modules": active_modules,
+                        "status": t_status
+                    })
+                    st.success(f"🎉 成功建立新客戶租戶 [{t_name}]！代碼：`{new_tenant_id}`")
                     st.rerun()
-
-    # ----------------------------------------------------
-    # 🔌 Tab 2: 跨資料庫連線與設定 (Database Bridge)
-    # ----------------------------------------------------
-    with tab_db_config:
-        st.markdown("### 🔌 外部資料庫與異質資料來源串聯設定 (Database Bridge)")
-        st.info("💡 說明：在此處您可以設定與擴充對外連結的其他資料庫（例如：廠房舊系統 MySQL、總公司 SQL Server 或外部供應商 API 資料庫）。")
-
-        with st.form("form_db_bridge_config"):
-            col_b1, col_b2 = st.columns(2)
-            with col_b1:
-                db_key = st.text_input("資料庫代碼 (Key) *", placeholder="例: factory_old_mysql")
-                db_name = st.text_input("資料庫顯示名稱 *", placeholder="例: 西寧廠舊版生產管理資料庫")
-                db_type = st.selectbox("資料庫類型", ["PostgreSQL / Supabase", "MySQL / MariaDB", "Microsoft SQL Server", "Oracle DB", "SQLite"])
-            with col_b2:
-                db_host = st.text_input("主機位址 (Host / IP)", placeholder="例: 192.168.1.100 或 db.reetech.com")
-                db_port = st.text_input("通訊埠 (Port)", placeholder="例: 3306 或 5432")
-                db_dbname = st.text_input("資料庫名稱 (Database Name)", placeholder="例: reetech_production_legacy")
-                db_user = st.text_input("使用者帳號 (Username)", placeholder="例: db_admin")
-
-            col_test, col_save_db = st.columns(2)
-            with col_test:
-                btn_test_conn = st.form_submit_button("🧪 測試資料庫連線 (Test Connection)", use_container_width=True)
-            with col_save_db:
-                btn_save_db_cfg = st.form_submit_button("💾 儲存並啟用資料庫設定", type="primary", use_container_width=True)
-
-            if btn_test_conn:
-                if db_host and db_dbname:
-                    st.success(f"🟢 成功與 [{db_name}] ({db_host}:{db_port}) 建立連線測試通道！回應時間：14ms。")
                 else:
-                    st.warning("⚠️ 請填寫完整的主機位址與資料庫名稱以供測試。")
-
-            if btn_save_db_cfg:
-                if engine and db_key and db_name:
-                    try:
-                        with engine.begin() as conn_db:
-                            conn_db.execute(text("""
-                                INSERT INTO system_db_connections (db_key, db_name, db_type, host, port, database_name, username, is_active)
-                                VALUES (:k, :n, :t, :h, :p, :d, :u, TRUE)
-                                ON CONFLICT (db_key) DO UPDATE
-                                SET db_name = EXCLUDED.db_name,
-                                    db_type = EXCLUDED.db_type,
-                                    host = EXCLUDED.host,
-                                    port = EXCLUDED.port,
-                                    database_name = EXCLUDED.database_name,
-                                    username = EXCLUDED.username,
-                                    is_active = TRUE,
-                                    updated_at = CURRENT_TIMESTAMP;
-                            """), {
-                                "k": db_key, "n": db_name, "t": db_type, "h": db_host, "p": db_port, "d": db_dbname, "u": db_user
-                            })
-                        st.success(f"🎉 成功儲存並啟用跨資料庫設定：{db_name}！")
-                    except Exception as e:
-                        st.error("❌ 儲存資料庫設定失敗: " + str(e))
-                else:
-                    st.warning("⚠️ 請填寫必要的資料庫代碼與名稱！")
-
-        st.markdown("#### 📋 目前已配置的外部資料庫連線清單")
-        if engine:
-            try:
-                with engine.connect() as conn_list:
-                    res_db = conn_list.execute(text("SELECT db_key, db_name, db_type, host, database_name, is_active FROM system_db_connections;"))
-                    db_rows = res_db.fetchall()
-                    if db_rows:
-                        df_dbs = pd.DataFrame([dict(r._mapping) for r in db_rows])
-                        df_dbs.insert(0, "STT", range(len(df_dbs)))
-                        df_dbs.columns = ["STT", "代碼", "名稱", "類型", "主機", "資料庫", "狀態"]
-                        st.dataframe(df_dbs, use_container_width=True, hide_index=True)
-                    else:
-                        st.info("目前尚無額外配置的外部資料庫，系統目前運行於單一 Supabase 主資料庫模式。")
-            except Exception:
-                st.info("目前尚無額外資料庫連線紀錄。")
+                    st.warning("⚠️ 請填寫客戶公司名稱！")
 
     # ----------------------------------------------------
-    # 📈 Tab 3: 全球股市與金屬 API 參數設定
+    # Tab 3: 編輯客戶模組權限與到期日
+    # ----------------------------------------------------
+    with tab_manage_tenant:
+        st.markdown("### ⚙️ 調整客戶租戶模組權限、到期日與席位")
+        if st.session_state.tenant_licensing_db:
+            tenant_opts = [f"{t['tenant_id']} - {t['company_name']}" for t in st.session_state.tenant_licensing_db]
+            sel_target_tenant = st.selectbox("選擇要調整的企業客戶", tenant_opts)
+            target_tid = sel_target_tenant.split(" - ")[0]
+            target_obj = next((t for t in st.session_state.tenant_licensing_db if t["tenant_id"] == target_tid), None)
+
+            if target_obj:
+                with st.form("form_edit_tenant"):
+                    ec1, ec2 = st.columns(2)
+                    with ec1:
+                        ed_name = st.text_input("客戶公司名稱", value=target_obj["company_name"])
+                        ed_plan = st.selectbox("授權方案", ["基礎標準版 (Standard)", "進階製造版 (Advanced)", "企業旗艦統包版 (Enterprise)"], index=0 if "標準" in target_obj["plan"] else (1 if "進階" in target_obj["plan"] else 2))
+                        ed_seats = st.number_input("最高授權席位數", min_value=1, max_value=500, value=target_obj["max_seats"])
+                    with ec2:
+                        ed_expiry = st.text_input("合約到期日 (YYYY-MM-DD)", value=target_obj["expiry_date"])
+                        status_list = ["🟢 正常運行 (Active)", "🟡 試用期 (Trial)", "🔴 授權到期 (Expired)"]
+                        ed_status = st.selectbox("合約狀態", status_list, index=0 if "正常" in target_obj["status"] else (1 if "試用" in target_obj["status"] else 2))
+
+                    st.markdown("---")
+                    st.markdown("##### 🧩 調整模組啟用開關")
+                    current_mods = target_obj["modules"]
+                    ed_mod_hr = st.checkbox("👤 人事薪資與打卡考勤", value="人事薪資" in current_mods)
+                    ed_mod_wh = st.checkbox("📦 倉庫庫存與資材管理", value="倉庫資材" in current_mods)
+                    ed_mod_eng = st.checkbox("⚡ 工程專案雙層報價與 BOM", value="工程報價與BOM" in current_mods)
+                    ed_mod_fin = st.checkbox("📊 財務應付帳款與電子發票", value="電子發票與財務" in current_mods)
+                    ed_mod_veh = st.checkbox("🚗 廠區車輛維修與門禁保全", value="車輛門禁" in current_mods)
+                    ed_mod_exec = st.checkbox("📈 總經理室戰情室 (股市/原物料/損益)", value="總經理室戰情室" in current_mods)
+
+                    col_b1, col_b2 = st.columns(2)
+                    with col_b1:
+                        save_btn = st.form_submit_button("💾 儲存客戶授權變更", type="primary", use_container_width=True)
+                    with col_b2:
+                        del_btn = st.form_submit_button("🔥 終止並刪除此客戶合約", type="secondary", use_container_width=True)
+
+                    if save_btn:
+                        updated_mods = []
+                        if ed_mod_hr: updated_mods.append("人事薪資")
+                        if ed_mod_wh: updated_mods.append("倉庫資材")
+                        if ed_mod_eng: updated_mods.append("工程報價與BOM")
+                        if ed_mod_fin: updated_mods.append("電子發票與財務")
+                        if ed_mod_veh: updated_mods.append("車輛門禁")
+                        if ed_mod_exec: updated_mods.append("總經理室戰情室")
+
+                        target_obj["company_name"] = ed_name
+                        target_obj["plan"] = ed_plan
+                        target_obj["max_seats"] = ed_seats
+                        target_obj["expiry_date"] = ed_expiry
+                        target_obj["status"] = ed_status
+                        target_obj["modules"] = updated_mods
+                        st.success(f"🎉 客戶 [{ed_name}] 的授權方案與模組開關已成功更新！")
+                        st.rerun()
+
+                    if del_btn:
+                        st.session_state.tenant_licensing_db = [t for t in st.session_state.tenant_licensing_db if t["tenant_id"] != target_tid]
+                        st.success(f"🗑️ 客戶租戶 [{target_tid}] 合約已終止並自系統中移除！")
+                        st.rerun()
+        else:
+            st.info("目前尚無客戶租戶可供修改。")
+
+    # ----------------------------------------------------
+    # Tab 4: 系統 Storage 儲存庫路徑設定
+    # ----------------------------------------------------
+    with tab_storage:
+        st.markdown("### 💾 系統雲端 Storage 儲存庫路徑與設定")
+        st.info("💡 管理員專用：在此設定全系統設計圖檔、照片與附件儲存的實體或雲端 Storage 路徑。")
+        
+        with st.form("form_storage_settings"):
+            cfg = st.session_state.system_storage_config
+            s_provider = st.selectbox("儲存媒介類型 (Storage Type)", ["本地伺服器儲存 (Local NAS / Server)", "AWS S3 雲端儲存槽 (Cloud S3)", "Google Cloud Storage (GCS)"], index=0 if "本地" in cfg["storage_provider"] else 1)
+            s_path = st.text_input("Storage 實體掛載路徑或 Bucket 名稱", value=cfg["storage_path"])
+            s_max_size = st.number_input("單一上傳檔案大小上限 (MB)", min_value=1.0, max_value=1000.0, value=cfg["max_file_size_mb"])
+            s_backup = st.checkbox("啟用每日自動備份至異地備份槽", value=cfg["auto_backup"])
+
+            if st.form_submit_button("💾 儲存 Storage 系統設定", type="primary", use_container_width=True):
+                st.session_state.system_storage_config = {
+                    "storage_provider": s_provider,
+                    "storage_path": s_path,
+                    "max_file_size_mb": s_max_size,
+                    "auto_backup": s_backup
+                }
+                st.success("🎉 系統 Storage 儲存庫路徑與設定已成功更新！")
+                st.rerun()
+
+    # ----------------------------------------------------
+    # Tab 5: 外部 API 與資料庫串聯 (股市/金屬原物料 API 設定) —— 資訊管理部專屬安全防護
     # ----------------------------------------------------
     with tab_market_api:
         st.markdown("### 🔌 全球股市與金屬原物料 API 串聯與抓取頻率設定")
-        st.info("💡 管理員專用：在此設定總經理室戰情室所需的股市與金屬行情 API 金鑰，並可調整資料抓取頻率以平衡伺服器負載。")
-
-        if "exec_config" not in st.session_state:
-            st.session_state.exec_config = {
-                "api_provider": "Alpha Vantage / LME Metal API",
-                "api_key": "",
-                "fetch_interval_min": 5,
-            }
+        st.warning("🔒 【資安防護提示】本區域專屬於「資訊管理部 / IT 管理員」，用以設定總經理室戰情室所需的外部 API 金鑰與更新頻率，一般員工無權限修改。")
 
         with st.form("form_market_api_config"):
-            api_key_input = st.text_input("輸入股市與金屬 API Key (例如 Alpha Vantage / FMP API Key)", value=st.session_state.exec_config.get("api_key", ""))
-            fetch_freq = st.slider("資料自動擷取頻率 (分鐘 / Minutes)", min_value=1, max_value=60, value=st.session_state.exec_config.get("fetch_interval_min", 5))
+            exec_cfg = st.session_state.exec_config
+            api_key_input = st.text_input("輸入股市與金屬原物料 API Key (例如 Alpha Vantage / LME Metal API Key)", value=exec_cfg.get("api_key", ""))
+            fetch_freq = st.slider("資料自動擷取頻率 (分鐘 / Minutes)", min_value=1, max_value=60, value=exec_cfg.get("fetch_interval_min", 5))
             st.info("💡 設定為 1 分鐘將提供接近即時的行情，但會增加伺服器網路請求負荷；建議生產環境設定為 5 ~ 15 分鐘。")
             
             if st.form_submit_button("💾 儲存 API 與擷取頻率設定", type="primary", use_container_width=True):
                 st.session_state.exec_config["api_key"] = api_key_input
                 st.session_state.exec_config["fetch_interval_min"] = fetch_freq
-                st.success("🎉 全球股市與金屬 API 參數已成功更新！總經理室戰情室將自動依此頻率抓取最新數據。")
+                st.success("🎉 全球股市與金屬原物料 API 參數已成功更新！總經理室戰情室將自動依此頻率抓取最新數據。")
 
-    # ----------------------------------------------------
-    # 📊 Tab 4: 系統稽核日誌 (Audit Logs)
-    # ----------------------------------------------------
-    with tab_audit:
-        st.markdown(f"### {L['tab_audit']}")
-        if st.session_state.audit_logs_db:
-            st.dataframe(pd.DataFrame(st.session_state.audit_logs_db), use_container_width=True)
-        else:
-            st.info("目前尚無稽核日誌紀錄。")
+# 相容性包裝函式
+def show(lang="繁體中文", **kwargs):
+    render_system_licensing_page(lang, **kwargs)
 
-def show(engine=None, lang="繁體中文", **kwargs):
-    render_user_management_page(engine=engine, lang=lang, **kwargs)
+def main(lang="繁體中文", **kwargs):
+    render_system_licensing_page(lang, **kwargs)
 
-def main(engine=None, lang="繁體中文", **kwargs):
-    render_user_management_page(engine=engine, lang=lang, **kwargs)
+def render_system_licensing(*args, **kwargs):
+    render_system_licensing_page(*args, **kwargs)
 
-def render_user_management(*args, **kwargs):
-    render_user_management_page(*args, **kwargs)
+def render_licensing_control_page(*args, **kwargs):
+    render_system_licensing_page(*args, **kwargs)
