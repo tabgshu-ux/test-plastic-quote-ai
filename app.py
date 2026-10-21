@@ -26,10 +26,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 🌟 全產業通用企業級 AI-ERP 模組庫
+# 🌟 全產業通用企業級 AI-ERP 模組庫 (已擴充「智慧零售與 POS 生態系」)
 # ==============================================================================
 if "master_module_library" not in st.session_state:
     st.session_state.master_module_library = {
+        "☕ 智慧零售、POS 收銀與會員行銷生態系 (Smart Retail & POS)": [
+            "POS 收銀機與多幣別實體門市結算", "行動支付、電子發票與跨境金流串接", "VIP 會員咖啡廳免費額度與次數控管", 
+            "人臉辨識會員快速識別與自動招呼", "推薦分潤機制與最佳推廣大使評選系統", "環保材質（咖啡絲鞋）履歷與碳足跡展示", 
+            "電動車獎勵與行銷競賽積分自動化引擎", "門市現場預約與客製化鞋款顏色挑選"
+        ],
         "📈 高階決策、營運戰情與多維度 BI": [
             "全局原物料與市場即時行情看板", "匯率多幣別自動換算與避險中心", "全球主要股市與財經大盤監控", 
             "多公司合併財務報表分析", "企業 KPI 戰情室與 AI 智慧營運健檢", "高階主管簽核流與授權矩陣", 
@@ -62,23 +67,23 @@ if "global_plans_db" not in st.session_state:
             "base_price": 350.0,
             "description": "適合大型集團與製造業，解鎖全產業模組與無限部門掛載",
             "included_modules": [
-                "全局原物料與市場即時行情看板", "高階主管簽核流與授權矩陣", "智能進銷存與批號效期全生命周期管理", 
-                "總帳會計、多幣別傳票與會計師報表", "跨部門營運總控台與異常預警"
+                "POS 收銀機與多幣別實體門市結算", "全局原物料與市場即時行情看板", "高階主管簽核流與授權矩陣", 
+                "智能進銷存與批號效期全生命周期管理", "總帳會計、多幣別傳票與會計師報表"
             ]
         },
         "💼 正式商業版 (Professional)": {
             "base_price": 180.0,
             "description": "適合中型企業與貿易商，支援完整供應鏈、財會核心與多據點管理",
             "included_modules": [
-                "高階主管簽核流與授權矩陣", "智能進銷存與批號效期全生命周期管理", 
-                "總帳會計、多幣別傳票與會計師報表", "人事薪酬、勞健保與考勤排班"
+                "POS 收銀機與多幣別實體門市結算", "高階主管簽核流與授權矩陣", 
+                "智能進銷存與批號效期全生命周期管理", "總帳會計、多幣別傳票與會計師報表"
             ]
         },
         "📦 標準訂閱版 (Subscription)": {
             "base_price": 90.0,
             "description": "適合小型企業或單一據點，靈活按需勾選樂高模組",
             "included_modules": [
-                "智能進銷存與批號效期全生命周期管理", "人事薪酬、勞健保與考勤排班"
+                "POS 收銀機與多幣別實體門市結算", "智能進銷存與批號效期全生命周期管理"
             ]
         }
     }
@@ -109,7 +114,7 @@ if "tenants_db" not in st.session_state:
         }
     }
 
-# ==================== 動態帳號資料庫 (支援離職停權與權限管控) ====================
+# ==================== 動態帳號資料庫 ====================
 if "master_staff_db" not in st.session_state:
     st.session_state.master_staff_db = [
         {"name": "許福村", "account": "admin", "password": "admin123", "role": "👑 平台老闆 (Master Admin)", "status": "啟用中"},
@@ -224,7 +229,6 @@ with st.sidebar:
 # ==================== 路由分發與動態帳號驗證邏輯 ====================
 if st.session_state.current_portal == "Master":
     if not st.session_state.master_logged_in:
-        # 乾淨俐落的登入畫面（從動態資料庫進行比對與驗證狀態）
         st.markdown("## 🔐 總控台安全登入")
         
         with st.form("master_login_form"):
@@ -240,7 +244,7 @@ if st.session_state.current_portal == "Master":
                 
                 if matched_user:
                     if matched_user["status"] == "已停權 (Disabled)":
-                        st.error("❌ 此帳號已被停權（離職封鎖），無法登入系統！")
+                        st.error("❌ 此帳號已被停權，無法登入系統！")
                     else:
                         st.session_state.master_logged_in = True
                         st.session_state.master_current_user = matched_user["name"]
@@ -274,9 +278,8 @@ if st.session_state.current_portal == "Master":
             elif "全球定價策略" in menu_choice:
                 render_pricing_hub()
             else:
-                # 總控台專屬的員工帳號與動態狀態管理（解決離職停權問題）
                 st.markdown("## 👥 總控台內部員工與權限管理 (IAM)")
-                st.info("💡 *在此管理平台總控台內部的管理者與財務人員帳號。當人員離職時，可直接將狀態切換為【已停權】，系統將立即封鎖其登入權限，無須修改程式碼。*")
+                st.info("💡 *在此管理平台總控台內部的管理者與財務人員帳號。當人員離職時，可直接將狀態切換為【已停權】，系統將立即封鎖其登入權限。*")
                 
                 with st.container():
                     st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -308,8 +311,6 @@ if st.session_state.current_portal == "Master":
                 st.markdown("### 📋 現有總控台帳號與離職停權管理")
                 with st.container():
                     st.markdown('<div class="card-container">', unsafe_allow_html=True)
-                    
-                    # 呈現清單並允許老闆切換狀態（模擬資料庫更新）
                     for idx, staff in enumerate(st.session_state.master_staff_db):
                         cols = st.columns([2, 2, 2, 2, 1])
                         with cols[0]:
@@ -330,18 +331,15 @@ if st.session_state.current_portal == "Master":
                                 st.success(f"已更新 [{staff['name']}] 狀態為：{new_status}")
                                 st.rerun()
                         with cols[4]:
-                            if staff['account'] != "admin":  # 防止老闆把自己刪除
+                            if staff['account'] != "admin":
                                 if st.button("🗑️ 刪除", key=f"del_staff_{idx}Y"):
                                     st.session_state.master_staff_db.pop(idx)
                                     st.rerun()
                         st.markdown("---")
                     st.markdown('</div>', unsafe_allow_html=True)
         else:
-            # 財務專員專屬視角
             st.markdown("## 💰 總控台：平台財務營收與租戶帳單結算中心")
-            
             total_mrr = sum([v["price_usd"] for v in st.session_state.tenants_db.values()])
-            
             c1, c2 = st.columns(2)
             with c1:
                 st.metric("📊 本月總訂閱營收 (MRR)", f"$ {total_mrr:,.2f} USD")
@@ -350,7 +348,6 @@ if st.session_state.current_portal == "Master":
             
             st.markdown("---")
             st.markdown("### 📋 各租戶訂閱明細與帳款清單 (Billing Ledger)")
-            
             billing_list = []
             for t_id, v in st.session_state.tenants_db.items():
                 billing_list.append({
@@ -362,7 +359,6 @@ if st.session_state.current_portal == "Master":
                     "合約到期日": v["expiry_date"],
                     "繳費狀態": "✅ 已付費 (Active)"
                 })
-            
             with st.container():
                 st.markdown('<div class="card-container">', unsafe_allow_html=True)
                 st.dataframe(pd.DataFrame(billing_list), use_container_width=True)
