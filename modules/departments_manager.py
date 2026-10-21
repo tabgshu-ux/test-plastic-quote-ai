@@ -3,91 +3,139 @@ import pandas as pd
 import uuid
 
 def render_departments_manager(current_tenant):
-    st.markdown("## 🏢 企業部門、海外廠區與組織架構動態管理")
-    st.info("💡 *各家企業的組織與部門皆不相同。您可以在此自由新增、修改或刪除公司部門與廠區據點，系統將即時連動至拼圖模組市集與權限設定。*")
+    st.markdown("## 🏢 裕豐電機：多級組織架構管理（部 ➔ 科 ➔ 組）與模組動態對應")
+    st.info("💡 *支援製造業標準的多級階層組織（事業群 ➔ 部 ➔ 科 ➔ 組/班），並可將相同的作業功能彈性指派到任何層級。*")
     
-    # 確保資料結構存在
-    if "org_nodes" not in current_tenant:
-        current_tenant["org_nodes"] = [
-            {"id": "node_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
-            {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 工程製造", "parent": "董事長室"},
-            {"id": "node_vn", "name": "越南平陽廠區", "type": "🏭 製造廠區", "parent": "董事長室"}
+    # 初始化多級組織樹狀結構資料庫
+    if "hierarchical_org_tree" not in current_tenant:
+        current_tenant["hierarchical_org_tree"] = [
+            {
+                "id": "div_01",
+                "level": "1級-事業群/處",
+                "name": "生產製造事業群",
+                "parent": "董事長室",
+                "sub_departments": [
+                    {
+                        "dept_name": "配電盤製造部 (2級-部)",
+                        "sections": [
+                            {
+                                "sec_name": "高壓盤組裝科 (3級-科)",
+                                "groups": ["第一作業班 (4級-組)", "第二測試班 (4級-組)"]
+                            },
+                            {
+                                "sec_name": "低壓盤配線科 (3級-科)",
+                                "groups": ["焊接組", "佈線組"]
+                            }
+                        ]
+                    }
+                ],
+                "assigned_modules": ["MES 電機製造執行與車間排程", "工地師傅手機快速回報"]
+            }
         ]
 
-    tab_add, tab_manage = st.tabs(["➕ 1. 新增部門或廠區", "📋 2. 現有部門列表與維護 (CRUD)"])
-    
-    # ==================== 1. 新增功能 (Create) ====================
-    with tab_add:
+    master_available_modules = [
+        "👑 老闆級即時經營戰情室 (Executive BI)",
+        "💼 商務接單與多幣別報價管理",
+        "🏭 MES 電機製造執行與車間排程",
+        "📱 工地師傅手機快速回報 (Mobile Field Worker)",
+        "🖱️ 組織架構圖與節點管理",
+        "👥 員工帳號與權限管理 (RBAC)",
+        "🎨 企業品牌識別與 Logo 自訂",
+        "📦 智慧倉儲與物料叫料管理",
+        "💰 財務應收應付與電子發票系統"
+    ]
+
+    tab_tree, tab_assign = st.tabs(["🌳 1. 多級組織架構維護（部、科、組）", "🧩 2. 各部門/科組功能模組複用市集"])
+
+    # ==================== 1. 多級組織架構維護 ====================
+    with tab_tree:
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### ➕ 新增組織節點（部門 / 廠區 / 辦事處）")
+        st.markdown("### 🌳 建立與管理多級組織（部 ➔ 科 ➔ 組）")
         
-        with st.form("add_dept_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                new_name = st.text_input("部門或廠區名稱 (Name)", placeholder="例: 品管部、越南河內倉庫...")
-                node_type = st.selectbox(
-                    "節點屬性類型",
-                    [
-                        "👑 核心管理層 (Management)",
-                        "⚙️ 工程與製造 (Engineering & Plant)",
-                        "💼 業務與商務部 (Sales & Commerce)",
-                        "💰 財務與會計部 (Finance)",
-                        "📦 倉儲與物流部 (Warehouse & Logistics)",
-                        "🛡️ 工安與品管部 (QA & Safety)",
-                        "🌍 海外廠區 / 辦事處 (Overseas Plant/Branch)"
-                    ]
-                )
-            with col2:
-                # 取得現有節點作為父層選項
-                parent_options = [n["name"] for n in current_tenant["org_nodes"]]
-                parent_node = st.selectbox("上級歸屬部門 (Parent Node)", ["無 (頂層集團)"] + parent_options)
-                currency_scope = st.selectbox("預設記帳幣別", ["USD (美元)", "VND (越南盾)", "RMB (人民幣)", "TWD (新台幣)"])
+        with st.form("multi_level_org_form"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                t1_div = st.text_input("1 級：事業群 / 處名稱", placeholder="例: 工程技術事業群")
+            with c2:
+                t2_dept = st.text_input("2 級：部名稱 (Department)", placeholder="例: 變壓器設計部")
+            with c3:
+                t3_sec = st.text_input("3 級：科名稱 (Section)", placeholder="例: 繞線技術科")
                 
-            if st.form_submit_button("💾 確認新增部門至資料庫", type="primary", use_container_width=True):
-                if new_name.strip():
-                    new_id = f"node_{uuid.uuid4().hex[:8]}"
-                    current_tenant["org_nodes"].append({
-                        "id": new_id,
-                        "name": new_name.strip(),
-                        "type": node_type,
-                        "parent": parent_node
-                    })
-                    st.success(f"🎉 成功新增部門/廠區【{new_name.strip()}】！已同步至全系統組織架構。")
+            t4_groups = st.text_input("4 級：組 / 班名稱 (可用逗號分隔)", placeholder="例: A班, B班, 特殊繞線組")
+            
+            if st.form_submit_button("💾 新增至多級組織樹", type="primary", use_container_width=True):
+                if t1_div.strip() and t2_dept.strip():
+                    groups_list = [g.strip() for g in t4_groups.split(",") if g.strip()]
+                    
+                    # 尋找是否已有此 1 級事業群
+                    existing_div = next((d for d in current_tenant["hierarchical_org_tree"] if d["name"] == t1_div.strip()), None)
+                    
+                    if existing_div:
+                        # 檢查 2 級部是否存在
+                        existing_dept = next((dp for dp in existing_div["sub_departments"] if dp["dept_name"] == t2_dept.strip()), None)
+                        if existing_dept:
+                            if t3_sec.strip():
+                                existing_dept["sections"].append({"sec_name": t3_sec.strip(), "groups": groups_list})
+                        else:
+                            existing_div["sub_departments"].append({
+                                "dept_name": t2_dept.strip(),
+                                "sections": [{"sec_name": t3_sec.strip(), "groups": groups_list}] if t3_sec.strip() else []
+                            })
+                    else:
+                        current_tenant["hierarchical_org_tree"].append({
+                            "id": f"div_{uuid.uuid4().hex[:6]}",
+                            "level": "1級-事業群/處",
+                            "name": t1_div.strip(),
+                            "parent": "董事長室",
+                            "sub_departments": [{
+                                "dept_name": t2_dept.strip(),
+                                "sections": [{"sec_name": t3_sec.strip(), "groups": groups_list}] if t3_sec.strip() else []
+                            }],
+                            "assigned_modules": []
+                        })
+                        
+                    st.success(f"🎉 成功建立多級組織：【{t1_div}】➔ 【{t2_dept}】➔ 【{t3_sec}】！")
                     st.rerun()
                 else:
-                    st.error("❌ 請輸入有效的部門或廠區名稱！")
-        st.markdown('</div>', unsafe_allow_html=True)
+                    st.error("❌ 請至少填寫 1 級事業群與 2 級部門名稱！")
         
-    # ==================== 2. 查看、修改與刪除 (Read, Update, Delete) ====================
-    with tab_manage:
-        st.markdown('<div class="card-container">', unsafe_allow_html=True)
-        st.markdown("### 📋 現有部門與廠區組織清單")
-        
-        df_nodes = pd.DataFrame(current_tenant["org_nodes"])
-        
-        # 互動式表格編輯與查看
-        edited_df = st.data_editor(
-            df_nodes,
-            num_rows="dynamic",
-            use_container_width=True,
-            key="dept_data_editor"
-        )
-        
-        # 同步更新編輯結果
-        if st.buttun_update_saved := st.button("💾 儲存表格修改變更", type="primary"):
-            current_tenant["org_nodes"] = edited_df.to_dict(orient="records")
-            st.success("✅ 組織架構資料已成功更新並寫入資料庫！")
-            st.rerun()
-            
         st.markdown("---")
-        st.markdown("### 🗑️ 指定刪除部門或廠區")
-        col_d1, col_d2 = st.columns([2, 1])
-        with col_d1:
-            del_target = st.selectbox("選擇要移除的部門/廠區", [n["name"] for n in current_tenant["org_nodes"] if n["name"] != "董事長室"])
-        with col_d2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🗑️ 確認刪除此部門", type="secondary"):
-                current_tenant["org_nodes"] = [n for n in current_tenant["org_nodes"] if n["name"] != del_target]
-                st.success(f"🗑️ 已成功移除部門【{del_target}】。")
+        st.markdown("### 📋 現有企業多級組織樹檢視")
+        for div in current_tenant["hierarchical_org_tree"]:
+            st.markdown(f"**🏢 1級: {div['name']}**")
+            for dept in div.get("sub_departments", []):
+                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;┗ 📂 *2級-部*: `{dept['dept_name']}`")
+                for sec in dept.get("sections", []):
+                    g_str = ", ".join(sec['groups']) if sec['groups'] else "無下屬組別"
+                    st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;┗ 📑 *3級-科*: `{sec['sec_name']}` ➔ 👥 *4級-組*: [{g_str}]")
+            mods_assigned = ", ".join(div.get("assigned_modules", [])) or "尚未指派模組"
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;🧩 *已指派功能模組*: `{mods_assigned}`")
+            st.markdown("---")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ==================== 2. 功能模組跨部門/科組複用市集 ====================
+    with tab_assign:
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.markdown("### 🛒 跨部門功能模組彈性指派（同一個功能可在多個部門共用）")
+        
+        div_names = [d["name"] for d in current_tenant["hierarchical_org_tree"]]
+        target_div = st.selectbox("選擇要指派功能的 1級/2級 事業群與部門", div_names)
+        
+        selected_obj = next(d for d in current_tenant["hierarchical_org_tree"] if d["name"] == target_div)
+        
+        with st.form(f"form_multi_mod_{target_div}"):
+            current_mods = selected_obj.get("assigned_modules", [])
+            selected_new_mods = []
+            
+            st.markdown(f"##### 📌 勾選【{target_div}】及其底下所有科、組可使用的 ERP 功能")
+            cols = st.columns(2)
+            for idx, mod in enumerate(master_available_modules):
+                with cols[idx % 2]:
+                    if st.checkbox(mod, value=mod in current_mods, key=f"multi_chk_{target_div}_{idx}"):
+                        selected_new_mods.append(mod)
+                        
+            if st.form_submit_button(f"💾 儲存【{target_div}】的功能模組對應", type="primary", use_container_width=True):
+                selected_obj["assigned_modules"] = list(set(selected_new_mods))
+                st.success(f"🎉 儲存成功！【{target_div}】已成功掛載 `{len(selected_new_mods)}` 項功能模組。")
                 st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
