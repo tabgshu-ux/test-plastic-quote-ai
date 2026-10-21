@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# 引入裕豐內部各部門模組
+# 引入各大部門模組
 from modules.executive_bi import render_executive_bi
 from modules.pos_retail import render_pos_retail
 from modules.mes_factory import render_mes_factory
@@ -9,6 +9,10 @@ from modules.app_store import render_app_store
 from modules.org_chart import render_org_chart
 from modules.rbac import render_rbac
 from modules.departments_manager import render_departments_manager
+
+# 引入總經理室戰情室與租戶 IT 授權模組
+import executive_office
+import system_licensing
 
 st.set_page_config(
     page_title="裕豐電機工業 (Reetech Industrial) ERP 系統",
@@ -25,11 +29,22 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 初始化裕豐登入狀態
+# 初始化登入狀態
 if "tenant_logged_in" not in st.session_state:
     st.session_state.tenant_logged_in = False
 if "current_tenant_user" not in st.session_state:
     st.session_state.current_tenant_user = None
+
+# 初始化租戶動態勾選的模組清單（預設全部開啟）
+if "tenant_active_modules" not in st.session_state:
+    st.session_state.tenant_active_modules = [
+        "總經理室 (Executive Office)",
+        "管理部 (Management Dept)",
+        "全方位電子簽核中心 (Approval Center)",
+        "工程與設計管理中心 (Engineering & Design Center)",
+        "生產部 (Production Dept)",
+        "資訊管理部 (IT & System)"
+    ]
 
 # 裕豐電機工業專屬租戶資料
 tenant_info = {
@@ -41,7 +56,7 @@ tenant_info = {
     ]
 }
 
-# ==================== 側邊欄導覽 ====================
+# ==================== 側邊欄動態選單導覽 ====================
 with st.sidebar:
     st.image(tenant_info["logo_url"], width=64)
     st.markdown(f"### {tenant_info['name']}")
@@ -60,18 +75,19 @@ with st.sidebar:
     st.markdown("---")
     if st.session_state.tenant_logged_in:
         st.markdown("讀取選擇一個部門/系統：")
-        tenant_menu = st.radio(
-            "部門選單",
-            [
-                "總經理室 (Executive Office)",
-                "管理部 (Management Dept)",
-                "全方位電子簽核中心 (Approval Center)",
-                "工程與設計管理中心 (Engineering & Design Center)",
-                "生產部 (Production Dept)",
-                "資訊管理部 (IT & System)"
-            ],
-            label_visibility="collapsed"
-        )
+        
+        # 🔗 核心動態連動：只抓取租戶 IT 在後台有勾選啟用的模組清單來生成選項
+        allowed_menu_options = st.session_state.tenant_active_modules
+        
+        if allowed_menu_options:
+            tenant_menu = st.radio(
+                "部門選單",
+                allowed_menu_options,
+                label_visibility="collapsed"
+            )
+        else:
+            st.warning("⚠️ 目前無任何啟用模組，請至「資訊管理部」勾選開通。")
+            tenant_menu = "資訊管理部 (IT & System)"
     else:
         tenant_menu = "請先登入"
 
@@ -93,8 +109,9 @@ if not st.session_state.tenant_logged_in:
             else:
                 st.error("帳號或密碼錯誤")
 else:
+    # 依照租戶選單動態路由載入對應模組
     if "總經理室" in tenant_menu:
-        render_executive_bi(tenant_info)
+        executive_office.show(tenant_info)
     elif "管理部" in tenant_menu:
         render_pos_retail(tenant_info)
     elif "全方位電子簽核" in tenant_menu:
@@ -103,5 +120,11 @@ else:
         render_mes_factory(tenant_info)
     elif "生產部" in tenant_menu:
         render_org_chart(tenant_info)
-    else:
-        render_rbac(tenant_info)
+    elif "資訊管理部" in tenant_menu:
+        # 這裡整合原本的 RBAC 權限與我們專屬的 system_licensing (租戶自主勾選模組與 API 設定)
+        st.markdown("### 💻 資訊管理部 (IT & System) 專屬後台")
+        it_tab1, it_tab2 = st.tabs(["🔒 組織權限與角色管理 (RBAC)", "🧩 租戶模組勾選與外部 API 設定"])
+        with it_tab1:
+            render_rbac(tenant_info)
+        with it_tab2:
+            system_licensing.show(tenant_info)
