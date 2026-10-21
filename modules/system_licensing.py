@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import datetime
@@ -24,9 +23,10 @@ st.markdown(MOBILE_USER_MGMT_CSS, unsafe_allow_html=True)
 USER_MGMT_I18N = {
     "繁體中文": {
         "title": "🔒 IT 管理中心 - 組織權限與部門模組授權",
-        "caption": "裕豐電機（越南西寧廠）組織架構與部門動態管理中心。",
+        "caption": "裕豐電機（越南西寧廠）組織架構、部門動態管理與總經理室外部 API 參數設定中心。",
         "tab_roles": "⚙️ 組織角色與部門權限設定 (RBAC)",
         "tab_db_config": "🔌 跨資料庫連線與串聯設定 (Database Bridge)",
+        "tab_market_api": "📈 全球股市與金屬 API 設定",
         "tab_audit": "📊 系統稽核日誌 (Audit Logs)",
         "success_connected": "PostgreSQL / Supabase 資料庫連線正常！",
         "db_not_connected": "ℹ️ 提示：目前使用安全記憶體模式運行。",
@@ -164,6 +164,7 @@ def delete_role_db(engine, role_name):
 
 DEPARTMENT_MODULE_TREE = {
     "📈 總經理室 (Executive Office)": [
+        "📈 總經理室戰情室 (AR/AP, 股市與原物料)",
         "🔴 原料價格與 Gemini 智慧採購顧問",
         "📊 財務類顯示資料 (AR/AP & P&L)",
         "⚡ 工程專案進度與現場異常監控"
@@ -207,7 +208,8 @@ DEPARTMENT_MODULE_TREE = {
     "💻 資訊管理部 (IT & System)": [
         "🔒 系統角色權限與模組開關設定",
         "🎛️ 客戶 ERP 模組授權與功能開關",
-        "🔌 跨資料庫連線與設定管理"
+        "🔌 跨資料庫連線與設定管理",
+        "📈 全球股市與原物料 API 設定"
     ]
 }
 
@@ -227,8 +229,8 @@ def render_user_management_page(engine=None, lang="繁體中文", **kwargs):
 
     roles_dict, available_depts, is_connected, msg = fetch_roles(engine, L)
 
-    tab_roles, tab_db_config, tab_audit = st.tabs([
-        L["tab_roles"], L["tab_db_config"], L["tab_audit"]
+    tab_roles, tab_db_config, tab_market_api, tab_audit = st.tabs([
+        L["tab_roles"], L["tab_db_config"], L["tab_market_api"], L["tab_audit"]
     ])
 
     with tab_roles:
@@ -279,7 +281,6 @@ def render_user_management_page(engine=None, lang="繁體中文", **kwargs):
 
         st.markdown(f"#### {L['step1_title']}")
         
-        # 🔘 將部門選擇改為「用點的」單選按鈕 (Radio Buttons)
         dept_options_list = available_depts + [L["add_new_dept_opt"]]
         curr_dept_idx = dept_options_list.index(default_dept) if default_dept in dept_options_list else 0
         
@@ -334,11 +335,11 @@ def render_user_management_page(engine=None, lang="繁體中文", **kwargs):
                     st.rerun()
 
     # ----------------------------------------------------
-    # 🔌 Tab 2: 跨資料庫連線與串聯設定 (Database Bridge)
+    # 🔌 Tab 2: 跨資料庫連線與設定 (Database Bridge)
     # ----------------------------------------------------
     with tab_db_config:
         st.markdown("### 🔌 外部資料庫與異質資料來源串聯設定 (Database Bridge)")
-        st.info("💡 說明：在此處您可以設定與擴充對外連結的其他資料庫（例如：廠房舊系統 MySQL、總公司 SQL Server 或外部供應商 API 資料庫），供系統進行跨庫數據交換與自動同步。")
+        st.info("💡 說明：在此處您可以設定與擴充對外連結的其他資料庫（例如：廠房舊系統 MySQL、總公司 SQL Server 或外部供應商 API 資料庫）。")
 
         with st.form("form_db_bridge_config"):
             col_b1, col_b2 = st.columns(2)
@@ -406,7 +407,31 @@ def render_user_management_page(engine=None, lang="繁體中文", **kwargs):
                 st.info("目前尚無額外資料庫連線紀錄。")
 
     # ----------------------------------------------------
-    # 📊 Tab 3: 系統稽核日誌 (Audit Logs)
+    # 📈 Tab 3: 全球股市與金屬 API 參數設定
+    # ----------------------------------------------------
+    with tab_market_api:
+        st.markdown("### 🔌 全球股市與金屬原物料 API 串聯與抓取頻率設定")
+        st.info("💡 管理員專用：在此設定總經理室戰情室所需的股市與金屬行情 API 金鑰，並可調整資料抓取頻率以平衡伺服器負載。")
+
+        if "exec_config" not in st.session_state:
+            st.session_state.exec_config = {
+                "api_provider": "Alpha Vantage / LME Metal API",
+                "api_key": "",
+                "fetch_interval_min": 5,
+            }
+
+        with st.form("form_market_api_config"):
+            api_key_input = st.text_input("輸入股市與金屬 API Key (例如 Alpha Vantage / FMP API Key)", value=st.session_state.exec_config.get("api_key", ""))
+            fetch_freq = st.slider("資料自動擷取頻率 (分鐘 / Minutes)", min_value=1, max_value=60, value=st.session_state.exec_config.get("fetch_interval_min", 5))
+            st.info("💡 設定為 1 分鐘將提供接近即時的行情，但會增加伺服器網路請求負荷；建議生產環境設定為 5 ~ 15 分鐘。")
+            
+            if st.form_submit_button("💾 儲存 API 與擷取頻率設定", type="primary", use_container_width=True):
+                st.session_state.exec_config["api_key"] = api_key_input
+                st.session_state.exec_config["fetch_interval_min"] = fetch_freq
+                st.success("🎉 全球股市與金屬 API 參數已成功更新！總經理室戰情室將自動依此頻率抓取最新數據。")
+
+    # ----------------------------------------------------
+    # 📊 Tab 4: 系統稽核日誌 (Audit Logs)
     # ----------------------------------------------------
     with tab_audit:
         st.markdown(f"### {L['tab_audit']}")
@@ -414,18 +439,6 @@ def render_user_management_page(engine=None, lang="繁體中文", **kwargs):
             st.dataframe(pd.DataFrame(st.session_state.audit_logs_db), use_container_width=True)
         else:
             st.info("目前尚無稽核日誌紀錄。")
-          
-          # 股市 API 與擷取頻率後台設定片段
-st.markdown("### 🔌 全球股市 API 串聯與抓取頻率設定 (Market Data API Config)")
-with st.form("form_market_api_config"):
-    api_key_input = st.text_input("輸入股市 API Key (例如 Alpha Vantage / FMP API Key)", value=st.session_state.get("exec_config", {}).get("api_key", ""))
-    fetch_freq = st.slider("資料自動擷取頻率 (分鐘 / Minutes)", min_value=1, max_value=60, value=5)
-    st.info("💡 設為 1 分鐘將提供接近即時的行情，但會增加伺服器網路請求負荷；建議生產環境設定為 5 ~ 15 分鐘。")
-    
-    if st.form_submit_button("💾 儲存 API 與頻率設定", type="primary"):
-        st.session_state.exec_config["api_key"] = api_key_input
-        st.session_state.exec_config["fetch_interval_min"] = fetch_freq
-        st.success("🎉 全球股市 API 與抓取頻率已成功更新！總經理室將自動依此頻率抓取最新數據。")
 
 def show(engine=None, lang="繁體中文", **kwargs):
     render_user_management_page(engine=engine, lang=lang, **kwargs)
