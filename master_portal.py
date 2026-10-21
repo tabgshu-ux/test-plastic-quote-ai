@@ -10,7 +10,7 @@ def render_master_portal():
         </style>
     """, unsafe_allow_html=True)
 
-    # 初始化 Master 專屬全域狀態
+    # 初始化 Master 專屬全域狀態（預設強制未登入，確保每次進來都要輸入密碼）
     if "master_logged_in" not in st.session_state:
         st.session_state.master_logged_in = False
     if "master_role" not in st.session_state:
@@ -24,6 +24,7 @@ def render_master_portal():
             {"name": "財務部專員", "account": "finance", "password": "finance123", "role": "💰 總控台財務專員 (Master Finance)", "status": "啟用中"}
         ]
 
+    # 確保 tenants_db 完整包含 server_ip 與 port，避免 KeyError
     if "tenants_db" not in st.session_state:
         st.session_state.tenants_db = {
             "tenant_vina_group": {
@@ -37,6 +38,15 @@ def render_master_portal():
                 "api_status": "🟢 連線正常 (Online)"
             }
         }
+    else:
+        # 如果舊資料沒有 server_ip，自動補上預設值避免報錯
+        for t_id in st.session_state.tenants_db:
+            if "server_ip" not in st.session_state.tenants_db[t_id]:
+                st.session_state.tenants_db[t_id]["server_ip"] = "192.168.1.100"
+            if "port" not in st.session_state.tenants_db[t_id]:
+                st.session_state.tenants_db[t_id]["port"] = "8501"
+            if "api_status" not in st.session_state.tenants_db[t_id]:
+                st.session_state.tenants_db[t_id]["api_status"] = "🟢 連線正常 (Online)"
 
     # ==================== 總控台側邊欄導覽 ====================
     with st.sidebar:
@@ -113,7 +123,6 @@ def render_master_portal():
                             st.markdown(f"- **目前指定主機 IP**: `http://{t_data['server_ip']}:{t_data['port']}` | 狀態: {t_data['api_status']}")
                         with col2:
                             st.markdown("<br>", unsafe_allow_html=True)
-                            # 修正此處的 key 語法錯誤 (key: 改為 key=)
                             if st.button(f"🔗 測試 API 串聯", key=f"test_api_{t_id}"):
                                 st.success(f"✅ 成功連線至 {t_data['name']} 的伺服器 ({t_data['server_ip']})！")
                         st.markdown('</div>', unsafe_allow_html=True)
@@ -130,9 +139,9 @@ def render_master_portal():
                     with st.form("update_ip_form"):
                         c1, c2 = st.columns(2)
                         with c1:
-                            new_ip = st.text_input("伺服器 IP 位址 (Server IP)", value=t_obj["server_ip"])
+                            new_ip = st.text_input("伺服器 IP 位址 (Server IP)", value=t_obj.get("server_ip", "192.168.1.100"))
                         with c2:
-                            new_port = st.text_input("通訊埠 (Port)", value=t_obj["port"])
+                            new_port = st.text_input("通訊埠 (Port)", value=t_obj.get("port", "8501"))
                         
                         if st.form_submit_button("💾 儲存並更新通訊路由", type="primary", use_container_width=True):
                             st.session_state.tenants_db[selected_t]["server_ip"] = new_ip
@@ -172,5 +181,5 @@ def render_master_portal():
                     st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.markdown("## 💰 總控台：平台財務營收與租戶帳單結算中心")
-            total_mrr = sum([v["price_usd"] for v in st.session_state.tenants_db.values()])
+            total_mrr = sum([v.get("price_usd", 0) for v in st.session_state.tenants_db.values()])
             st.metric("📊 本月總訂閱營收 (MRR)", f"$ {total_mrr:,.2f} USD")
