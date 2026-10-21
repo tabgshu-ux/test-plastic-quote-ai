@@ -91,7 +91,6 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 若已登入總控且已進入特定租戶，顯示該租戶的部門動態選單
     if st.session_state.master_logged_in and st.session_state.selected_tenant:
         st.markdown("##### 🏢 租戶端部門選單：")
         allowed_menu_options = st.session_state.get("tenant_active_modules", [])
@@ -104,7 +103,7 @@ with st.sidebar:
 
 # ==================== 主畫面邏輯：雙層架構路由 ====================
 
-# 1. 尚未登入總控台：顯示總控登入畫面
+# 1. 尚未登入總控台
 if not st.session_state.master_logged_in:
     st.markdown("## 🔐 AI ERP 系統 - 平台總控管理員登入")
     st.markdown("---")
@@ -118,36 +117,52 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("總控管理員帳號或密碼錯誤 (預設 admin / 123)")
 
-# 2. 已登入總控台，但尚未選擇特定租戶：顯示總控台首頁（租戶合約總覽與切換）
+# 2. 已登入總控台，但尚未選擇特定租戶：提供「即時搜尋框」與「租戶清單快速點擊」
 elif not st.session_state.selected_tenant:
     st.markdown("### 🏢 平台總控台 - 全球企業租戶（Tenant）總覽與合約管理")
-    st.caption("在此處您可以檢視所有客戶租戶合約、新增租戶，或點擊進入指定租戶的內部作業環境。")
+    st.caption("面對大量租戶時，請直接在下方輸入關鍵字搜尋，或從表格中直接選取進入。")
 
-    # 顯示目前所有租戶清單
+    # 🔍 新增：租戶關鍵字即時搜尋框（解決下拉選單拉到天荒地老的問題）
+    search_query = st.text_input("🔍 快速搜尋租戶（可輸入公司名稱、代碼或統編）：", placeholder="例如：裕豐 或 TENANT-001")
+
     tenants = st.session_state.tenant_licensing_db
-    df_tenants = pd.DataFrame(tenants)
-    st.dataframe(df_tenants, use_container_width=True, hide_index=True)
+    
+    # 過濾租戶
+    if search_query:
+        filtered_tenants = [
+            t for t in tenants 
+            if search_query.lower() in t["company_name"].lower() 
+            or search_query.lower() in t["tenant_id"].lower() 
+            or search_query.lower() in t["tax_id"].lower()
+        ]
+    else:
+        filtered_tenants = tenants
 
-    st.markdown("---")
-    st.markdown("### 🚀 快速進入租戶端作業環境")
-    tenant_names = [t["company_name"] for t in tenants]
-    chosen_t = st.selectbox("選擇要進入的企業租戶：", tenant_names)
+    # 顯示過濾後的租戶表格
+    if filtered_tenants:
+        df_tenants = pd.DataFrame(filtered_tenants)
+        st.dataframe(df_tenants, use_container_width=True, hide_index=True)
 
-    col_enter, col_new = st.columns(2)
-    with col_enter:
-        if st.button("🚀 進入該租戶工作環境", type="primary", use_container_width=True):
-            st.session_state.selected_tenant = chosen_t
-            st.rerun()
-    with col_new:
-        if st.button("➕ 註冊新企業租戶合約", use_container_width=True):
-            st.info("您可以直接進入該租戶的「資訊管理部」進行合約與模組開關設定。")
+        st.markdown("---")
+        st.markdown("### 🚀 點擊下方按鈕直接進入對應租戶環境：")
+        
+        # 迴圈動態產生每一個租戶的快速進入按鈕（適合幾十家到上百家企業過濾後快速點擊）
+        for t in filtered_tenants:
+            col_info, col_btn = [st.columns([3, 1])[0], st.columns([3, 1])[1]]
+            with col_info:
+                st.markdown(f"**{t['company_name']}** (`{t['tenant_id']}`) | 方案：{t['plan']}")
+            with col_btn:
+                if st.button(f"🚀 進入", key=f"btn_enter_{t['tenant_id']}", use_container_width=True):
+                    st.session_state.selected_tenant = t["company_name"]
+                    st.rerun()
+    else:
+        st.warning("⚠️ 找不到符合搜尋條件的企業租戶。")
 
-# 3. 已進入特定租戶環境：渲染該租戶內部的各部門與模組
+# 3. 已進入特定租戶環境
 else:
     st.markdown(f"### ⚡ 當前操作租戶環境：`{st.session_state.selected_tenant}`")
     st.markdown("---")
 
-    # 依照租戶選單動態路由載入對應模組
     if "總經理室" in tenant_menu:
         executive_office.show({"name": st.session_state.selected_tenant})
     elif "管理部" in tenant_menu:
