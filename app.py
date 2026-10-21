@@ -3,48 +3,52 @@ import streamlit as st
 st.set_page_config(
     page_title="SaaS Platform & Enterprise ERP Gateway",
     page_icon="🚪",
-    layout="centered"
+    layout="wide"
 )
 
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .card-container { background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); margin-bottom: 20px; text-align: center; }
-    h1 { color: #1e293b; }
-    .stButton>button { border-radius: 8px; font-weight: 600; padding: 10px 24px; }
-    </style>
-""", unsafe_allow_html=True)
+# 初始化全域路由狀態
+if "active_portal" not in st.session_state:
+    st.session_state.active_portal = None
 
-st.markdown("<h1 style='text-align: center;'>🌐 SaaS 企業級多租戶 AI-ERP 平台</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #64748b;'>請選擇您要進入的系統入口（多檔案模組化架構）</p>", unsafe_allow_html=True)
+# 如果尚未選擇入口，才顯示首頁閘道選擇器
+if st.session_state.active_portal is None:
+    st.markdown("""
+        <style>
+        .main { background-color: #f8f9fa; }
+        .card-container { background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); margin-bottom: 20px; text-align: center; }
+        h1 { color: #1e293b; }
+        .stButton>button { border-radius: 8px; font-weight: 600; padding: 10px 24px; }
+        </style>
+    """, unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown('<div class="card-container">', unsafe_allow_html=True)
-    st.markdown("### 👑 平台總控台 (Master)")
-    st.markdown("專屬平台開發商與財務人員<br>管理全球租戶、定價與權限", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🌐 SaaS 企業級多租戶 AI-ERP 平台</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #64748b;'>嚴格資安隔離：平台總控與企業租戶獨立運行</p>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🚀 進入總控台", type="primary", use_container_width=True):
-        st.session_state.active_portal = "master"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
-with col2:
-    st.markdown('<div class="card-container">', unsafe_allow_html=True)
-    st.markdown("### 🏭 企業租戶 ERP (Tenant)")
-    st.markdown("專屬企業內部員工與主管<br>執行進銷存、POS、戰情室與 MES", unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🚀 進入租戶系統", type="primary", use_container_width=True):
-        st.session_state.active_portal = "tenant"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
 
-# 路由狀態檢查與安全載入
-if "active_portal" in st.session_state:
-    st.markdown("---")
+    with col1:
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.markdown("### 👑 平台總控台 (Master)")
+        st.markdown("專屬平台開發商與財務人員<br>管理全球租戶、定價與伺服器 IP", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚀 進入總控台", type="primary", use_container_width=True):
+            st.session_state.active_portal = "master"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.markdown("### 🏭 企業租戶 ERP (Tenant)", unsafe_allow_html=True)
+        st.markdown("專屬企業內部員工與主管<br>執行裕豐電機製造、報價與 MES", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🚀 進入租戶系統", type="primary", use_container_width=True):
+            st.session_state.active_portal = "tenant"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    # 進入對應系統後，完全阻斷閘道首頁，實現實體隔離
     if st.session_state.active_portal == "master":
         import master_portal
         master_portal.render_master_portal()
