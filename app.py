@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (總控台方案定價樂高市集 + 資料庫持久化)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (獨立大合集模組庫 + 方案定價與部門市集動態串聯)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP Pricing Hub",
+    page_title="SaaS Enterprise Modular AI-ERP Master App Store",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -79,23 +79,53 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化全域資料與方案定價資料庫 (Master Pricing & Plans DB)
+# ==============================================================================
+# 🌟 【核心獨立模組庫】市面上所有企業與水電工程 ERP 功能大合集 (Master Module Library)
+# ==============================================================================
+if "master_module_library" not in st.session_state:
+    st.session_state.master_module_library = {
+        "📈 高階決策與戰情室": [
+            "全局原物料即時行情看板", "國際匯率多幣別換算中心", "全球股市財經大盤監控", 
+            "綜合損益表與資產負債表", "企業 KPI 與多維度 BI 戰情室", "高階決策審核簽核流", "跨部門營運總控台"
+        ],
+        "📦 供應鏈與進銷存 (SCM)": [
+            "智能進銷存與批號效期管理", "全球供應鏈採購比價系統", "倉儲物流與條碼掃描(WMS)", 
+            "供應商交期與品質評鑑系統", "進出口報關與海運物流追蹤", "條碼/QR Code資產標籤列印", "PDA 行動叫料與驗收"
+        ],
+        "💰 財會與生產核心": [
+            "總帳會計、傳票與會計師報表", "生產排程、BOM表與製程智考", "CRM 客戶關係與外貿商機管理", 
+            "人事薪酬、勞健保與考勤排班", "電子簽核流程引擎 (BPM)", "AI 智慧語音助理與跨國翻譯", "應收/應付帳款(AR/AP)管理"
+        ],
+        "⚙️ 水電工程與專案特化": [
+            "水電工程專案與工項預算編號", "工程估驗與計價請款追蹤", "工地現場點工點料管理", 
+            "施工日報表與工時扣減聯動", "外包商工班計價與合約管理", "設備維修履歷與保養排程", "工地物聯網(IoT)設備監控"
+        ]
+    }
+
+# 總控台方案定價與預設模組資料庫
 if "global_plans_db" not in st.session_state:
     st.session_state.global_plans_db = {
         "🚀 旗艦版 (Enterprise)": {
             "base_price": 250.0,
             "description": "適合大型集團與跨國水電工程企業，解鎖全功能與無限部門掛載",
-            "included_modules": ["全局戰情室與BI分析", "高階決策審核", "水電工程專案與預算", "工程估驗與計價請款", "全局資金水位管理"]
+            "included_modules": [
+                "全局原物料即時行情看板", "高階決策審核簽核流", "智能進銷存與批號效期管理", 
+                "總帳會計、傳票與會計師報表", "水電工程專案與工項預算編號", "工程估驗與計價請款追蹤"
+            ]
         },
         "💼 正式商業版 (Professional)": {
             "base_price": 150.0,
             "description": "適合中型企業與成長中公司，支援完整進銷存與財會核心",
-            "included_modules": ["高階決策審核", "智能進銷存管理", "總帳會計與報表", "人事組織架構管理"]
+            "included_modules": [
+                "高階決策審核簽核流", "智能進銷存與批號效期管理", "總帳會計、傳票與會計師報表", "人事薪酬、勞健保與考勤排班"
+            ]
         },
         "📦 標準訂閱版 (Subscription)": {
             "base_price": 80.0,
             "description": "適合小型店家或單一據點，靈活按需勾選樂高模組",
-            "included_modules": ["智能進銷存管理", "人事組織架構管理"]
+            "included_modules": [
+                "智能進銷存與批號效期管理", "人事薪酬、勞健保與考勤排班"
+            ]
         }
     }
 
@@ -124,34 +154,6 @@ ALL_ENTERPRISE_DEPARTMENTS = [
     "💻 資訊技術與系統開發部 (IT & Software Development)"
 ]
 
-DEPARTMENT_MODULE_CATALOG = {
-    "👑 董事長室 / 總經理室 (Executive & Board Room)": {
-        "col1": ["全局戰情室與BI分析", "高階決策審核", "營運總控台", "跨部門協調"],
-        "col2": ["智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑"],
-        "col3": ["總帳會計與報表", "生產排程與BOM管理", "CRM客戶關係管理", "人事考勤與薪資計算"]
-    },
-    "👥 人力資源與行政管理部 (HR & Admin Dept)": {
-        "col1": ["人事組織架構管理", "員工考勤打卡與GPS", "多國薪資與勞健保", "教育訓練與考核"],
-        "col2": ["內部公告與公文簽核", "訪客預約與門禁對接", "會議室與車輛預約", "辦公用品請購申領"],
-        "col3": ["AI 履歷篩選助手", "員工滿意度調查", "勞資合規資料庫", "多語言員工App"]
-    },
-    "💰 財務與資本運作部 (Finance Dept)": {
-        "col1": ["全球資金水位管理", "應收帳款(AR)催收", "應付帳款(AP)排程", "銀行融資與LC管理"],
-        "col2": ["子公司合併報表", "稅務申報與發票勾稽", "預算編列與費用控管", "資本支出(CAPEX)追蹤"],
-        "col3": ["AI 異常交易預警", "電子發票與越南紅發票", "自動化傳票生成", "跨國利潤匯出分析"]
-    },
-    "⚙️ 工程與技術服務部 (Engineering & Technical)": {
-        "col1": ["水電工程專案與預算", "工程估驗與計價請款", "工地現場點工點料", "施工日報表與工時扣減"],
-        "col2": ["設備維修履歷保養", "CAD/BIM圖檔協同", "工地現場安衛查核", "外包商工班計價"],
-        "col3": ["AI 工程預算超支預警", "PDA現場叫料系統", "工地物聯網(IoT)監控", "智能施工甘特圖"]
-    },
-    "🏭 生產製造與廠務管理部 (Manufacturing & Plant)": {
-        "col1": ["MES製造執行與報工", "BOM表與用料清單", "產線排程與產能規劃", "製程SOP管理"],
-        "col2": ["設備OEE稼動率預警", "模具壽命與保養維護", "產線計件薪資計算", "車間碳排與能源監控"],
-        "col3": ["AI 產能瓶頸優化", "機器視覺(AI)瑕疵檢測", "AGV無人搬運車派工", "智慧產線看板"]
-    }
-}
-
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
         "tenant_vina_水电": {
@@ -161,8 +163,8 @@ if "tenants_db" not in st.session_state:
             "price_usd": 250,
             "expiry_date": "2027-10-20",
             "dept_modules_db": {
-                "👑 董事長室 / 總經理室 (Executive & Board Room)": ["全局戰情室與BI分析", "高階決策審核"],
-                "⚙️ 工程技術服務部 (Engineering & Technical)": ["水電工程專案與預算", "工程估驗與計價請款"]
+                "👑 董事長室 / 總經理室 (Executive & Board Room)": ["全局原物料即時行情看板", "高階決策審核簽核流"],
+                "⚙️ 工程與技術服務部 (Engineering & Technical)": ["水電工程專案與工項預算編號", "工程估驗與計價請款追蹤"]
             },
             "org_nodes": [
                 {"id": "node_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
@@ -255,7 +257,8 @@ if st.session_state.current_portal == "Master":
                 "地區位置": t_val["region"],
                 "訂閱方案": t_val["plan"],
                 "每月價格 (USD)": t_val["price_usd"],
-                "已啟用功能數": total_active_mods,
+                "組織節點數": len(t_val["org_nodes"]),
+                "已啟用功能總數": total_active_mods,
                 "狀態": "🟢 正常營運"
             })
         df_tenants = pd.DataFrame(tenant_list_data)
@@ -302,19 +305,20 @@ if st.session_state.current_portal == "Master":
             st.markdown('</div>', unsafe_allow_html=True)
 
     else:
-        # ==================== 總控台全新模組：全球定價策略與方案模組自訂 (Pricing App Store) ====================
+        # ==================== 總控台：全功能大合集模組庫與方案定價管理 ====================
         st.markdown("## ⚙️ SaaS 平台總控台：全球定價策略與方案模組自訂 (Pricing App Store)")
-        st.info("💡 *在此處自由自訂【旗艦版】、【正式商業版】與【標準訂閱版】所包含的預設樂高模組，並直接在下方填入並鎖定方案的每月基本訂閱金額！*")
+        st.info("💡 *在此處統一管理【全功能模組大合集庫】，並為【旗艦版】、【正式商業版】與【標準訂閱版】自訂預設解鎖的樂高模組與每月基本定價！*")
         
-        plan_tabs = st.tabs(list(st.session_state.global_plans_db.keys()))
+        plan_tabs = st.tabs(list(st.session_state.global_plans_db.keys()) + ["🌟 管理全平台大合集模組庫 (Master Library)"])
         
-        all_possible_all_modules = [
-            "全局戰情室與BI分析", "高階決策審核", "營運總控台", "跨部門協調",
-            "智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑",
-            "總帳會計與報表", "生產排程與BOM管理", "CRM客戶關係管理", "人事考勤與薪資計算",
-            "水電工程專案與預算", "工程估驗與計價請款", "全方位資金水位管理"
-        ]
+        # 取得全平台獨立模組庫
+        master_lib = st.session_state.master_module_library
         
+        # 將大合集模組庫平鋪展開供方案勾選
+        all_flatten_modules = []
+        for cat_name, mod_list in master_lib.items():
+            all_flatten_modules.extend(mod_list)
+            
         for idx, (plan_name, plan_data) in enumerate(st.session_state.global_plans_db.items()):
             with plan_tabs[idx]:
                 with st.form(f"form_plan_{plan_name}"):
@@ -323,31 +327,46 @@ if st.session_state.current_portal == "Master":
                     p_desc = st.text_input("方案描述說明", value=plan_data["description"], key=f"desc_{plan_name}")
                     p_price = st.number_input("每月基本訂閱金額 (USD $)", value=float(plan_data["base_price"]), step=10.0, key=f"price_{plan_name}")
                     
-                    st.markdown("#### 🧱 選擇此方案預設解鎖的樂高模組 (App Store 組合)")
+                    st.markdown("#### 🧱 從【全功能大合集模組庫】中勾選此方案預設解鎖的模組：")
                     
-                    c_m1, c_m2 = st.columns(2)
+                    # 依據分類整齊呈現複選框
                     selected_plan_mods = []
-                    
-                    half_len = len(all_possible_all_modules) // 2
-                    with c_m1:
-                        for mod in all_possible_all_modules[:half_len]:
-                            if st.checkbox(mod, value=mod in plan_data["included_modules"], key=f"p_mod_{plan_name}_{mod}"):
-                                selected_plan_mods.append(mod)
-                    with c_m2:
-                        for mod in all_possible_all_modules[half_len:]:
-                            if st.checkbox(mod, value=mod in plan_data["included_modules"], key=f"p_mod_{plan_name}_{mod}"):
-                                selected_plan_mods.append(mod)
+                    for cat_name, mod_list in master_lib.items():
+                        st.markdown(f"**{cat_name}**")
+                        cols_m = st.columns(3)
+                        for m_idx, mod in enumerate(mod_list):
+                            with cols_m[m_idx % 3]:
+                                if st.checkbox(mod, value=mod in plan_data["included_modules"], key=f"p_mod_{plan_name}_{mod}"):
+                                    selected_plan_mods.append(mod)
+                        st.markdown("---")
                                 
-                    st.markdown("---")
                     if st.form_submit_button(f"💾 儲存【{plan_name}】定價與模組配置", type="primary", use_container_width=True):
                         st.session_state.global_plans_db[plan_name]["description"] = p_desc
                         st.session_state.global_plans_db[plan_name]["base_price"] = p_price
                         st.session_state.global_plans_db[plan_name]["included_modules"] = selected_plan_mods
                         st.success(f"🎉 成功更新 [{plan_name}] 的方案定價與模組規則！")
                         st.rerun()
+                        
+        # 最後一個 Tab：管理全平台大合集模組庫
+        with plan_tabs[-1]:
+            st.markdown("### 🌟 全平台獨立模組庫管理 (Master Module Library)")
+            st.info("💡 *在此處新增或檢視市面上所有的 ERP 功能模組，新增後所有部門市集與方案定價將自動同步串聯！*")
+            
+            with st.form("add_master_mod_form"):
+                new_cat = st.selectbox("選擇模組分類", list(master_lib.keys()))
+                new_mod_name = st.text_input("新增模組名稱", placeholder="例：AI 智慧工安影像辨識")
+                if st.form_submit_button("➕ 增加至全平台模組庫", type="primary"):
+                    if new_mod_name and new_mod_name not in master_lib[new_cat]:
+                        master_lib[new_cat].append(new_mod_name)
+                        st.success(f"🎉 成功新增模組 [{new_mod_name}] 至大合集庫！")
+                        st.rerun()
+                        
+            st.markdown("#### 目前大合集庫中的所有模組清單：")
+            for cat_n, m_list in master_lib.items():
+                st.markdown(f"**{cat_n}**：`" + "`, `".join(m_list) + "`")
 
 else:
-    # ==================== 個別租戶後台：資料庫持久化串聯模組市集與組織樹 ====================
+    # ==================== 個別租戶後台：動態串聯大合集模組庫的部門市集 ====================
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     
     if "dept_modules_db" not in current_tenant:
@@ -355,7 +374,7 @@ else:
         
     if "樂高積木式模組市集與功能開關" in menu_choice:
         st.markdown(f"## 🧩 {current_tenant['name']}：樂高積木式模組市集與功能開關 (App Store)")
-        st.info("💡 *說明：點選左側任意部門，右側會即時讀取與寫入資料庫，讓您自由勾選或組合該部門專屬的 ERP 功能模組，並即時計費！*")
+        st.info("💡 *說明：點選左側任意部門，右側會自動動態載入【全平台獨立模組庫】，讓您自由勾選該部門專屬的 ERP 功能模組，並即時計費！*")
         
         col_left, col_right = st.columns([1, 2.5])
         
@@ -370,37 +389,24 @@ else:
             
         with col_right:
             clean_dept_name = selected_dept.split('(')[0].strip()
-            st.markdown(f"### 🛒 【{clean_dept_name}】的資料庫模組市集 (App Store)")
+            st.markdown(f"### 🛒 【{clean_dept_name}】的動態模組市集 (App Store)")
             
-            cat_data = DEPARTMENT_MODULE_CATALOG.get(selected_dept, {
-                "col1": ["全局戰情室", "高階決策審核", "營運總控台", "跨部門協調"],
-                "col2": ["智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑"],
-                "col3": ["總帳會計與報表", "生產排程與BOM", "CRM客戶關係管理", "人事考勤與薪資"]
-            })
-            
+            # 直接讀取全平台獨立模組庫
+            master_lib = st.session_state.master_module_library
             saved_dept_mods = current_tenant["dept_modules_db"].get(selected_dept, [])
             
             with st.form(f"form_store_{selected_dept}"):
-                mc1, mc2, mc3 = st.columns(3)
                 curr_selected = []
                 
-                with mc1:
-                    st.markdown("#### 📈 高階決策與行情")
-                    for mod in cat_data["col1"]:
-                        if st.checkbox(mod, value=mod in saved_dept_mods, key=f"m1_{selected_dept}_{mod}"):
-                            curr_selected.append(mod)
-                with mc2:
-                    st.markdown("#### 📦 供應鏈與進銷存")
-                    for mod in cat_data["col2"]:
-                        if st.checkbox(mod, value=mod in saved_dept_mods, key=f"m2_{selected_dept}_{mod}"):
-                            curr_selected.append(mod)
-                with mc3:
-                    st.markdown("#### 💰 財會與生產核心")
-                    for mod in cat_data["col3"]:
-                        if st.checkbox(mod, value=mod in saved_dept_mods, key=f"m3_{selected_dept}_{mod}"):
-                            curr_selected.append(mod)
+                for cat_name, mod_list in master_lib.items():
+                    st.markdown(f"#### {cat_name}")
+                    cols_m = st.columns(3)
+                    for m_idx, mod in enumerate(mod_list):
+                        with cols_m[m_idx % 3]:
+                            if st.checkbox(mod, value=mod in saved_dept_mods, key=f"store_{selected_dept}_{mod}"):
+                                curr_selected.append(mod)
+                    st.markdown("---")
                             
-                st.markdown("---")
                 total_all_mods = sum(len(mods) for mods in current_tenant["dept_modules_db"].values())
                 calculated_price = 80 + (total_all_mods * 5)
                 current_tenant["price_usd"] = calculated_price
