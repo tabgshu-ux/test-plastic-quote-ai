@@ -7,6 +7,7 @@ from datetime import datetime
 from modules.pricing_hub import render_pricing_hub
 from modules.app_store import render_app_store
 from modules.org_chart import render_org_chart
+from modules.rbac import render_rbac  # 引入 RBAC 權限管理模組
 
 st.set_page_config(
     page_title="SaaS Global Cross-Border AI-ERP Platform",
@@ -25,7 +26,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 🌟 全球跨國通用 AI-ERP 模組庫 (已將多語系/AI翻譯抽離為全域基礎設施)
+# 🌟 全球跨國通用 AI-ERP 模組庫
 # ==============================================================================
 if "master_module_library" not in st.session_state:
     st.session_state.master_module_library = {
@@ -175,7 +176,11 @@ with st.sidebar:
         current_t_name = st.session_state.tenants_db[st.session_state.current_portal]["name"]
         menu_choice = st.radio(
             f"內部模組 ({current_t_name})",
-            ["🧩 樂高積木式模組市集 (App Store)", "🖱️ ProcessOn 組織架構圖與節點管理"]
+            [
+                "🧩 樂高積木式模組市集 (App Store)", 
+                "🖱️ ProcessOn 組織架構圖與節點管理",
+                "👥 員工帳號與跨國權限管理 (RBAC)"
+            ]
         )
 
 # ==================== 路由分發邏輯 ====================
@@ -193,5 +198,8 @@ else:
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     if "樂高積木式模組市集" in menu_choice:
         render_app_store(current_tenant, ALL_ENTERPRISE_DEPARTMENTS)
-    else:
+    elif "組織架構圖" in menu_choice:
         render_org_chart(current_tenant)
+    else:
+        render_rbac(current_tenant)
+        
