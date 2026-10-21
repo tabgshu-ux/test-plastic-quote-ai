@@ -115,6 +115,9 @@ if "current_portal" not in st.session_state:
 if "master_logged_in" not in st.session_state:
     st.session_state.master_logged_in = False
 
+if "master_role" not in st.session_state:
+    st.session_state.master_role = None  # 可為 "admin" 或 "finance"
+
 ALL_ENTERPRISE_DEPARTMENTS = [
     "👑 董事長室 / 總經理室 (Executive & Board Room)",
     "📈 經營企劃與策略發展部 (Corporate Strategy)",
@@ -140,7 +143,7 @@ ALL_ENTERPRISE_DEPARTMENTS = [
 # ==================== 側邊欄導覽 (含全域多語言動態切換) ====================
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
-    st.markdown("### 🌐 企業級 AI-ERP 平台")
+    st.markdown("### 🌐 企業級 AI-ERP 平台總控")
     
     selected_lang = st.selectbox(
         "🌍 系統全域語系 / Language (i18n)",
@@ -168,21 +171,28 @@ with st.sidebar:
             st.rerun()
         st.markdown(f"{i18n_current}: `{st.session_state.tenants_db[st.session_state.current_portal]['name']}`")
     else:
-        st.markdown("👑 **目前身分**: `平台最高管理者 / Master`")
         if st.session_state.master_logged_in:
+            role_title = "👑 平台最高管理者 (Master Admin)" if st.session_state.master_role == "admin" else "💰 總控台財務專員 (Master Finance)"
+            st.markdown(f"**目前身分**: `{role_title}`")
             if st.button("🔒 登出總控台 (Lock Master)", use_container_width=True):
                 st.session_state.master_logged_in = False
+                st.session_state.master_role = None
                 st.rerun()
+        else:
+            st.markdown("👑 **目前身分**: `未登入`")
     
     st.markdown("---")
     st.markdown(f"### {i18n_menu}")
     
     if st.session_state.current_portal == "Master":
         if st.session_state.master_logged_in:
-            menu_choice = st.radio(
-                "選擇總控台模組",
-                ["🏢 全球企業租戶總覽", "⚙️ 全球定價策略與方案模組自訂 (Pricing App Store)"]
-            )
+            if st.session_state.master_role == "admin":
+                menu_choice = st.radio(
+                    "選擇總控台模組 (老闆完整權限)",
+                    ["🏢 全球企業租戶總覽", "⚙️ 全球定價策略與方案模組自訂 (Pricing App Store)"]
+                )
+            else:
+                menu_choice = "💰 平台財務營收與租戶帳單清單"
         else:
             menu_choice = "🔒 請先登入"
     else:
@@ -199,39 +209,82 @@ with st.sidebar:
 # ==================== 路由分發與資安登入鎖邏輯 ====================
 if st.session_state.current_portal == "Master":
     if not st.session_state.master_logged_in:
-        st.markdown("## 🔐 平台最高管理者安全登入 (Master Portal Security Gate)")
-        st.info("💡 *為了確保 SaaS 核心數據與全平台租戶隱私安全，請輸入管理員密碼以解鎖總控台。* (預設密碼: `admin123`)")
+        st.markdown("## 🔐 總控台安全登入 (Master Portal Gate)")
+        st.info("💡 *請輸入對應帳號密碼登入。老闆帳號可管理全平台與定價；財務帳號僅能檢視各租戶訂閱費用與營收報表。*")
         
         with st.form("master_login_form"):
-            m_pass = st.text_input("最高管理員密碼 (Master Password)", type="password", placeholder="請輸入密碼...")
-            if st.form_submit_button("🔓 解鎖總控台", type="primary"):
-                if m_pass == "admin123":
+            login_role_choice = st.selectbox("登入身分角色 (Select Role)", ["👑 平台老闆 (Master Admin)", "💰 財務專員 (Master Finance)"])
+            m_pass = st.text_input("密碼 (Password)", type="password", placeholder="請輸入密碼 (預設: admin123 或 finance123)...")
+            
+            if st.form_submit_button("🔓 登入總控台", type="primary", use_container_width=True):
+                if "平台老闆" in login_role_choice and m_pass == "admin123":
                     st.session_state.master_logged_in = True
-                    st.success("🎉 身分驗證成功，正在進入總控台...")
+                    st.session_state.master_role = "admin"
+                    st.success("🎉 老闆身分驗證成功，正在進入總控台...")
+                    st.rerun()
+                elif "財務專員" in login_role_choice and m_pass == "finance123":
+                    st.session_state.master_logged_in = True
+                    st.session_state.master_role = "finance"
+                    st.success("🎉 財務身分驗證成功，正在進入營收帳單中心...")
                     st.rerun()
                 else:
-                    st.error("❌ 密碼錯誤，請重新輸入！")
+                    st.error("❌ 密碼錯誤或身分不符！(老闆密碼: admin123 / 財務密碼: finance123)")
     else:
-        if "全球企業租戶總覽" in menu_choice:
-            st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽與快速切換")
-            st.info("💡 *身為平台總管理員，您可以在下方檢視所有租戶，並隨時點擊按鈕直接切換進入該租戶的內部後台進行檢視或協助設定。*")
-            
-            for t_id, t_data in st.session_state.tenants_db.items():
-                with st.container():
-                    st.markdown('<div class="card-container">', unsafe_allow_html=True)
-                    col_info, col_btn = st.columns([3, 1])
-                    with col_info:
-                        st.markdown(f"### 🏢 {t_data['name']}")
-                        st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
-                        st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
-                    with col_btn:
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        if st.button(f"🚀 進入該租戶後台", key=f"enter_{t_id}", type="primary", use_container_width=True):
-                            st.session_state.current_portal = t_id
-                            st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
+        if st.session_state.master_role == "admin":
+            if "全球企業租戶總覽" in menu_choice:
+                st.markdown("## 🏢 SaaS 平台總控台：企業租戶動態總覽與快速切換")
+                st.info("💡 *身為平台總管理員，您可以在下方檢視所有租戶，並隨時點擊按鈕直接切換進入該租戶的內部後台。*")
+                
+                for t_id, t_data in st.session_state.tenants_db.items():
+                    with st.container():
+                        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                        col_info, col_btn = st.columns([3, 1])
+                        with col_info:
+                            st.markdown(f"### 🏢 {t_data['name']}")
+                            st.markdown(f"- **租戶代碼**: `{t_id}` | **地區**: `{t_data['region']}`")
+                            st.markdown(f"- **目前訂閱方案**: `{t_data['plan']}` | **每月月費**: `$ {t_data['price_usd']} USD`")
+                        with col_btn:
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            if st.button(f"🚀 進入該租戶後台", key=f"enter_{t_id}", type="primary", use_container_width=True):
+                                st.session_state.current_portal = t_id
+                                st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                render_pricing_hub()
         else:
-            render_pricing_hub()
+            # 財務專員專屬視角：只能看訂閱戶、月費與營收報表，不能改定價
+            st.markdown("## 💰 總控台：平台財務營收與租戶帳單結算中心")
+            st.info("💡 *此為財務專員專屬視角。您可在此檢視各租戶的訂閱方案與月費金額，以便將營收數據填入公司內部會計 ERP 系統中。*")
+            
+            # 計算總 MRR (經常性營收)
+            total_mrr = sum([v["price_usd"] for v in st.session_state.tenants_db.values()])
+            
+            col1, col2 = st.metrics if hasattr(st, "columns") else (None, None)
+            c1, c2 = st.columns(2)
+            with c1:
+                st.metric("📊 本月總訂閱營收 (MRR)", f"$ {total_mrr:,.2f} USD")
+            with c2:
+                st.metric("🏢 目前有效付費租戶數", f"{len(st.session_state.tenants_db)} 家")
+            
+            st.markdown("---")
+            st.markdown("### 📋 各租戶訂閱明細與帳款清單 (Billing Ledger)")
+            
+            billing_list = []
+            for t_id, v in st.session_state.tenants_db.items():
+                billing_list.append({
+                    "租戶代碼": t_id,
+                    "公司名稱": v["name"],
+                    "地區": v["region"],
+                    "訂閱方案": v["plan"],
+                    "每月月費 (USD)": f"$ {v['price_usd']}",
+                    "合約到期日": v["expiry_date"],
+                    "繳費狀態": "✅ 已付費 (Active)"
+                })
+            
+            with st.container():
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                st.dataframe(pd.DataFrame(billing_list), use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 else:
     current_tenant = st.session_state.tenants_db[st.session_state.current_portal]
     if "樂高積木式模組市集" in menu_choice:
