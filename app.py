@@ -1,4 +1,5 @@
 import streamlit as st
+from modules.executive_bi import render_executive_bi
 
 st.set_page_config(
     page_title="SaaS Platform & Enterprise ERP Gateway",
