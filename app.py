@@ -9,7 +9,7 @@ from modules.app_store import render_app_store
 from modules.org_chart import render_org_chart
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP Ultimate Master",
+    page_title="SaaS Global Cross-Border AI-ERP Platform",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -25,59 +25,61 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 🌟 【全能商業級模組大合集庫】包羅萬象的企業與工程 ERP 功能清單 (Master Library)
+# 🌟 【全產業通用跨國 AI-ERP 旗艦模組庫】(Master Module Library)
+# 擺脫單一產業限制，全面涵蓋跨國企業、製造、貿易、零售與服務業所需的高階功能
 # ==============================================================================
 if "master_module_library" not in st.session_state:
     st.session_state.master_module_library = {
-        "📈 高階決策與戰情室 (Executive & BI)": [
-            "全局原物料即時行情看板", "國際匯率多幣別換算中心", "全球股市財經大盤監控", 
-            "綜合損益表與資產負債表", "企業 KPI 與多維度 BI 戰情室", "高階決策審核簽核流", 
-            "跨部門營運總控台", "多公司合併財務報表分析", "AI 商業智能預測與營運健檢"
+        "📈 高階決策、跨國戰情與多維度 BI": [
+            "全局原物料與市場即時行情看板", "國際匯率多幣別自動換算與避險中心", "全球主要股市與財經大盤監控", 
+            "跨國多公司合併財務報表分析", "企業 KPI 戰情室與 AI 智慧營運健檢", "高階主管簽核流與授權矩陣", 
+            "跨部門營運總控台與異常預警", "多國稅務合規與利潤匯出分析", "ESG 永續碳排與能源消耗戰情室"
         ],
-        "📦 供應鏈與進銷存 (SCM & WMS)": [
-            "智能進銷存與批號效期管理", "全球供應鏈採購比價系統", "倉儲物流與條碼掃描(WMS)", 
-            "供應商交期與品質評鑑系統", "進出口報關與海運物流追蹤", "條碼/QR Code資產標籤列印", 
-            "PDA 行動叫料與驗收系統", "安全庫存自動補貨警報", "多倉庫調撥與批次管理"
+        "📦 全球供應鏈、智慧進銷存與倉儲 (SCM & WMS)": [
+            "智能進銷存與批號效期全生命周期管理", "全球供應商評鑑、自動比價與採購發包(PR/PO)", "智慧倉儲物流與 PDA 條碼掃描(WMS)", 
+            "進出口報關、海運物流追蹤與原產地證明", "條碼/QR Code 全自動資產與物料標籤列印", "安全庫存水位 AI 自動補貨警報", 
+            "多倉庫智能調撥、批次與序號追蹤", "供應商交期達標率與品質異常扣款追蹤", "全球保稅倉庫與免稅品項管理"
         ],
-        "💰 財會、稅務與人事 (Finance & HR)": [
-            "總帳會計、傳票與會計師報表", "應收/應付帳款(AR/AP)管理", "越南紅發票與電子發票勾稽", 
-            "人事薪酬、勞健保與考勤排班", "GPS 定位行動打卡與排班管理", "AI 履歷篩選與面試排程助手", 
-            "電子簽核流程引擎 (BPM)", "固定資產與折舊自動提列", "各國稅務申報試算與合規管理"
+        "💰 跨國財會、電子發票與人事法規 (Finance & HR)": [
+            "總帳會計、多幣別傳票與會計師國際報表", "全球應收(AR)智慧催收與應付(AP)現金流排程", "越南紅發票/電子發票與各國稅務勾稽", 
+            "多國人事薪酬、外派人員勞健保與考勤排班", "GPS 定位行動打卡、外勤軌跡與排班管理", "AI 智慧履歷篩選、跨國面試與人才庫管理", 
+            "全球電子簽核流程引擎 (BPM) 與委任授權", "固定資產盤點、多國折舊自動提列與租賃會計", "跨國勞資合規與在地化薪資法規資料庫"
         ],
-        "⚙️ 水電工程與專案特化 (Engineering & Project)": [
-            "水電工程專案與工項預算編號", "工程估驗與計價請款追蹤", "工地現場點工點料管理", 
-            "施工日報表與工時扣減聯動", "外包商工班計價與合約管理", "設備維修履歷與保養排程", 
-            "工地物聯網(IoT)設備監控", "CAD/BIM 圖檔雲端協同檢視", "工程超支自動預警與鎖定"
+        "🏭 智慧製造、專案管控與業務維運 (Manufacturing & Projects)": [
+            "MES 製造執行系統與車間動態報工", "多階 BOM 表管理、製程工藝與標準SOP", "產線動態排程、瓶頸預警與產能平衡調度", 
+            "大型跨國專案管理、里程碑與成本預算管控", "客戶關係管理(CRM)、全球商機與外貿銷售漏斗", "售後服務工單、設備維修履歷與定期保養排程", 
+            "外包商工班計價、合約追蹤與驗收請款", "CAD/BIM 工程圖檔雲端協同與版本控制", "IoT 機台稼動率監控與 OEE 設備效率分析"
         ],
-        "🤖 AI 智慧硬體與其他特化 (AI & Hardware Integration)": [
-            "車牌辨識 (ANPR) 智慧車道進出", "廠區人臉辨識門禁與考勤對接", "AI 智慧語音助理與跨國翻譯", 
-            "AI 智慧工安影像辨識與違規預警", "車輛保養與車隊 GPS 定位追蹤", "汽車美容 / 車體包膜預約管理", 
-            "多語言動態介面切換 (越/英/中/日)"
+        "🤖 AI 語音多模態、跨語系轉譯與智慧硬體 (AI & Cross-lingual Integration)": [
+            "越南語/多國語言語音自動回報與文字轉譯", "現場照片 AI 智慧辨識、自動分類與建檔", "車牌辨識(ANPR)智慧車道與物流車隊管理", 
+            "廠區人臉辨識門禁、訪客預約與考勤對接", "AI 智慧語音助理與多國文件即時跨語系翻譯", "AI 智慧工安影像辨識與違規即時預警", 
+            "車輛保養、車隊 GPS 定位與外派油耗追蹤", "多語言動態介面一鍵切換 (越/英/中/日/印尼)", "AI 智慧客服機器人與自動化客戶詢價回覆"
         ]
     }
 
 if "global_plans_db" not in st.session_state:
     st.session_state.global_plans_db = {
-        "🚀 旗艦版 (Enterprise)": {
-            "base_price": 250.0,
-            "description": "適合大型集團與跨國水電工程企業，解鎖全功能與無限部門掛載",
+        "🚀 跨國旗艦集團版 (Enterprise)": {
+            "base_price": 350.0,
+            "description": "適合跨國集團、製造業與大型企業，解鎖全產業模組、無限部門掛載與跨國多語系 AI 引擎",
             "included_modules": [
-                "全局原物料即時行情看板", "高階決策審核簽核流", "智能進銷存與批號效期管理", 
-                "總帳會計、傳票與會計師報表", "水電工程專案與工項預算編號", "工程估驗與計價請款追蹤"
+                "全局原物料與市場即時行情看板", "高階主管簽核流與授權矩陣", "智能進銷存與批號效期全生命周期管理", 
+                "總帳會計、多幣別傳票與會計師國際報表", "越南語/多國語言語音自動回報與文字轉譯", "跨部門營運總控台與異常預警"
             ]
         },
         "💼 正式商業版 (Professional)": {
-            "base_price": 150.0,
-            "description": "適合中型企業與成長中公司，支援完整進銷存與財會核心",
+            "base_price": 180.0,
+            "description": "適合中型企業與貿易商，支援完整供應鏈、財會核心與多據點管理",
             "included_modules": [
-                "高階決策審核簽核流", "智能進銷存與批號效期管理", "總帳會計、傳票與會計師報表", "人事薪酬、勞健保與考勤排班"
+                "高階主管簽核流與授權矩陣", "智能進銷存與批號效期全生命周期管理", 
+                "總帳會計、多幣別傳票與會計師國際報表", "多國人事薪酬、外派人員勞健保與考勤排班"
             ]
         },
         "📦 標準訂閱版 (Subscription)": {
-            "base_price": 80.0,
-            "description": "適合小型店家或單一據點，靈活按需勾選樂高模組",
+            "base_price": 90.0,
+            "description": "適合小型企業或單一據點，靈活按需勾選樂高模組",
             "included_modules": [
-                "智能進銷存與批號效期管理", "人事薪酬、勞健保與考勤排班"
+                "智能進銷存與批號效期全生命周期管理", "多國人事薪酬、外派人員勞健保與考勤排班"
             ]
         }
     }
@@ -87,18 +89,18 @@ if "global_fx_rates" not in st.session_state:
 
 if "tenants_db" not in st.session_state:
     st.session_state.tenants_db = {
-        "tenant_vina_水电": {
-            "name": "🇻🇳 越南平陽水電工程有限公司",
+        "tenant_vina_group": {
+            "name": "🇻🇳 越南平陽跨國控股集團",
             "region": "越南 (Binh Duong, VN)",
-            "plan": "🚀 旗艦版 (Enterprise)",
-            "price_usd": 250,
+            "plan": "🚀 跨國旗艦集團版 (Enterprise)",
+            "price_usd": 350,
             "expiry_date": "2027-10-20",
             "dept_modules_db": {
-                "⚙️ 工程與技術服務部 (Engineering & Technical)": ["水電工程專案與工項預算編號", "工程估驗與計價請款追蹤"]
+                "⚙️ 工程與技術服務部 (Engineering & Technical)": ["越南語/多國語言語音自動回報與文字轉譯", "現場照片 AI 智慧辨識、自動分類與建檔"]
             },
             "org_nodes": [
-                {"id": "node_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
-                {"id": "node_eng", "name": "工程技術部", "type": "⚙️ 二級部門", "parent": "董事長室"}
+                {"id": "node_root", "name": "集團董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
+                {"id": "node_eng", "name": "越南平陽廠區", "type": "🏭 製造廠區", "parent": "集團董事長室"}
             ]
         }
     }
@@ -131,7 +133,7 @@ ALL_ENTERPRISE_DEPARTMENTS = [
 # ==================== 側邊欄導覽 ====================
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/company.png", width=64)
-    st.markdown("### 🌐 SaaS 多租戶 AI-ERP 平台")
+    st.markdown("### 🌐 跨國 AI-ERP 平台總控台")
     
     if st.session_state.current_portal != "Master":
         if st.button("👑 返回 SaaS 平台總控台", type="primary", use_container_width=True):
@@ -139,7 +141,7 @@ with st.sidebar:
             st.rerun()
         st.markdown(f"🏢 **目前管理租戶**: `{st.session_state.tenants_db[st.session_state.current_portal]['name']}`")
     else:
-        st.markdown("👑 **目前身分**: `SaaS 平台總管理員 (Master)`")
+        st.markdown("👑 **目前身分**: `AI ERP 首席架構師 / Master`")
     
     st.markdown("---")
     st.markdown("### 📌 系統導覽選單")
@@ -159,11 +161,11 @@ with st.sidebar:
 # ==================== 路由分發邏輯 ====================
 if st.session_state.current_portal == "Master":
     if "全球企業租戶總覽" in menu_choice:
-        st.markdown("## 🏢 SaaS 平台總控台：全球企業租戶動態總覽")
+        st.markdown("## 🏢 SaaS 平台總控台：全球跨國企業租戶動態總覽")
         tenant_list = [{"代碼": k, "公司名稱": v["name"], "方案": v["plan"], "月費(USD)": v["price_usd"]} for k, v in st.session_state.tenants_db.items()]
         st.dataframe(pd.DataFrame(tenant_list), use_container_width=True)
-        if st.button("📂 進入越南平陽水電後台"):
-            st.session_state.current_portal = "tenant_vina_水电"
+        if st.button("📂 進入越南平陽控股集團後台"):
+            st.session_state.current_portal = "tenant_vina_group"
             st.rerun()
     else:
         render_pricing_hub()
