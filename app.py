@@ -109,11 +109,11 @@ if "tenants_db" not in st.session_state:
         }
     }
 
-# 初始化總控台內部員工/財務帳號資料庫
+# ==================== 動態帳號資料庫 (支援離職停權與權限管控) ====================
 if "master_staff_db" not in st.session_state:
     st.session_state.master_staff_db = [
-        {"name": "許福村", "account": "admin", "role": "👑 平台老闆 (Master Admin)", "status": "啟用中"},
-        {"name": "財務部專員", "account": "finance", "role": "💰 總控台財務專員 (Master Finance)", "status": "啟用中"}
+        {"name": "許福村", "account": "admin", "password": "admin123", "role": "👑 平台老闆 (Master Admin)", "status": "啟用中"},
+        {"name": "財務部專員", "account": "finance", "password": "finance123", "role": "💰 總控台財務專員 (Master Finance)", "status": "啟用中"}
     ]
 
 if "current_portal" not in st.session_state:
@@ -124,6 +124,9 @@ if "master_logged_in" not in st.session_state:
 
 if "master_role" not in st.session_state:
     st.session_state.master_role = None
+
+if "master_current_user" not in st.session_state:
+    st.session_state.master_current_user = None
 
 ALL_ENTERPRISE_DEPARTMENTS = [
     "👑 董事長室 / 總經理室 (Executive & Board Room)",
@@ -180,10 +183,11 @@ with st.sidebar:
     else:
         if st.session_state.master_logged_in:
             role_title = "👑 平台最高管理者" if st.session_state.master_role == "admin" else "💰 總控台財務專員"
-            st.markdown(f"**目前身分**: `{role_title}`")
+            st.markdown(f"**目前身分**: `{st.session_state.master_current_user} ({role_title})`")
             if st.button("🔒 登出總控台 (Lock Master)", use_container_width=True):
                 st.session_state.master_logged_in = False
                 st.session_state.master_role = None
+                st.session_state.master_current_user = None
                 st.rerun()
         else:
             st.markdown("👑 **目前身分**: `未登入`")
@@ -217,29 +221,37 @@ with st.sidebar:
             ]
         )
 
-# ==================== 路由分發與資安登入鎖邏輯 ====================
+# ==================== 路由分發與動態帳號驗證邏輯 ====================
 if st.session_state.current_portal == "Master":
     if not st.session_state.master_logged_in:
-        # 乾淨俐落的登入畫面，拿掉所有冗長說明
+        # 乾淨俐落的登入畫面（從動態資料庫進行比對與驗證狀態）
         st.markdown("## 🔐 總控台安全登入")
         
         with st.form("master_login_form"):
-            login_role_choice = st.selectbox("登入身分角色", ["👑 平台老闆 (Master Admin)", "💰 財務專員 (Master Finance)"])
-            m_pass = st.text_input("密碼", type="password", placeholder="請輸入密碼...")
+            input_account = st.text_input("登入帳號 (Account)", placeholder="請輸入帳號...")
+            input_pass = st.text_input("密碼 (Password)", type="password", placeholder="請輸入密碼...")
             
             if st.form_submit_button("🔓 登入總控台", type="primary", use_container_width=True):
-                if "平台老闆" in login_role_choice and m_pass == "admin123":
-                    st.session_state.master_logged_in = True
-                    st.session_state.master_role = "admin"
-                    st.success("🎉 登入成功！")
-                    st.rerun()
-                elif "財務專員" in login_role_choice and m_pass == "finance123":
-                    st.session_state.master_logged_in = True
-                    st.session_state.master_role = "finance"
-                    st.success("🎉 登入成功！")
-                    st.rerun()
+                matched_user = None
+                for u in st.session_state.master_staff_db:
+                    if u["account"] == input_account and u["password"] == input_pass:
+                        matched_user = u
+                        break
+                
+                if matched_user:
+                    if matched_user["status"] == "已停權 (Disabled)":
+                        st.error("❌ 此帳號已被停權（離職封鎖），無法登入系統！")
+                    else:
+                        st.session_state.master_logged_in = True
+                        st.session_state.master_current_user = matched_user["name"]
+                        if "Master Admin" in matched_user["role"]:
+                            st.session_state.master_role = "admin"
+                        else:
+                            st.session_state.master_role = "finance"
+                        st.success(f"🎉 歡迎回來，{matched_user['name']}！")
+                        st.rerun()
                 else:
-                    st.error("❌ 密碼錯誤或身分不符！")
+                    st.error("❌ 帳號或密碼錯誤！")
     else:
         if st.session_state.master_role == "admin":
             if "全球企業租戶總覽" in menu_choice:
@@ -262,9 +274,9 @@ if st.session_state.current_portal == "Master":
             elif "全球定價策略" in menu_choice:
                 render_pricing_hub()
             else:
-                # 總控台專屬的員工帳號與權限管理模組
-                st.markdown("## 👥 總控台內部員工與權限管理")
-                st.info("💡 *在此管理平台總控台內部的管理者與財務人員帳號，您可以隨時新增或調整成員權限。*")
+                # 總控台專屬的員工帳號與動態狀態管理（解決離職停權問題）
+                st.markdown("## 👥 總控台內部員工與權限管理 (IAM)")
+                st.info("💡 *在此管理平台總控台內部的管理者與財務人員帳號。當人員離職時，可直接將狀態切換為【已停權】，系統將立即封鎖其登入權限，無須修改程式碼。*")
                 
                 with st.container():
                     st.markdown('<div class="card-container">', unsafe_allow_html=True)
@@ -279,23 +291,50 @@ if st.session_state.current_portal == "Master":
                             new_pass_input = st.text_input("設定密碼 (Password)", type="password", placeholder="請設定初始密碼...")
                         
                         if st.form_submit_button("👤 建立總控台帳號", type="primary", use_container_width=True):
-                            if new_name and new_account:
+                            if new_name and new_account and new_pass_input:
                                 st.session_state.master_staff_db.append({
                                     "name": new_name,
                                     "account": new_account,
+                                    "password": new_pass_input,
                                     "role": new_role,
                                     "status": "啟用中"
                                 })
                                 st.success(f"🎉 成功為 [{new_name}] 建立總控台帳號！")
                                 st.rerun()
                             else:
-                                st.warning("⚠️ 請填寫完整姓名與帳號。")
+                                st.warning("⚠️ 請完整填寫姓名、帳號與密碼。")
                     st.markdown('</div>', unsafe_allow_html=True)
                 
-                st.markdown("### 📋 現有總控台帳號清單")
+                st.markdown("### 📋 現有總控台帳號與離職停權管理")
                 with st.container():
                     st.markdown('<div class="card-container">', unsafe_allow_html=True)
-                    st.dataframe(pd.DataFrame(st.session_state.master_staff_db), use_container_width=True)
+                    
+                    # 呈現清單並允許老闆切換狀態（模擬資料庫更新）
+                    for idx, staff in enumerate(st.session_state.master_staff_db):
+                        cols = st.columns([2, 2, 2, 2, 1])
+                        with cols[0]:
+                            st.write(f"**{staff['name']}**")
+                        with cols[1]:
+                            st.write(f"帳號: `{staff['account']}`")
+                        with cols[2]:
+                            st.write(staff['role'])
+                        with cols[3]:
+                            new_status = st.selectbox(
+                                "狀態", 
+                                ["啟用中", "已停權 (Disabled)"], 
+                                index=0 if staff['status'] == "啟用中" else 1,
+                                key=f"status_select_{idx}"
+                            )
+                            if new_status != staff['status']:
+                                st.session_state.master_staff_db[idx]['status'] = new_status
+                                st.success(f"已更新 [{staff['name']}] 狀態為：{new_status}")
+                                st.rerun()
+                        with cols[4]:
+                            if staff['account'] != "admin":  # 防止老闆把自己刪除
+                                if st.button("🗑️ 刪除", key=f"del_staff_{idx}Y"):
+                                    st.session_state.master_staff_db.pop(idx)
+                                    st.rerun()
+                        st.markdown("---")
                     st.markdown('</div>', unsafe_allow_html=True)
         else:
             # 財務專員專屬視角
