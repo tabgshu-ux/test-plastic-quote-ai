@@ -4,11 +4,11 @@ import uuid
 from datetime import datetime
 
 # ==============================================================================
-# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (資料庫持久化 + 模組市集與組織樹完全連動)
+# 🧩 SaaS 企業級多租戶 AI-ERP 系統 (總控台方案定價樂高市集 + 資料庫持久化)
 # ==============================================================================
 
 st.set_page_config(
-    page_title="SaaS Enterprise Modular AI-ERP Database Connected",
+    page_title="SaaS Enterprise Modular AI-ERP Pricing Hub",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -79,14 +79,29 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. 初始化全域資料
-if "global_pricing" not in st.session_state:
-    st.session_state.global_pricing = {"enterprise_base_fee": 150, "standard_base_fee": 80, "module_fee": 15}
+# 3. 初始化全域資料與方案定價資料庫 (Master Pricing & Plans DB)
+if "global_plans_db" not in st.session_state:
+    st.session_state.global_plans_db = {
+        "🚀 旗艦版 (Enterprise)": {
+            "base_price": 250.0,
+            "description": "適合大型集團與跨國水電工程企業，解鎖全功能與無限部門掛載",
+            "included_modules": ["全局戰情室與BI分析", "高階決策審核", "水電工程專案與預算", "工程估驗與計價請款", "全局資金水位管理"]
+        },
+        "💼 正式商業版 (Professional)": {
+            "base_price": 150.0,
+            "description": "適合中型企業與成長中公司，支援完整進銷存與財會核心",
+            "included_modules": ["高階決策審核", "智能進銷存管理", "總帳會計與報表", "人事組織架構管理"]
+        },
+        "📦 標準訂閱版 (Subscription)": {
+            "base_price": 80.0,
+            "description": "適合小型店家或單一據點，靈活按需勾選樂高模組",
+            "included_modules": ["智能進銷存管理", "人事組織架構管理"]
+        }
+    }
 
 if "global_fx_rates" not in st.session_state:
     st.session_state.global_fx_rates = {"USD": 1.0, "TWD": 31.50, "VND": 25400.00, "RMB": 7.20}
 
-# 市面上所有企業主流部門清單
 ALL_ENTERPRISE_DEPARTMENTS = [
     "👑 董事長室 / 總經理室 (Executive & Board Room)",
     "📈 經營企劃與策略發展部 (Corporate Strategy)",
@@ -142,10 +157,9 @@ if "tenants_db" not in st.session_state:
         "tenant_vina_水电": {
             "name": "🇻🇳 越南平陽水電工程有限公司",
             "region": "越南 (Binh Duong, VN)",
-            "plan": "旗艦版 (Enterprise)",
-            "price_usd": 170,
+            "plan": "🚀 旗艦版 (Enterprise)",
+            "price_usd": 250,
             "expiry_date": "2027-10-20",
-            # 每個部門獨立儲存其勾選的功能模組資料庫 (Dictionary: Dept Name -> List of Modules)
             "dept_modules_db": {
                 "👑 董事長室 / 總經理室 (Executive & Board Room)": ["全局戰情室與BI分析", "高階決策審核"],
                 "⚙️ 工程技術服務部 (Engineering & Technical)": ["水電工程專案與預算", "工程估驗與計價請款"]
@@ -158,24 +172,6 @@ if "tenants_db" not in st.session_state:
             "ap_invoices": [{"invoice_no": "000123", "supplier": "越南材料行", "items": "PVC管", "amount_vnd": "15,000,000", "status": "🔴 待付款"}],
             "staff": [{"name": "許福村", "email": "fuchun@vina.com", "role": "Tenant Admin"}],
             "audit_logs": [{"time": "2026-10-20 14:10:22", "user": "許福村", "action": "初始化系統", "ip": "192.168.10.2"}]
-        },
-        "tenant_taipei_wash": {
-            "name": "🇹🇼 台北極速智慧洗車坊",
-            "region": "台灣 (Taipei, TW)",
-            "plan": "標準版 (Standard)",
-            "price_usd": 80,
-            "expiry_date": "2026-11-05",
-            "dept_modules_db": {
-                "👑 董事長室 / 總經理室 (Executive & Board Room)": ["營運總控台"]
-            },
-            "org_nodes": [
-                {"id": "w_root", "name": "董事長室", "type": "👑 頂層 (Board)", "parent": "無 (頂層)"},
-                {"id": "w_branch", "name": "台北旗艦總店", "type": "🏢 一級據點", "parent": "董事長室"}
-            ],
-            "iot_devices": [{"dev_id": "W-01", "name": "車牌辨識 (ANPR)", "type": "車牌辨識", "ip": "10.0.0.15", "status": "🟢 運作中"}],
-            "ap_invoices": [],
-            "staff": [{"name": "張店長", "email": "manager@wash.com", "role": "Tenant Admin"}],
-            "audit_logs": [{"time": "2026-10-19 10:00:00", "user": "張店長", "action": "初始化系統", "ip": "1.2.3.4"}]
         }
     }
 
@@ -208,7 +204,7 @@ with st.sidebar:
             [
                 "🏢 全球企業租戶動態總覽與管理 (Tenants Hub)",
                 "💱 全球多幣別與即時匯率中樞 (Global FX)",
-                "⚙️ 全球定價策略與費率自訂 (Pricing)"
+                "⚙️ 全球定價策略與方案模組自訂 (Pricing App Store)"
             ]
         )
     else:
@@ -259,8 +255,7 @@ if st.session_state.current_portal == "Master":
                 "地區位置": t_val["region"],
                 "訂閱方案": t_val["plan"],
                 "每月價格 (USD)": t_val["price_usd"],
-                "組織節點數": len(t_val["org_nodes"]),
-                "已啟用功能總數": total_active_mods,
+                "已啟用功能數": total_active_mods,
                 "狀態": "🟢 正常營運"
             })
         df_tenants = pd.DataFrame(tenant_list_data)
@@ -307,8 +302,49 @@ if st.session_state.current_portal == "Master":
             st.markdown('</div>', unsafe_allow_html=True)
 
     else:
-        st.markdown("## ⚙️ SaaS 平台總控台：全球定價策略與費率自訂")
-        st.info("設定全平台的方案月費與部門加購價。")
+        # ==================== 總控台全新模組：全球定價策略與方案模組自訂 (Pricing App Store) ====================
+        st.markdown("## ⚙️ SaaS 平台總控台：全球定價策略與方案模組自訂 (Pricing App Store)")
+        st.info("💡 *在此處自由自訂【旗艦版】、【正式商業版】與【標準訂閱版】所包含的預設樂高模組，並直接在下方填入並鎖定方案的每月基本訂閱金額！*")
+        
+        plan_tabs = st.tabs(list(st.session_state.global_plans_db.keys()))
+        
+        all_possible_all_modules = [
+            "全局戰情室與BI分析", "高階決策審核", "營運總控台", "跨部門協調",
+            "智能進銷存管理", "供應鏈採購比價", "倉儲物流與WMS", "供應商交期評鑑",
+            "總帳會計與報表", "生產排程與BOM管理", "CRM客戶關係管理", "人事考勤與薪資計算",
+            "水電工程專案與預算", "工程估驗與計價請款", "全方位資金水位管理"
+        ]
+        
+        for idx, (plan_name, plan_data) in enumerate(st.session_state.global_plans_db.items()):
+            with plan_tabs[idx]:
+                with st.form(f"form_plan_{plan_name}"):
+                    st.markdown(f"### 📦 編輯方案：{plan_name}")
+                    
+                    p_desc = st.text_input("方案描述說明", value=plan_data["description"], key=f"desc_{plan_name}")
+                    p_price = st.number_input("每月基本訂閱金額 (USD $)", value=float(plan_data["base_price"]), step=10.0, key=f"price_{plan_name}")
+                    
+                    st.markdown("#### 🧱 選擇此方案預設解鎖的樂高模組 (App Store 組合)")
+                    
+                    c_m1, c_m2 = st.columns(2)
+                    selected_plan_mods = []
+                    
+                    half_len = len(all_possible_all_modules) // 2
+                    with c_m1:
+                        for mod in all_possible_all_modules[:half_len]:
+                            if st.checkbox(mod, value=mod in plan_data["included_modules"], key=f"p_mod_{plan_name}_{mod}"):
+                                selected_plan_mods.append(mod)
+                    with c_m2:
+                        for mod in all_possible_all_modules[half_len:]:
+                            if st.checkbox(mod, value=mod in plan_data["included_modules"], key=f"p_mod_{plan_name}_{mod}"):
+                                selected_plan_mods.append(mod)
+                                
+                    st.markdown("---")
+                    if st.form_submit_button(f"💾 儲存【{plan_name}】定價與模組配置", type="primary", use_container_width=True):
+                        st.session_state.global_plans_db[plan_name]["description"] = p_desc
+                        st.session_state.global_plans_db[plan_name]["base_price"] = p_price
+                        st.session_state.global_plans_db[plan_name]["included_modules"] = selected_plan_mods
+                        st.success(f"🎉 成功更新 [{plan_name}] 的方案定價與模組規則！")
+                        st.rerun()
 
 else:
     # ==================== 個別租戶後台：資料庫持久化串聯模組市集與組織樹 ====================
@@ -342,7 +378,6 @@ else:
                 "col3": ["總帳會計與報表", "生產排程與BOM", "CRM客戶關係管理", "人事考勤與薪資"]
             })
             
-            # 從資料庫讀取該部門目前已勾選的功能
             saved_dept_mods = current_tenant["dept_modules_db"].get(selected_dept, [])
             
             with st.form(f"form_store_{selected_dept}"):
@@ -366,7 +401,6 @@ else:
                             curr_selected.append(mod)
                             
                 st.markdown("---")
-                # 計算總合約金額 (全租戶所有部門模組總數加總)
                 total_all_mods = sum(len(mods) for mods in current_tenant["dept_modules_db"].values())
                 calculated_price = 80 + (total_all_mods * 5)
                 current_tenant["price_usd"] = calculated_price
@@ -374,10 +408,8 @@ else:
                 st.markdown(f"### 💳 系統計費試算：當前部門選定 `{len(curr_selected)}` 項模組 ➔ 企業每月總訂閱費用：**`$ {current_tenant['price_usd']} USD`**")
                 
                 if st.form_submit_button(f"💾 立即寫入資料庫：儲存【{clean_dept_name}】模組配置", type="primary", use_container_width=True):
-                    # 【核心修正】：真實寫入資料庫字典中！
                     current_tenant["dept_modules_db"][selected_dept] = list(set(curr_selected))
                     
-                    # 同時自動將此部門同步寫入組織節點資料庫（若組織圖中還沒有）
                     node_names = [n["name"] for n in current_tenant["org_nodes"]]
                     short_name = clean_dept_name.replace("👑", "").replace("📈", "").replace("👥", "").replace("⚖️", "").replace("🔒", "").replace("💰", "").replace("📊", "").replace("🌍", "").replace("🌐", "").replace("📢", "").replace("🤝", "").replace("🛒", "").replace("📦", "").replace("🏭", "").replace("⚙️", "").replace("🛡️", "").replace("💡", "").replace("💻", "").strip()
                     
@@ -436,7 +468,7 @@ else:
                         with cb1:
                             sub_u = st.form_submit_button("💾 儲存修改", type="primary", use_container_width=True)
                         with cb2:
-                            sub_d = st.form_submit_button("🗑️ 從資料庫刪除", use_container_width=True)
+                            sub_d = st.form_submit_button("🗑️ 從資料庫刪除", type="primary", use_container_width=True)
                             
                         if sub_u:
                             target_node["name"] = up_name
@@ -452,7 +484,6 @@ else:
                                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # 下方 ProcessOn 標準方塊組織圖呈現 (同時顯示資料庫中該部門啟用的功能)
         st.markdown("---")
         st.markdown("### 📊 資料庫即時組織架構與部門專屬功能總覽")
         st.info("💡 *下方即時呈現資料庫中的組織階層方塊圖，並自動帶出各部門在市集裡勾選啟用的功能模組！*")
@@ -461,11 +492,9 @@ else:
             st.markdown('<div class="card-container">', unsafe_allow_html=True)
             roots = [n for n in current_tenant["org_nodes"] if n["parent"] == "無 (頂層)"]
             others = [n for n in current_tenant["org_nodes"] if n["parent"] != "無 (頂層)"]
-            
             dept_db = current_tenant.get("dept_modules_db", {})
             
             for r in roots:
-                # 尋找是否有對應部門的功能
                 r_mods = []
                 for k, v in dept_db.items():
                     if r['name'] in k:
@@ -502,26 +531,6 @@ else:
                                     </div>
                                 </div>
                             """, unsafe_allow_html=True)
-                            
-                            level2 = [n for n in others if n["parent"] == l1["name"]]
-                            if level2:
-                                st.markdown('<div class="tree-connector" style="height: 15px;"></div>', unsafe_allow_html=True)
-                                for l2 in level2:
-                                    l2_mods = []
-                                    for k, v in dept_db.items():
-                                        if l2['name'] in k:
-                                            l2_mods = v
-                                    l2_mods_str = ", ".join(l2_mods) if l2_mods else "尚未勾選模組"
-                                    
-                                    st.markdown(f"""
-                                        <div style="text-align: center;">
-                                            <div class="org-level2-card">
-                                                <b>{l2['name']}</b><br>
-                                                <span style="font-size: 10px; color: gray;">{l2['type']}</span><br>
-                                                <span style="font-size: 9px; color: #059669;">📌 功能：{l2_mods_str}</span>
-                                            </div>
-                                        </div>
-                                    """, unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
     elif "員工帳號與權限角色管理" in menu_choice:
