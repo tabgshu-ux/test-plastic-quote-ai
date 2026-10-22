@@ -58,11 +58,11 @@ if "global_departments_list" not in st.session_state:
         "資訊技術與系統開發部 (IT & Software Development)"
     ]
 
-# 2. 🌟 關鍵升級：為「每一個部門」量身打造「相對應的專屬功能拼圖清單」
+# 2. 為每個部門量身打造的相對應專屬功能拼圖清單
 if "department_specific_puzzles_db" not in st.session_state:
     st.session_state.department_specific_puzzles_db = {
         "董事長室 / 總經理室 (Executive & Board Room)": [
-            "👑 全球多維度 BI 經營戰情室", "👑 集团即時合併報表與現金流水位", "👑 跨國重大決策電子簽核", "👑 全球原物料與總經理室即時看板"
+            "👑 全球多維度 BI 經營戰情室", "👑 集團即時合併報表與現金流水位", "👑 跨國重大決策電子簽核", "👑 全球原物料與總經理室即時看板"
         ],
         "經營企劃與策略發展部 (Corporate Strategy)": [
             "📈 長期策略目標 KPI 追蹤儀表板", "📈 市場競爭分析與競品情報庫", "📈 投資併購專案評估模型", "📈 企業年度預算編列與執行追蹤"
@@ -83,7 +83,7 @@ if "department_specific_puzzles_db" not in st.session_state:
         ],
         "會計與稅務管理部 (Accounting & Tax)": [
             "📊 總帳會計系統、傳票登錄與試算表", "📊 越南會計準則 (Thông tư 200) 專用帳套", 
-            "📊 电子發票 (Electronic Invoice) 開立與申報", "📊 各國動態稅制引擎與營業稅計算"
+            "📊 電子發票 (Electronic Invoice) 開立與申報", "📊 各國動態稅制引擎與營業稅計算"
         ],
         "國內業務與通路發展部 (Domestic Sales)": [
             "💼 國內客戶關係管理 (CRM) 與商機追蹤", "💼 國內多層級經銷商與通路授信管理", "💼 國內銷貨合約、雙層報價與出貨單開立", "💼 業務績效獎金與佣金自動計算"
@@ -223,7 +223,7 @@ elif not st.session_state.selected_tenant:
         "➕ 註冊新租戶與方案指派"
     ])
 
-    # Tab 1: 完美對齊圖片的雙欄互動介面 (左側部門選單 ➔ 右側加載該部門專屬功能)
+    # Tab 1: 雙欄互動介面 (左側部門選單 ➔ 右側加載該部門專屬功能)
     with master_tab1:
         col_dept_list, col_store_market = st.columns([1.2, 1.8])
 
@@ -331,4 +331,65 @@ elif not st.session_state.selected_tenant:
             c1, c2 = st.columns(2)
             with c1:
                 t_name = st.text_input("客戶公司名稱 *", placeholder="例: 越南精密工業股份公司")
-                t_tax = st.text_input("統一編號 / 稅號", placeholder="0312345
+                t_tax = st.text_input("統一編號 / 稅號", placeholder="0312345678")
+                t_plan = st.selectbox("選擇商業授權方案 (旗艦/正式/訂閱)", list(st.session_state.subscription_plans_db.keys()))
+            with c2:
+                default_pr = st.session_state.subscription_plans_db[t_plan]["price_usd"]
+                t_price = st.number_input("客製合約定價金額 (USD)", value=float(default_pr))
+                t_exp = st.date_input("合約到期日", value=datetime.date(2027, 12, 31))
+            
+            if st.form_submit_button("🚀 確認註冊並開通租戶環境", type="primary", use_container_width=True):
+                if t_name:
+                    new_id = f"TENANT-{len(st.session_state.tenant_licensing_db)+1:03d}"
+                    st.session_state.tenant_licensing_db.append({
+                        "tenant_id": new_id,
+                        "company_name": t_name,
+                        "tax_id": t_tax,
+                        "plan": t_plan,
+                        "pricing_usd": t_price,
+                        "expiry_date": str(t_exp),
+                        "status": "🟢 正常運行 (Active)",
+                        "hierarchical_org_tree": [],
+                        "org_nodes": [{"id": "node_root", "name": t_name, "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
+                        "dept_modules_db": {}
+                    })
+                    st.success(f"🎉 成功建立新租戶：{t_name}！")
+                    st.rerun()
+                else:
+                    st.warning("請填寫公司名稱！")
+
+# 層級三：已進入特定租戶環境
+else:
+    current_tenant_obj = next((t for t in st.session_state.tenant_licensing_db if t["company_name"] == st.session_state.selected_tenant), None)
+    
+    if current_tenant_obj:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("##### 📂 租戶專屬功能選單：")
+        
+        tenant_menu_options = [
+            "🌳 多級組織架構維護（部 ➔ 科 ➔ 組）",
+            "🖱️ 組織架構圖與節點管理 (Org Chart)",
+            "📈 總經理室戰情室 (Executive Office)",
+            "💻 資訊管理與 API 授權設定 (System Licensing)"
+        ]
+        
+        chosen_module = st.sidebar.radio("選擇租戶模組", tenant_menu_options, label_visibility="collapsed")
+        
+        st.markdown(f"### ⚡ 租戶工作區：`{current_tenant_obj['company_name']}`")
+        st.markdown(f"**授權方案**：{current_tenant_obj['plan']} | **合約到期**：{current_tenant_obj['expiry_date']}")
+        st.markdown("---")
+        
+        if "多級組織架構維護" in chosen_module:
+            render_departments_manager(current_tenant_obj)
+        elif "組織架構圖" in chosen_module:
+            render_org_chart(current_tenant_obj)
+        elif "總經理室戰情室" in chosen_module:
+            executive_office.show(current_tenant_obj)
+        elif "資訊管理" in chosen_module:
+            it_tab1, it_tab2 = st.tabs(["🔒 組織權限與角色管理 (RBAC)", "🧩 本公司拼圖模組與 API 設定"])
+            with it_tab1:
+                render_rbac(current_tenant_obj)
+            with it_tab2:
+                system_licensing.show(current_tenant_obj)
+        else:
+            st.info(f"正在載入模組功能：{chosen_module}")
