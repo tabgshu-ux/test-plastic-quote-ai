@@ -27,7 +27,7 @@ def render_master_portal():
 
     st.markdown("---")
 
-    # 迴圈遍歷所有租戶，採用卡片式外框與分隔線
+    # 迴圈遍歷所有租戶，採用卡片式外框與分隔線，避免點錯行
     for tenant in st.session_state.tenant_list:
         if search_query and search_query.lower() not in tenant["company_name"].lower() and search_query.lower() not in tenant["tenant_id"].lower():
             continue
@@ -50,6 +50,7 @@ def render_master_portal():
                     st.rerun()
 
             st.markdown("---")
-     # 確保網頁載入時直接執行總控台渲染
-      if __name__ == "__main__":
-         render_master_portal()
+
+# 主程式進入點，確保 Streamlit 可以正確渲染畫面
+if __name__ == "__main__":
+    render_master_portal()
