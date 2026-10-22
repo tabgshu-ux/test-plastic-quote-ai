@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-# 引入各大部門模組
+# 引入各大部門與組織模組
 from modules.executive_bi import render_executive_bi
 from modules.pos_retail import render_pos_retail
 from modules.mes_factory import render_mes_factory
@@ -77,18 +77,45 @@ if "subscription_plans_db" not in st.session_state:
         }
     }
 
-# 租戶授權資料庫
+# 租戶授權與結構資料庫 (內含多級組織與節點結構)
 if "tenant_licensing_db" not in st.session_state:
     st.session_state.tenant_licensing_db = [
         {
             "tenant_id": "TENANT-001",
+            "name": "裕豐電機工業 (Reetech Industrial)",
             "company_name": "裕豐電機工業 (Reetech Industrial)",
             "tax_id": "0312345678",
             "plan": "🚀 企業旗艦版 (Enterprise Flagship)",
             "pricing_usd": 3500.0,
             "expiry_date": "2027-12-31",
             "modules": [p["name"] for p in st.session_state.all_department_puzzles],
-            "status": "🟢 正常運行 (Active)"
+            "status": "🟢 正常運行 (Active)",
+            "hierarchical_org_tree": [
+                {
+                    "id": "div_01",
+                    "level": "1級-事業群/處",
+                    "name": "生產製造事業群",
+                    "parent": "董事長室",
+                    "sub_departments": [
+                        {
+                            "dept_name": "配電盤製造部 (2級-部)",
+                            "sections": [
+                                {"sec_name": "高壓盤組裝科 (3級-科)", "groups": ["第一作業班", "第二測試班"]},
+                                {"sec_name": "低壓盤配線科 (3級-科)", "groups": ["焊接組", "佈線組"]}
+                            ]
+                        }
+                    ],
+                    "assigned_modules": ["MES 電機製造執行與車間排程", "工地師傅手機快速回報"]
+                }
+            ],
+            "org_nodes": [
+                {"id": "node_root", "name": "裕豐電機工業", "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"},
+                {"id": "node_hq", "name": "總管理處", "type": "👑 一級部門 (Headquarters)", "parent": "裕豐電機工業"},
+                {"id": "node_prod", "name": "生產製造事業群", "type": "⚙️ 二級部門 (Functional Dept)", "parent": "總管理處"}
+            ],
+            "dept_modules_db": {
+                "生產製造事業群": ["MES 電機製造執行與車間排程", "倉庫資材庫存與條碼管理"]
+            }
         }
     ]
 
@@ -132,7 +159,7 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
-# 層級二：總控管理中心 (含完整的全球 1~4 級組織與課級拼圖分類)
+# 層級二：總控管理中心
 elif not st.session_state.selected_tenant:
     st.markdown("## 🏢 平台總控管理中心 (Master Control Panel)")
     st.markdown("在此檢視所有企業租戶、設定方案定價，並按 **全球標準 1~4 級組織架構（處 ➔ 部 ➔ 課 ➔ 組）** 動態勾選功能拼圖。")
@@ -244,51 +271,56 @@ elif not st.session_state.selected_tenant:
                     new_id = f"TENANT-{len(st.session_state.tenant_licensing_db)+1:03d}"
                     st.session_state.tenant_licensing_db.append({
                         "tenant_id": new_id,
+                        "name": t_name,
                         "company_name": t_name,
                         "tax_id": t_tax,
                         "plan": t_plan,
                         "pricing_usd": t_price,
                         "expiry_date": str(t_exp),
                         "modules": tenant_puzzles,
-                        "status": "🟢 正常運行 (Active)"
+                        "status": "🟢 正常運行 (Active)",
+                        "hierarchical_org_tree": [],
+                        "org_nodes": [{"id": "node_root", "name": t_name, "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
+                        "dept_modules_db": {}
                     })
                     st.success(f"🎉 成功建立新租戶：{t_name}！")
                     st.rerun()
                 else:
                     st.warning("請填寫公司名稱！")
 
-# 層級三：已進入特定租戶環境
+# 層級三：已進入特定租戶環境 (無縫掛載 departments_manager 與 org_chart 模組)
 else:
     current_tenant_obj = next((t for t in st.session_state.tenant_licensing_db if t["company_name"] == st.session_state.selected_tenant), None)
     
     if current_tenant_obj:
         st.sidebar.markdown("---")
-        st.sidebar.markdown("##### 📂 租戶全球 1~4 級組織選單：")
-        allowed_modules = current_tenant_obj["modules"]
+        st.sidebar.markdown("##### 📂 租戶專屬營運與模組選單：")
         
-        chosen_module = st.sidebar.radio("選擇模組", allowed_modules, label_visibility="collapsed")
+        tenant_menu_options = [
+            "🌳 多級組織架構維護（部 ➔ 科 ➔ 組）與模組動態對應",
+            "🖱️ 組織架構圖與節點管理 (Org Chart)",
+            "📈 總經理室戰情室 (Executive Office)",
+            "💻 資訊管理與 API 授權設定 (System Licensing)"
+        ]
+        
+        chosen_module = st.sidebar.radio("選擇租戶模組", tenant_menu_options, label_visibility="collapsed")
         
         st.markdown(f"### ⚡ 租戶工作區：`{current_tenant_obj['company_name']}`")
         st.markdown(f"**授權方案**：{current_tenant_obj['plan']} | **合約到期**：{current_tenant_obj['expiry_date']}")
         st.markdown("---")
         
-        # 路由分派
-        if "總經理室" in chosen_module:
-            executive_office.show({"name": current_tenant_obj['company_name']})
-        elif "工程事業群" in chosen_module:
-            render_mes_factory({"name": current_tenant_obj['company_name']})
-        elif "會計" in chosen_module or "人資" in chosen_module or "業務" in chosen_module:
-            render_pos_retail({"name": current_tenant_obj['company_name']})
-        elif "電子簽核" in chosen_module:
-            render_app_store({"name": current_tenant_obj['company_name']}, [])
-        elif "倉儲" in chosen_module or "製造" in chosen_module or "品質" in chosen_module:
-            render_org_chart({"name": current_tenant_obj['company_name']})
-        elif "資訊管理部" in chosen_module or "永續" in chosen_module:
-            st.markdown("### 💻 資訊管理與永續治理專屬後台")
+        # 精準呼叫對應的模組檔案函數
+        if "多級組織架構維護" in chosen_module:
+            render_departments_manager(current_tenant_obj)
+        elif "組織架構圖" in chosen_module:
+            render_org_chart(current_tenant_obj)
+        elif "總經理室戰情室" in chosen_module:
+            executive_office.show(current_tenant_obj)
+        elif "資訊管理" in chosen_module:
             it_tab1, it_tab2 = st.tabs(["🔒 組織權限與角色管理 (RBAC)", "🧩 本公司拼圖模組與 API 設定"])
             with it_tab1:
-                render_rbac({"name": current_tenant_obj['company_name']})
+                render_rbac(current_tenant_obj)
             with it_tab2:
-                system_licensing.show({"name": current_tenant_obj['company_name']})
+                system_licensing.show(current_tenant_obj)
         else:
             st.info(f"正在載入模組功能：{chosen_module}")
