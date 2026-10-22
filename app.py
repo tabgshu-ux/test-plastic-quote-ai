@@ -14,7 +14,7 @@ from modules import executive_office
 from modules import system_licensing
 
 st.set_page_config(
-    page_title="全球多租戶 SaaS AI ERP 平台 - 1~4級組織與拼圖互動選購中心",
+    page_title="全球多租戶 SaaS AI ERP 平台 - 產業別與 1~4級組織拼圖總控中心",
     page_icon="⚡",
     layout="wide"
 )
@@ -33,69 +33,132 @@ if "master_logged_in" not in st.session_state:
     st.session_state.master_logged_in = False
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
+if "current_lang" not in st.session_state:
+    st.session_state.current_lang = "繁體中文"
+if "selected_industry" not in st.session_state:
+    st.session_state.selected_industry = "科技資訊業 (Tech & IT)"
 
-# 1. 嚴格對標 1~4 級組織架構與部門內含功能互動資料庫
-if "strict_4level_departments_db" not in st.session_state:
-    st.session_state.strict_4level_departments_db = {
-        "1級最高決策層": {
-            "desc": "集團最高戰略決策與經營監控核心",
-            "departments": {
-                "董事長室 / 總經理室": ["👑 全球多維度 BI 經營戰情室", "👑 集團即時合併報表與現金流水位", "👑 跨國重大決策電子簽核", "👑 全球原物料與總經理室即時看板"],
-                "經營企劃與策略發展部": ["📈 長期策略目標 KPI 追蹤儀表板", "📈 市場競爭分析與競品情報庫", "📈 投資併購專案評估模型", "📈 企業年度預算編列與執行追蹤"]
+# 🌐 多國語言字典檔支援
+lang_dict = {
+    "繁體中文": {
+        "title": "全球多租戶 SaaS AI ERP 平台 - 產業別與 1~4 級組織總控中心",
+        "sidebar_title": "⚡ SaaS ERP 總控台",
+        "lang_label": "🌐 選擇介面語系 / Select Language",
+        "logged_in": "🟢 總控管理員已登入",
+        "logout": "🚪 登出系統",
+        "tab1": "🏭 選擇產業與 1~4 級部門拼圖市集",
+        "tab2": "💰 四大商業授權方案定價設定",
+        "tab3": "📋 企業租戶總覽與方案綁定",
+        "tab4": "➕ 註冊新租戶與方案指派"
+    },
+    "English": {
+        "title": "Global Multi-Tenant SaaS AI ERP - Industry & Org Control Center",
+        "sidebar_title": "⚡ SaaS ERP Master",
+        "lang_label": "🌐 Select Language",
+        "logged_in": "🟢 Master Admin Logged In",
+        "logout": "🚪 Logout",
+        "tab1": "🏭 Industry & 1-4 Level Org Marketplace",
+        "tab2": "💰 Commercial Plans Setup",
+        "tab3": "📋 Tenant Overview & Licensing",
+        "tab4": "➕ Register New Tenant"
+    },
+    "Tiếng Việt": {
+        "title": "Nền tảng SaaS AI ERP Đa người thuê - Trung tâm điều khiển ngành nghề",
+        "sidebar_title": "⚡ SaaS ERP Tổng",
+        "lang_label": "🌐 Chọn ngôn ngữ",
+        "logged_in": "🟢 Quản trị viên đã đăng nhập",
+        "logout": "Đăng xuất",
+        "tab1": "🏭 Chọn ngành & Chợ tính năng 1-4 cấp",
+        "tab2": "💰 Cài đặt gói thương mại",
+        "tab3": "📋 Tổng quan khách hàng",
+        "tab4": "➕ Đăng ký khách hàng mới"
+    }
+}
+
+t = lang_dict[st.session_state.current_lang]
+
+# 🏭 核心架構：多產業別對應的 1~4 級完整部門與科別矩陣
+if "industry_hierarchy_db" not in st.session_state:
+    st.session_state.industry_hierarchy_db = {
+        "科技資訊業 (Tech & IT)": {
+            "desc": "專為軟體研發、系統整合與高科技製造業設計之多級組織架構",
+            "levels": {
+                "1級最高決策層": {
+                    "董事長室 / 總經理室": ["👑 全球多維度 BI 經營戰情室", "👑 集團即時合併報表與現金流水位", "👑 跨國重大決策電子簽核"],
+                    "策略發展委員會": ["📈 長期策略目標 KPI 追蹤儀表板", "📈 市場競爭分析與競品情報庫", "📈 投資併購專案評估模型"]
+                },
+                "2級處/部": {
+                    "資訊處 (IT Division)": ["💻 SaaS 租戶自主拼圖模組開關與授權管控", "💻 組織權限與角色管理 (RBAC) 核心", "💻 外部第三方 API 串聯與資料庫同步"],
+                    "人力資源處": ["👥 全球人事組織與員工生命週期管理", "👥 跨國薪資計算引擎 (含加班費/夜班加給)", "👥 多班別排班考勤與請假打卡系統"],
+                    "財務會計處": ["📊 總帳會計系統、傳票登錄與試算表", "📊 越南會計準則 (Thông tư 200) 專用帳套", "📊 電子發票 (Electronic Invoice) 開立與申報"]
+                },
+                "3級課/營運中心": {
+                    "資訊處 - 資訊部": ["💻 企業內部 ERP 系統維運與資料庫備份管理", "💻 總部與各廠區網路架構與 VPN 監控", "💻 使用者端硬體設備與資安派送管理"],
+                    "資訊處 - 軟體開發部": ["💻 AI 模組串聯、Function Calling 與工作流程引擎", "💻 跨國多語系自動翻譯快取與前端動態渲染", "💻 客製化 API 開發與 Webhook 整合"],
+                    "研發專案課": ["💡 新產品研發專案管理與階段閘門審查", "💡 研發實驗數據記錄與原型機測試追蹤"]
+                },
+                "4級組/班別": {
+                    "資訊安全小組": ["🛡️ 資訊安全事件通報與資安軌跡日誌", "🛡️ 權限存取控制稽核 (RBAC Log)"],
+                    "系統維運組": ["💻 系統效能監控、容器化部署與資安日誌管理"]
+                }
             }
         },
-        "2級部門": {
-            "desc": "核心事業處與管理支援部門",
-            "departments": {
-                "人力資源與行政管理部": ["👥 全球人事組織與員工生命週期管理", "👥 跨國薪資計算引擎 (含越南勞動法加班費/夜班加給)", "👥 多班別排班考勤與請假打卡系統", "👥 招募管理與績效考核 (KPI/OKRs)"],
-                "財務與資本運作部": ["💰 應收帳款 (AR) 與應付帳款 (AP) 即時水位", "💰 多幣別資金調度與銀行信用狀 (L/C) 管理", "💰 國際匯率風險避險與即時換算中心"],
-                "會計與稅務管理部": ["📊 總帳會計系統、傳票登錄與試算表", "📊 越南會計準則 (Thông tư 200) 專用帳套", "📊 電子發票 (Electronic Invoice) 開立與申報"],
-                "國內與國際業務部": ["💼 國內外客戶關係管理 (CRM) 與商機追蹤", "💼 國際多幣別貿易契約與雙層報價管理", "💼 業務績效獎金與佣金自動計算"],
-                "法務與資訊安全處": ["⚖️ 跨國合約生命週期管理與電子簽署", "🛡️ 內部控制與 ISO 內稽內控檢核", "🛡️ 資訊安全事件通報與資安軌跡日誌"]
+        "傳統製造與勞動業 (Traditional Mfg & Labor)": {
+            "desc": "專為電機製造、機械加工與勞動密集產業設計之多級組織架構",
+            "levels": {
+                "1級最高決策層": {
+                    "董事長室 / 總經理室": ["👑 全球多維度 BI 經營戰情室", "👑 廠區稼動率與生產成本戰情看板"]
+                },
+                "2級處/部": {
+                    "生產製造事業群": ["🏭 MES 電機製造執行系統與車間工單排程", "🏭 現場機台設備稼動率與 OEE 即時監控"],
+                    "供應鏈與採購處": ["📦 全球供應商詢比議價與合格供應商 (AVL) 評鑑", "📦 採購訂單 (PO) 發包與交期追蹤系統"],
+                    "品質保證處 (QA/QC)": ["🔍 IQC 進料檢驗與 AQL 抽樣標準管理", "🔍 PQC 製程品保巡檢與不良率統計分析"]
+                },
+                "3級課/營運中心": {
+                    "配電盤製造課": ["⚡ 工程雙層報價與技術規格審查", "⚡ BOM (物料清單) 零件自動展開與版次管理"],
+                    "倉儲物流管理課": ["📦 智能多倉庫進銷存與安全庫存水位警示", "📦 PDA 條碼掃描入庫、出庫與盤點作業 (WMS)"]
+                },
+                "4級組/班別": {
+                    "高壓盤組裝班": ["📱 工地師傅與現場作業員手機快速回報", "🛡️ ISO 品質合規與 CAPA 矯正預防措施"],
+                    "廠區維修與車輛組": ["🚗 廠區車輛與設備維修組 (派車與保養)", "📦 包裝與出貨組 (成品條碼貼標)"]
+                }
             }
         },
-        "3級部門": {
-            "desc": "專業營運課室與供應鏈中心",
-            "departments": {
-                "供應鏈與全球採購部": ["📦 全球供應商詢比議價與合格供應商 (AVL) 評鑑", "📦 採購訂單 (PO) 發包與交期追蹤系統", "📦 原物料價格波動行情看板"],
-                "倉儲物流與庫存管理部": ["📦 智能多倉庫進銷存與安全庫存水位警示", "📦 PDA 條碼掃描入庫、出庫與盤點作業 (WMS)", "📦 批號效期管理 (FIFO/LIFO) 與溯源"],
-                "生產製造與商務管理部": ["🏭 MES 電機製造執行系統與車間工單排程", "🏭 現場機台設備稼動率與 OEE 即時監控", "🏭 工地師傅與現場作業員手機快速回報"],
-                "工程與技術服務部": ["⚡ 工程雙層報價與技術規格審查", "⚡ BOM (物料清單) 零件自動展開與版次管理", "⚡ 配電盤/變壓器設計圖紙與工程驗收"],
-                "品質保證與品管中心 (QA/QC)": ["🔍 IQC 進料檢驗與 AQL 抽樣標準管理", "🔍 PQC 製程品保巡檢與不良率統計分析", "🔍 OQC 出貨檢驗與品質證書列印"]
-            }
-        },
-        "4級部門": {
-            "desc": "現場作業班組、研發技術小組與IT支援",
-            "departments": {
-                "研發設計與創新中心": ["💡 新產品研發專案管理與階段閘門審查", "💡 研發實驗數據記錄與原型機測試追蹤", "💡 智慧財產權與研發圖庫管理"],
-                "資訊技術與系統開發部 (IT)": ["💻 SaaS 租戶自主拼圖模組開關與授權管控", "💻 組織權限與角色管理 (RBAC) 核心", "💻 外部第三方 API 串聯與資料庫同步"],
-                "現場作業班與品保小組": ["🛡️ ISO 品質合規組 (CAPA 矯正預防措施)", "🚗 廠區車輛與設備維修組 (派車與保養)", "📦 包裝與出貨組 (成品條碼貼標與海關文件)"]
+        "營造工程業 (Construction & Engineering)": {
+            "desc": "專為土木建築、廠房營造與工程估驗計價設計之多級組織架構",
+            "levels": {
+                "1級最高決策層": {
+                    "董事長室 / 總經理室": ["👑 工程總覽與多專案資金現金流戰情室"]
+                },
+                "2級處/部": {
+                    "工程事業處": ["🏗️ 營建專案工程進度與甘特圖管理", "🏗️ 分包商合約與估驗計價管理系統"],
+                    "工务管理處": ["👷 工地現場人員出勤與安衛稽核管理"]
+                },
+                "3級課/營運中心": {
+                    "機電工程課": ["⚡ 機電設備點交與工程驗收管理", "⚡ 施工圖說管理與工程變更 (ECN) 追蹤"]
+                },
+                "4級組/班別": {
+                    "工地安全衛生組": ["🛡️ 營造工地安衛環保巡檢與違規矯正"],
+                    "材料試驗班": ["🔍 營建建材進場抽驗與試驗報告管理"]
+                }
             }
         }
     }
 
-# 初始化部門互動勾選狀態對應資料庫
-if "interactive_dept_puzzles" not in st.session_state:
-    st.session_state.interactive_dept_puzzles = {}
-    for lvl_name, lvl_info in st.session_state.strict_4level_departments_db.items():
-        for d_name, puz_list in lvl_info["departments"].items():
-            # 預設全部勾選作為初始狀態
-            st.session_state.interactive_dept_puzzles[d_name] = puz_list.copy()
-
-# 商業方案與定價設定 (企業旗艦版、正式商業版、彈性訂閱版、個人試用版)
+# 初始化四大商業授權方案資料庫
 if "subscription_plans_db" not in st.session_state:
     st.session_state.subscription_plans_db = {
         "🚀 企業旗艦版 (Enterprise Flagship)": {
-            "price_usd": 3500.0, "billing_cycle": "每年計費", "max_seats": "無限席位", "target": "大型跨國集團", "desc": "解鎖全公司所有 1~4 級部門與所有業務拼圖模組。"
+            "price_usd": 3500.0, "billing_cycle": "每年計費", "max_seats": "無限席位", "desc": "解鎖全公司所有 1~4 級部門與所有業務拼圖模組。"
         },
         "💼 正式商業版 (Standard Official)": {
-            "price_usd": 1500.0, "billing_cycle": "每年計費", "max_seats": "30 席位", "target": "中型製造業", "desc": "支援核心生產、供應鏈與財會模組。"
+            "price_usd": 1500.0, "billing_cycle": "每年計費", "max_seats": "30 席位", "desc": "支援核心生產、供應鏈與財會模組。"
         },
         "⏱️ 彈性訂閱版 (Flexible Subscription)": {
-            "price_usd": 150.0, "billing_cycle": "每月計費", "max_seats": "10 席位", "target": "新創或彈性專案", "desc": "按月隨選訂閱指定部門拼圖。"
+            "price_usd": 150.0, "billing_cycle": "每月計費", "max_seats": "10 席位", "desc": "按月隨選訂閱指定部門拼圖。"
         },
         "👤 個人試用版 (Free Trial)": {
-            "price_usd": 0.0, "billing_cycle": "14天免費", "max_seats": "3 席位", "target": "評估與沙盒測試", "desc": "供單一部門進行功能體驗。"
+            "price_usd": 0.0, "billing_cycle": "14天免費", "max_seats": "3 席位", "desc": "供單一部門進行功能體驗。"
         }
     }
 
@@ -115,18 +178,25 @@ if "tenant_licensing_db" not in st.session_state:
 # ==================== 側邊欄導覽 ====================
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/factory.png", width=64)
-    st.markdown("### ⚡ SaaS ERP 總控台")
+    st.markdown(f"### {t['sidebar_title']}")
     st.markdown("---")
     
+    # 🌐 多國語言即時切換
+    selected_lang = st.selectbox(t["lang_label"], ["繁體中文", "English", "Tiếng Việt"], index=["繁體中文", "English", "Tiếng Việt"].index(st.session_state.current_lang))
+    if selected_lang != st.session_state.current_lang:
+        st.session_state.current_lang = selected_lang
+        st.rerun()
+
+    st.markdown("---")
     if st.session_state.master_logged_in:
-        st.success("🟢 總控管理員已登入")
+        st.success(t["logged_in"])
         if st.session_state.selected_tenant:
             st.markdown(f"**當前租戶**：`{st.session_state.selected_tenant}`")
             if st.button("🔄 返回總控台首頁", use_container_width=True):
                 st.session_state.selected_tenant = None
                 st.rerun()
         
-        if st.button("🚪 登出系統", use_container_width=True):
+        if st.button(t["logout"], use_container_width=True):
             st.session_state.master_logged_in = False
             st.session_state.selected_tenant = None
             st.rerun()
@@ -152,51 +222,48 @@ if not st.session_state.master_logged_in:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
 elif not st.session_state.selected_tenant:
-    st.markdown("## 🏢 平台總控管理中心 - 1~4級組織拼圖互動選購與商業授權總控")
-    st.markdown("💡 *直覺式展示 1~4 級組織架構（不使用隱蔽下拉選單），讓您或未來網頁客戶能直接在各部門下方「互動勾選」所需要的作業功能拼圖！*")
+    st.markdown(f"## 🏢 {t['title']}")
+    st.markdown("💡 *請先選擇您的產業別，系統將動態加載對應的 1~4 級完整部門、科別與功能模組，並支援商業授權方案綁定與多語系即時切換！*")
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
-        "🧩 1~4級組織部門與拼圖互動選購區",
-        "💰 四大商業方案（旗艦/正式/訂閱/試用）設定",
-        "📋 企業租戶總覽與方案連動管理",
-        "➕ 註冊新租戶與方案指派"
+        t["tab1"],
+        t["tab2"],
+        t["tab3"],
+        t["tab4"]
     ])
 
-    # Tab 1: 真正可互動勾選的 1~4 級組織與部門拼圖市集
+    # Tab 1: 產業別選擇 ➔ 動態展開 1~4 級部門與拼圖勾選
     with master_tab1:
-        st.markdown("### 🛒 1~4 級組織架構與部門功能互動配置市集")
-        st.info("💡 此介面同時提供給內部銷售團隊配置版本，以及未來開放給外部網路客戶在前端網頁自主勾選部門功能使用。")
+        st.markdown("### 🏭 第一步：選擇客戶所屬產業別")
+        
+        industries = list(st.session_state.industry_hierarchy_db.keys())
+        selected_ind = st.selectbox("選擇產業類型", industries, index=industries.index(st.session_state.selected_industry) if st.session_state.selected_industry in industries else 0)
+        
+        if selected_ind != st.session_state.selected_industry:
+            st.session_state.selected_industry = selected_ind
+            st.rerun()
 
-        hierarchy = st.session_state.strict_4level_departments_db
+        ind_info = st.session_state.industry_hierarchy_db[selected_ind]
+        st.info(f"💡 產業架構說明：{ind_info['desc']}")
+        st.markdown("---")
 
-        for lvl_name, lvl_info in hierarchy.items():
-            st.markdown(f"## 📌 【 {lvl_name} 】")
-            st.caption(f"說明：{lvl_info['desc']}")
-            st.markdown("---")
+        st.markdown(f"### 🌳 【 {selected_ind} 】之 1~4 級完整組織架構與功能拼圖配置")
+        
+        # 逐級展開 1~4 級組織與部門
+        for lvl_name, dept_dict in ind_info["levels"].items():
+            st.markdown(f"## 📌 ── 【 {lvl_name} 】 ──")
             
-            dept_dict = lvl_info["departments"]
-            
-            # 每個部門獨立成一個可互動的擴展容器或區塊
-            for d_name, d_puzzles in dept_dict.items():
-                with st.expander(f"🏢 點擊展開並配置【 {d_name} 】的專屬功能拼圖", expanded=True):
-                    current_selected = st.session_state.interactive_dept_puzzles.get(d_name, d_puzzles.copy())
-                    updated_selected = []
-                    
+            for d_name, puz_list in dept_dict.items():
+                with st.expander(f"🏢 展開配置【 {d_name} 】專屬作業模組", expanded=True):
                     c_cols = st.columns(2)
-                    for idx, puz in enumerate(d_puzzles):
+                    for idx, puz in enumerate(puz_list):
                         with c_cols[idx % 2]:
-                            if st.checkbox(puz, value=(puz in current_selected), key=f"interact_chk_{d_name}_{puz}"):
-                                updated_selected.append(puz)
-                                
-                    # 即時更新狀態
-                    st.session_state.interactive_dept_puzzles[d_name] = updated_selected
-                    st.caption(f"✨ 當前【{d_name}】已啟用了 `{len(updated_selected)} / {len(d_puzzles)}` 項作業模組。")
-            
+                            st.checkbox(puz, value=True, key=f"ind_chk_{selected_ind}_{d_name}_{puz}")
             st.markdown("<br>", unsafe_allow_html=True)
 
-        if st.button("💾 儲存全系統 1~4 級部門拼圖配置總表", type="primary", use_container_width=True):
-            st.success("🎉 全系統 1~4 級組織部門與拼圖選購配置已成功儲存並同步至雲端資料庫！")
+        if st.button("💾 儲存該產業別之 1~4 級拼圖與授權設定", type="primary", use_container_width=True):
+            st.success(f"🎉 成功儲存【{selected_ind}】的 1~4 級組織與模組拼圖配置！")
 
     # Tab 2: 四大商業方案設定
     with master_tab2:
@@ -237,20 +304,20 @@ elif not st.session_state.selected_tenant:
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
         
         tenants = st.session_state.tenant_licensing_db
-        filtered = [t for t in tenants if not search or search.lower() in t["company_name"].lower() or search.lower() in t["tenant_id"].lower()]
+        filtered = [t_item for t_item in tenants if not search or search.lower() in t_item["company_name"].lower() or search.lower() in t_item["tenant_id"].lower()]
         
         if filtered:
-            for t in filtered:
+            for t_item in filtered:
                 with st.container():
                     col_i, col_b = st.columns([3, 1])
                     with col_i:
-                        st.markdown(f"#### 🏢 {t['company_name']} (`{t['tenant_id']}`)")
-                        st.write(f"• **綁定商業方案**：{t['plan']} | **合約金額**：${t['pricing_usd']:,.2f} USD")
-                        st.write(f"• **合約到期日**：{t['expiry_date']} | **運行狀態**：{t['status']}")
+                        st.markdown(f"#### 🏢 {t_item['company_name']} (`{t_item['tenant_id']}`)")
+                        st.write(f"• **綁定商業方案**：{t_item['plan']} | **合約金額**：${t_item['pricing_usd']:,.2f} USD")
+                        st.write(f"• **合約到期日**：{t_item['expiry_date']} | **運行狀態**：{t_item['status']}")
                     with col_b:
                         st.markdown("<br>", unsafe_allow_html=True)
-                        if st.button(f"🚀 進入租戶工作區", key=f"enter_{t['tenant_id']}", use_container_width=True):
-                            st.session_state.selected_tenant = t["company_name"]
+                        if st.button(f"🚀 進入租戶工作區", key=f"enter_{t_item['tenant_id']}", use_container_width=True):
+                            st.session_state.selected_tenant = t_item["company_name"]
                             st.rerun()
                     st.markdown("---")
         else:
@@ -289,7 +356,7 @@ elif not st.session_state.selected_tenant:
 
 # 層級三：已進入特定租戶環境
 else:
-    current_tenant_obj = next((t for t in st.session_state.tenant_licensing_db if t["company_name"] == st.session_state.selected_tenant), None)
+    current_tenant_obj = next((t_item for t_item in st.session_state.tenant_licensing_db if t_item["company_name"] == st.session_state.selected_tenant), None)
     
     if current_tenant_obj:
         st.sidebar.markdown("---")
