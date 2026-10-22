@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-# 🌐 引入各大部門模組與總控元件（對應您的 modules 資料夾結構）
+# 🌐 採用安全匯入與防呆機制，確保主控台絕對不會因為單一模組未就緒而崩潰
 try:
     from modules import executive_office
     from modules import system_licensing
@@ -13,8 +13,7 @@ try:
     from modules.pos_retail import render_pos_retail
     from modules.mes_factory import render_mes_factory
     from modules.app_store import render_app_store
-except ImportError as e:
-    # 防呆機制：若有部分模組路徑或名稱微調，不影響主畫面載入
+except ImportError:
     pass
 
 st.set_page_config(
@@ -37,10 +36,6 @@ if "master_logged_in" not in st.session_state:
     st.session_state.master_logged_in = False
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
-if "current_lang" not in st.session_state:
-    st.session_state.current_lang = "繁體中文"
-if "selected_industry" not in st.session_state:
-    st.session_state.selected_industry = "科技資訊業 (Tech & IT)"
 
 # 🌐 多國語言字典檔支援
 lang_dict = {
@@ -79,9 +74,37 @@ lang_dict = {
     }
 }
 
-t = lang_dict[st.session_state.current_lang]
+# ==================== 側邊欄導覽與語系切換 ====================
+with st.sidebar:
+    st.image("https://img.icons8.com/color/96/factory.png", width=64)
+    
+    # 使用 native key 管理語系，避免手動 rerun 造成迴圈
+    current_lang = st.selectbox(
+        "🌐 選擇介面語系 / Select Language", 
+        ["繁體中文", "English", "Tiếng Việt"], 
+        key="current_lang_selector"
+    )
+    
+    t = lang_dict[current_lang]
+    st.markdown(f"### {t['sidebar_title']}")
+    st.markdown("---")
+    
+    if st.session_state.master_logged_in:
+        st.success(t["logged_in"])
+        if st.session_state.selected_tenant:
+            st.markdown(f"**當前檢視租戶**：`{st.session_state.selected_tenant}`")
+            if st.button("🔄 返回總控台首頁", use_container_width=True):
+                st.session_state.selected_tenant = None
+                st.rerun()
+        
+        if st.button(t["logout"], use_container_width=True):
+            st.session_state.master_logged_in = False
+            st.session_state.selected_tenant = None
+            st.rerun()
+    else:
+        st.info("狀態：等待總控台登入驗證")
 
-# 🏭 核心架構：多產業別對應的 1~4 級完整部門與科別矩陣
+# ==================== 核心資料庫初始化 ====================
 if "industry_hierarchy_db" not in st.session_state:
     st.session_state.industry_hierarchy_db = {
         "科技資訊業 (Tech & IT)": {
@@ -130,14 +153,13 @@ if "industry_hierarchy_db" not in st.session_state:
         }
     }
 
-# 初始化四大商業授權方案資料庫
 if "subscription_plans_db" not in st.session_state:
     st.session_state.subscription_plans_db = {
         "🚀 企業旗艦版 (Enterprise Flagship)": {
             "price_usd": 3500.0, "billing_cycle": "每年計費", "max_seats": "無限席位", "desc": "解鎖全公司所有 1~4 級部門與所有業務拼圖模組。"
         },
         "💼 正式商業版 (Standard Official)": {
-            "price_usd": 1500.0, "billing_cycle": "每年計費", "max_seats": "30 席位", "desc": "支援核心生產、供應鏈與財會模組。"
+            "price_usd": 1500.0, "billing_cycle": "每年計費", "max_seats": "30 席位", "desc": "支援核心生產, 供應鏈與財會模組。"
         },
         "⏱️ 彈性訂閱版 (Flexible Subscription)": {
             "price_usd": 150.0, "billing_cycle": "每月計費", "max_seats": "10 席位", "desc": "按月隨選訂閱指定部門拼圖。"
@@ -159,34 +181,6 @@ if "tenant_licensing_db" not in st.session_state:
             "status": "🟢 正常運行 (Active)"
         }
     ]
-
-# ==================== 側邊欄導覽 ====================
-with st.sidebar:
-    st.image("https://img.icons8.com/color/96/factory.png", width=64)
-    st.markdown(f"### {t['sidebar_title']}")
-    st.markdown("---")
-    
-    # 🌐 多國語言即時切換
-    selected_lang = st.selectbox(t["lang_label"], ["繁體中文", "English", "Tiếng Việt"], index=["繁體中文", "English", "Tiếng Việt"].index(st.session_state.current_lang))
-    if selected_lang != st.session_state.current_lang:
-        st.session_state.current_lang = selected_lang
-        st.rerun()
-
-    st.markdown("---")
-    if st.session_state.master_logged_in:
-        st.success(t["logged_in"])
-        if st.session_state.selected_tenant:
-            st.markdown(f"**當前檢視租戶**：`{st.session_state.selected_tenant}`")
-            if st.button("🔄 返回總控台首頁", use_container_width=True):
-                st.session_state.selected_tenant = None
-                st.rerun()
-        
-        if st.button(t["logout"], use_container_width=True):
-            st.session_state.master_logged_in = False
-            st.session_state.selected_tenant = None
-            st.rerun()
-    else:
-        st.info("狀態：等待總控台登入驗證")
 
 # ==================== 主路由邏輯 ====================
 
@@ -214,22 +208,16 @@ elif not st.session_state.selected_tenant:
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
-        t["tab1"],
-        t["tab2"],
-        t["tab3"],
-        t["tab4"]
+        t["tab1"], t["tab2"], t["tab3"], t["tab4"]
     ])
 
-    # Tab 1: 產業別選擇 ➔ 動態展開 1~4 級部門與拼圖勾選
+    # Tab 1: 產業別選擇 ➔ 1~4 級部門拼圖勾選
     with master_tab1:
         st.markdown("### 🏭 第一步：選擇企業所屬產業別與 1~4 級組織拼圖")
-        
         industries = list(st.session_state.industry_hierarchy_db.keys())
-        selected_ind = st.selectbox("選擇產業類型", industries, index=industries.index(st.session_state.selected_industry) if st.session_state.selected_industry in industries else 0)
         
-        if selected_ind != st.session_state.selected_industry:
-            st.session_state.selected_industry = selected_ind
-            st.rerun()
+        # 使用 key 讓 Streamlit 自動維護狀態，避免重新整理迴圈
+        selected_ind = st.selectbox("選擇產業類型", industries, key="industry_type_selector")
 
         ind_info = st.session_state.industry_hierarchy_db[selected_ind]
         st.info(f"💡 產業架構說明：{ind_info['desc']}")
@@ -239,7 +227,6 @@ elif not st.session_state.selected_tenant:
         
         for lvl_name, dept_dict in ind_info["levels"].items():
             st.markdown(f"## 📌 ── 【 {lvl_name} 】 ──")
-            
             for d_name, puz_list in dept_dict.items():
                 with st.expander(f"🏢 展開配置【 {d_name} 】專屬作業模組", expanded=True):
                     c_cols = st.columns(2)
@@ -255,8 +242,7 @@ elif not st.session_state.selected_tenant:
     with master_tab2:
         st.markdown("### 💰 四大商業授權方案定價與規格設定")
         plans_db = st.session_state.subscription_plans_db
-        c1, c2, c3, c4 = st.columns(4)
-        cols = [c1, c2, c3, c4]
+        cols = st.columns(4)
         for idx, (p_name, p_info) in enumerate(plans_db.items()):
             with cols[idx]:
                 st.markdown(f"#### {p_name}")
@@ -284,7 +270,7 @@ elif not st.session_state.selected_tenant:
                 st.success(f"🎉 商業方案 [{target_p}] 已成功更新！")
                 st.rerun()
 
-    # Tab 3: 企業租戶總覽 (支援 CRUD 搜尋與進入工作區)
+    # Tab 3: 企業租戶總覽 (CRUD 搜尋與進入工作區)
     with master_tab3:
         st.markdown("### 📋 現有企業租戶清單與方案綁定檢視")
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
