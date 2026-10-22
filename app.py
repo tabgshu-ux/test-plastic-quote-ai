@@ -3,7 +3,7 @@ import streamlit as st
 def render_master_portal():
     st.markdown("## 🏢 平台總控台 - 全球企業租戶與商業授權方案管理中心")
     st.markdown("在此管理所有客戶租戶、檢視與設定「旗艦版/正式版/訂閱版」之功能費用，並可快速進入各租戶環境。")
-    st.markdown("---") # 加入明確的視覺分隔線
+    st.markdown("---")
 
     # 模擬的企業租戶資料庫
     if "tenant_list" not in st.session_state:
@@ -17,8 +17,7 @@ def render_master_portal():
                 "seats": "無限席位 (Unlimited)",
                 "expiry": "2027-12-31",
                 "modules": ["總經理室 (Executive Office)", "管理部 (Management Dept)", "工程中心", "ISO品質合規", "ESG碳足跡"]
-            },
-            #未來可擴充其他租戶...
+            }
         ]
 
     st.markdown("### 📋 平台現有企業租戶清單（卡片式檢視）")
@@ -28,13 +27,12 @@ def render_master_portal():
 
     st.markdown("---")
 
-    # 迴圈遍歷所有租戶，改用獨立的「卡片外框 + 分隔線」呈現，避免點錯行
+    # 迴圈遍歷所有租戶，採用卡片式外框與分隔線
     for tenant in st.session_state.tenant_list:
         if search_query and search_query.lower() not in tenant["company_name"].lower() and search_query.lower() not in tenant["tenant_id"].lower():
             continue
 
         with st.container():
-            # 使用醒目的區塊與邊框包覆該租戶資訊
             col_info, col_action = st.columns([3, 1])
             
             with col_info:
@@ -45,12 +43,10 @@ def render_master_portal():
                 st.write(f"• **已開通模組**： {', '.join(tenant['modules'])}")
             
             with col_action:
-                st.markdown("<br>", unsafe_allow_html=True) # 調整按鈕垂直對齊
-                # 獨立的進入按鈕，配有明確的租戶名稱，杜絕點錯可能性
+                st.markdown("<br>", unsafe_allow_html=True)
                 if st.button(f"🚀 進入 {tenant['tenant_id']}", key=f"enter_{tenant['tenant_id']}"):
                     st.session_state.current_tenant = tenant['tenant_id']
                     st.success(f"已成功切換至 {tenant['company_name']} 租戶環境！")
                     st.rerun()
 
-            # 每個租戶卡片之間加上一條乾淨的分隔線，視覺層次分明
             st.markdown("---")
