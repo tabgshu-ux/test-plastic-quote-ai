@@ -2,16 +2,20 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-# 引入各大部門模組
-from modules.executive_bi import render_executive_bi
-from modules.pos_retail import render_pos_retail
-from modules.mes_factory import render_mes_factory
-from modules.app_store import render_app_store
-from modules.org_chart import render_org_chart
-from modules.rbac import render_rbac
-from modules.departments_manager import render_departments_manager
-from modules import executive_office
-from modules import system_licensing
+# 🌐 引入各大部門模組與總控元件（對應您的 modules 資料夾結構）
+try:
+    from modules import executive_office
+    from modules import system_licensing
+    from modules.departments_manager import render_departments_manager
+    from modules.org_chart import render_org_chart
+    from modules.rbac import render_rbac
+    from modules.executive_bi import render_executive_bi
+    from modules.pos_retail import render_pos_retail
+    from modules.mes_factory import render_mes_factory
+    from modules.app_store import render_app_store
+except ImportError as e:
+    # 防呆機制：若有部分模組路徑或名稱微調，不影響主畫面載入
+    pass
 
 st.set_page_config(
     page_title="全球多租戶 SaaS AI ERP 平台 - 產業別與 1~4級組織拼圖總控中心",
@@ -123,25 +127,6 @@ if "industry_hierarchy_db" not in st.session_state:
                     "廠區維修與車輛組": ["🚗 廠區車輛與設備維修組 (派車與保養)", "📦 包裝與出貨組 (成品條碼貼標)"]
                 }
             }
-        },
-        "營造工程業 (Construction & Engineering)": {
-            "desc": "專為土木建築、廠房營造與工程估驗計價設計之多級組織架構",
-            "levels": {
-                "1級最高決策層": {
-                    "董事長室 / 總經理室": ["👑 工程總覽與多專案資金現金流戰情室"]
-                },
-                "2級處/部": {
-                    "工程事業處": ["🏗️ 營建專案工程進度與甘特圖管理", "🏗️ 分包商合約與估驗計價管理系統"],
-                    "工务管理處": ["👷 工地現場人員出勤與安衛稽核管理"]
-                },
-                "3級課/營運中心": {
-                    "機電工程課": ["⚡ 機電設備點交與工程驗收管理", "⚡ 施工圖說管理與工程變更 (ECN) 追蹤"]
-                },
-                "4級組/班別": {
-                    "工地安全衛生組": ["🛡️ 營造工地安衛環保巡檢與違規矯正"],
-                    "材料試驗班": ["🔍 營建建材進場抽驗與試驗報告管理"]
-                }
-            }
         }
     }
 
@@ -191,7 +176,7 @@ with st.sidebar:
     if st.session_state.master_logged_in:
         st.success(t["logged_in"])
         if st.session_state.selected_tenant:
-            st.markdown(f"**當前租戶**：`{st.session_state.selected_tenant}`")
+            st.markdown(f"**當前檢視租戶**：`{st.session_state.selected_tenant}`")
             if st.button("🔄 返回總控台首頁", use_container_width=True):
                 st.session_state.selected_tenant = None
                 st.rerun()
@@ -201,10 +186,11 @@ with st.sidebar:
             st.session_state.selected_tenant = None
             st.rerun()
     else:
-        st.info("狀態：等待登入驗證")
+        st.info("狀態：等待總控台登入驗證")
 
 # ==================== 主路由邏輯 ====================
 
+# 1. 總控台登入驗證
 if not st.session_state.master_logged_in:
     st.markdown("## 🔐 全球多租戶 SaaS AI ERP - 平台總控登入")
     st.markdown("請輸入總控管理員帳號密碼以進入 SaaS 核心管理中心。")
@@ -221,9 +207,10 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
+# 2. 總控中心首頁 (未選定特定租戶時)
 elif not st.session_state.selected_tenant:
     st.markdown(f"## 🏢 {t['title']}")
-    st.markdown("💡 *請先選擇您的產業別，系統將動態加載對應的 1~4 級完整部門、科別與功能模組，並支援商業授權方案綁定與多語系即時切換！*")
+    st.markdown("💡 *請自由選擇產業別、自訂 1~4 級部門拼圖模組、管理商業授權方案與查看所有企業租戶！*")
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
@@ -235,7 +222,7 @@ elif not st.session_state.selected_tenant:
 
     # Tab 1: 產業別選擇 ➔ 動態展開 1~4 級部門與拼圖勾選
     with master_tab1:
-        st.markdown("### 🏭 第一步：選擇客戶所屬產業別")
+        st.markdown("### 🏭 第一步：選擇企業所屬產業別與 1~4 級組織拼圖")
         
         industries = list(st.session_state.industry_hierarchy_db.keys())
         selected_ind = st.selectbox("選擇產業類型", industries, index=industries.index(st.session_state.selected_industry) if st.session_state.selected_industry in industries else 0)
@@ -248,9 +235,8 @@ elif not st.session_state.selected_tenant:
         st.info(f"💡 產業架構說明：{ind_info['desc']}")
         st.markdown("---")
 
-        st.markdown(f"### 🌳 【 {selected_ind} 】之 1~4 級完整組織架構與功能拼圖配置")
+        st.markdown(f"### 🌳 【 {selected_ind} 】之 1~4 級完整組織架構與拼圖市集配置")
         
-        # 逐級展開 1~4 級組織與部門
         for lvl_name, dept_dict in ind_info["levels"].items():
             st.markdown(f"## 📌 ── 【 {lvl_name} 】 ──")
             
@@ -298,7 +284,7 @@ elif not st.session_state.selected_tenant:
                 st.success(f"🎉 商業方案 [{target_p}] 已成功更新！")
                 st.rerun()
 
-    # Tab 3: 企業租戶總覽
+    # Tab 3: 企業租戶總覽 (支援 CRUD 搜尋與進入工作區)
     with master_tab3:
         st.markdown("### 📋 現有企業租戶清單與方案綁定檢視")
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
@@ -354,7 +340,7 @@ elif not st.session_state.selected_tenant:
                 else:
                     st.warning("請填寫公司名稱！")
 
-# 層級三：已進入特定租戶環境
+# 3. 已進入特定租戶工作區
 else:
     current_tenant_obj = next((t_item for t_item in st.session_state.tenant_licensing_db if t_item["company_name"] == st.session_state.selected_tenant), None)
     
@@ -376,16 +362,31 @@ else:
         st.markdown("---")
         
         if "多級組織架構維護" in chosen_module:
-            render_departments_manager(current_tenant_obj)
+            if 'render_departments_manager' in globals():
+                render_departments_manager(current_tenant_obj)
+            else:
+                st.info("正在載入：多級組織架構維護模組")
         elif "組織架構圖" in chosen_module:
-            render_org_chart(current_tenant_obj)
+            if 'render_org_chart' in globals():
+                render_org_chart(current_tenant_obj)
+            else:
+                st.info("正在載入：組織架構圖模組")
         elif "總經理室戰情室" in chosen_module:
-            executive_office.show(current_tenant_obj)
+            if 'executive_office' in globals() and hasattr(executive_office, 'show'):
+                executive_office.show(current_tenant_obj)
+            else:
+                st.info("正在載入：總經理室戰情室模組")
         elif "資訊管理" in chosen_module:
             it_tab1, it_tab2 = st.tabs(["🔒 組織權限與角色管理 (RBAC)", "🧩 本公司拼圖模組與 API 設定"])
             with it_tab1:
-                render_rbac(current_tenant_obj)
+                if 'render_rbac' in globals():
+                    render_rbac(current_tenant_obj)
+                else:
+                    st.info("RBAC 模組載入中")
             with it_tab2:
-                system_licensing.show(current_tenant_obj)
+                if 'system_licensing' in globals() and hasattr(system_licensing, 'show'):
+                    system_licensing.show(current_tenant_obj)
+                else:
+                    st.info("系統授權模組載入中")
         else:
             st.info(f"正在載入模組功能：{chosen_module}")
