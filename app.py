@@ -14,7 +14,7 @@ from modules import executive_office
 from modules import system_licensing
 
 st.set_page_config(
-    page_title="全球多租戶 SaaS AI ERP 平台 - 1~4級組織與拼圖總控中心",
+    page_title="全球多租戶 SaaS AI ERP 平台 - 全球 1~4 級組織與拼圖總控中心",
     page_icon="⚡",
     layout="wide"
 )
@@ -34,24 +34,30 @@ if "master_logged_in" not in st.session_state:
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
 
-# 🌟 核心升級：定義「1~4 級組織架構的 ERP 功能拼圖樹狀清單」
+# 🌟 全球企業標準：完整涵蓋 1~4 級（處 ➔ 部 ➔ 課 ➔ 組）之 ERP 拼圖矩陣
 if "all_department_puzzles" not in st.session_state:
     st.session_state.all_department_puzzles = [
-        # 1級：總管理處 / 經營層
-        {"level": "1級：總管理處", "code": "L1-EXEC", "name": "📈 總經理室戰情室 (AR/AP, P&L, 財務現金流監控)", "module_ref": "executive_office"},
-        {"level": "1級：總管理處", "code": "L1-IT", "name": "💻 資訊管理部 - IT 專屬後台、RBAC 與 API 串聯", "module_ref": "system_licensing"},
-        
-        # 2級：事業群 / 核心部門
-        {"level": "2級：事業群", "code": "L2-ENG", "name": "⚡ 工程事業群 - 機電設計與 BOM 零件自動展開", "module_ref": "mes_factory"},
-        {"level": "2級：事業群", "code": "L2-HR", "name": "👤 管理部 - 人事薪資與考勤 (含越南勞動法加班費)", "module_ref": "pos_retail"},
-        {"level": "2級：事業群", "code": "L2-FIN", "name": "🇻🇳 越南在地化會計 (Thông tư 200) 與電子發票管理", "module_ref": "pos_retail"},
-        
-        # 3級：課 / 專案中心
-        {"level": "3級：課/中心", "code": "L3-SIGN", "name": "✍️ 全方位電子簽核中心 (跨部門呈核、估驗計價)", "module_ref": "app_store"},
-        {"level": "3級：課/中心", "code": "L3-WH", "name": "📦 生產部 - 倉庫資材庫存與條碼化管理", "module_ref": "org_chart"},
-        
-        # 4級：組 / 現場班別
-        {"level": "4級：組/現場", "code": "L4-ISO", "name": "🛡️ ISO品質合規與 ESG 碳足跡盤查 (CAPA 矯正預防)", "module_ref": "org_chart"}
+        # 【1級：總管理處 / 經營戰情】
+        {"level": "1級：總管理處 (Division)", "code": "L1-EXEC", "name": "📈 總經理室戰情室 (AR/AP, P&L, 財務現金流與全球原物料監控)"},
+        {"level": "1級：總管理處 (Division)", "code": "L1-IT", "name": "💻 資訊管理部 - 總部 IT 專屬後台、RBAC 與跨國 API 串聯"},
+        {"level": "1級：總管理處 (Division)", "code": "L1-ESG", "name": "🌱 永續與 ESG 治理中心 - 範疇一二三碳排與跨國法規合規"},
+
+        # 【2級：核心事業部 / 專業處】
+        {"level": "2級：核心事業部 (Department)", "code": "L2-ENG", "name": "⚡ 工程事業群 - 機電設計、BOM 零件自動展開與工程驗收"},
+        {"level": "2級：核心事業部 (Department)", "code": "L2-FIN", "name": "🇻🇳 越南在地化會計 (Thông tư 200) 與跨國電子發票管理"},
+        {"level": "2級：核心事業部 (Department)", "code": "L2-HR", "name": "👤 管理部 - 全球人事薪資與考勤 (含越南勞動法加班費/夜班加給)"},
+        {"level": "2級：核心事業部 (Department)", "code": "L2-SALES", "name": "🌐 業務貿易部 - 全球多幣別雙層報價與客戶關係管理 (CRM)"},
+
+        # 【3級：專屬課 / 營運中心】
+        {"level": "3級：營運課/中心 (Section)", "code": "L3-SIGN", "name": "✍️ 跨部門電子簽核中心 (呈核路由、估驗計價與手機端簽核)"},
+        {"level": "3級：營運課/中心 (Section)", "code": "L3-WH", "name": "📦 倉儲物流課 - 多倉庫條碼化管理、安全庫存水位與自動補貨"},
+        {"level": "3級：營運課/中心 (Section)", "code": "L3-PROD", "name": "🏭 製造生產課 - 板金加工組工單排程、派工與進度回報"},
+        {"level": "3級：營運課/中心 (Section)", "code": "L3-QA", "name": "🔍 品質保證課 (QA) - IQC進料檢驗、PQC製程品保與OQC出貨檢驗"},
+
+        # 【4級：現場組 / 班別 / 技術小組】
+        {"level": "4級：現場組/班別 (Group)", "code": "L4-ISO", "name": "🛡️ ISO 品質合規組 - CAPA 矯正預防措施與設備校驗履歷管理"},
+        {"level": "4級：現場組/班別 (Group)", "code": "L4-MAINT", "name": "🚗 廠區車輛與設備維修組 - 廠車維護、門禁保全與派車審核"},
+        {"level": "4級：現場組/班別 (Group)", "code": "L4-PACK", "name": "📦 包裝與出貨組 - 成品條碼貼標、棧板管理與海關出貨文件"}
     ]
 
 # 商業方案與 1~4 級拼圖綁定資料庫
@@ -63,11 +69,11 @@ if "subscription_plans_db" not in st.session_state:
         },
         "💼 正式商業版 (Standard Official)": {
             "price_usd": 1500.0,
-            "modules": [p["name"] for p in st.session_state.all_department_puzzles[:5]]
+            "modules": [p["name"] for p in st.session_state.all_department_puzzles[:8]]
         },
         "⏱️ 彈性訂閱版 (Flexible Subscription)": {
             "price_usd": 600.0,
-            "modules": [p["name"] for p in st.session_state.all_department_puzzles[:3]]
+            "modules": [p["name"] for p in st.session_state.all_department_puzzles[:4]]
         }
     }
 
@@ -126,15 +132,15 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
-# 層級二：總控管理中心 (含 1~4 級部門拼圖分類設定)
+# 層級二：總控管理中心 (含完整的全球 1~4 級組織與課級拼圖分類)
 elif not st.session_state.selected_tenant:
     st.markdown("## 🏢 平台總控管理中心 (Master Control Panel)")
-    st.markdown("在此檢視所有企業租戶、設定方案定價，並按 **1~4 級組織階層** 動態勾選功能拼圖。")
+    st.markdown("在此檢視所有企業租戶、設定方案定價，並按 **全球標準 1~4 級組織架構（處 ➔ 部 ➔ 課 ➔ 組）** 動態勾選功能拼圖。")
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3 = st.tabs([
         "📋 企業租戶總覽與快速進入",
-        "🧩 1~4 級組織拼圖與動態價格設定",
+        "🧩 全球 1~4 級組織拼圖與動態價格設定",
         "➕ 註冊新租戶與拼圖派發"
     ])
 
@@ -163,10 +169,10 @@ elif not st.session_state.selected_tenant:
         else:
             st.warning("查無符合條件的租戶。")
 
-    # Tab 2: 1~4 級組織拼圖與動態價格設定
+    # Tab 2: 全球 1~4 級組織拼圖與動態價格設定
     with master_tab2:
-        st.markdown("### 🧩 依據 1~4 級組織架構配置方案拼圖與定價")
-        st.info("💡 平台支援將全世界所有設立的部門按 1~4 級組織階層進行模組化勾選配置。")
+        st.markdown("### 🧩 全球企業標準 1~4 級組織架構與拼圖模組設定")
+        st.info("💡 完整整合全球跨國製造與企業的處、部、課、組組織階層，供管理者精確配置。")
         
         plans = st.session_state.subscription_plans_db
         target_p = st.selectbox("選擇要編輯的授權方案", list(plans.keys()))
@@ -175,28 +181,34 @@ elif not st.session_state.selected_tenant:
             current_price = plans[target_p]["price_usd"]
             new_price = st.number_input("設定年度授權價格 (USD)", value=float(current_price), step=100.0)
             
-            st.markdown("##### 🌳 按 1~4 級組織架構勾選功能拼圖：")
+            st.markdown("##### 🌳 按全球 1~4 級組織階層勾選功能拼圖：")
             current_mods = plans[target_p]["modules"]
             updated_mods = []
             
-            # 依照 1~4 級分組呈現
-            for lvl in ["1級：總管理處", "2級：事業群", "3級：課/中心", "4級：組/現場"]:
-                st.markdown(f"**📂 【 {lvl} 】相關模組：**")
+            levels_order = [
+                "1級：總管理處 (Division)",
+                "2級：核心事業部 (Department)",
+                "3級：營運課/中心 (Section)",
+                "4級：現場組/班別 (Group)"
+            ]
+            
+            for lvl in levels_order:
+                st.markdown(f"**📂 【 {lvl} 】相關模組與課級單位：**")
                 lvl_puzzles = [p for p in st.session_state.all_department_puzzles if p["level"] == lvl]
                 for puz in lvl_puzzles:
                     if st.checkbox(puz["name"], value=(puz["name"] in current_mods), key=f"puz_lvl_{target_p}_{puz['code']}"):
                         updated_mods.append(puz["name"])
                 st.markdown("")
             
-            if st.form_submit_button("💾 儲存方案 1~4 級拼圖與定價配置", type="primary"):
+            if st.form_submit_button("💾 儲存全球 1~4 級拼圖與定價配置", type="primary"):
                 plans[target_p]["price_usd"] = new_price
                 plans[target_p]["modules"] = updated_mods
-                st.success(f"🎉 方案 [{target_p}] 的 1~4 級組織拼圖配置已成功更新！")
+                st.success(f"🎉 方案 [{target_p}] 的全球 1~4 級組織拼圖配置已成功更新！")
                 st.rerun()
 
     # Tab 3: 註冊新租戶與拼圖派發
     with master_tab3:
-        st.markdown("### ➕ 註冊新企業租戶與 1~4 級組織拼圖客製化派發")
+        st.markdown("### ➕ 註冊新企業租戶與全球 1~4 級組織拼圖派發")
         with st.form("new_tenant_form"):
             c1, c2 = st.columns(2)
             with c1:
@@ -208,11 +220,18 @@ elif not st.session_state.selected_tenant:
                 t_price = st.number_input("合約定價金額 (USD)", value=float(default_pr))
                 t_exp = st.date_input("合約到期日", value=datetime.date(2027, 12, 31))
             
-            st.markdown("##### 🌳 針對此租戶客製化勾選 1~4 級組織拼圖：")
+            st.markdown("##### 🌳 針對此租戶客製化勾選全球 1~4 級組織與課級拼圖：")
             default_puzzles = st.session_state.subscription_plans_db[t_plan]["modules"]
             tenant_puzzles = []
             
-            for lvl in ["1級：總管理處", "2級：事業群", "3級：課/中心", "4級：組/現場"]:
+            levels_order = [
+                "1級：總管理處 (Division)",
+                "2級：核心事業部 (Department)",
+                "3級：營運課/中心 (Section)",
+                "4級：現場組/班別 (Group)"
+            ]
+            
+            for lvl in levels_order:
                 st.markdown(f"**📂 【 {lvl} 】：**")
                 lvl_puzzles = [p for p in st.session_state.all_department_puzzles if p["level"] == lvl]
                 for puz in lvl_puzzles:
@@ -244,7 +263,7 @@ else:
     
     if current_tenant_obj:
         st.sidebar.markdown("---")
-        st.sidebar.markdown("##### 📂 租戶 1~4 級組織模組選單：")
+        st.sidebar.markdown("##### 📂 租戶全球 1~4 級組織選單：")
         allowed_modules = current_tenant_obj["modules"]
         
         chosen_module = st.sidebar.radio("選擇模組", allowed_modules, label_visibility="collapsed")
@@ -254,18 +273,18 @@ else:
         st.markdown("---")
         
         # 路由分派
-        if "總經理室戰情室" in chosen_module:
+        if "總經理室" in chosen_module:
             executive_office.show({"name": current_tenant_obj['company_name']})
         elif "工程事業群" in chosen_module:
             render_mes_factory({"name": current_tenant_obj['company_name']})
-        elif "人事薪資" in chosen_module or "會計" in chosen_module:
+        elif "會計" in chosen_module or "人資" in chosen_module or "業務" in chosen_module:
             render_pos_retail({"name": current_tenant_obj['company_name']})
         elif "電子簽核" in chosen_module:
             render_app_store({"name": current_tenant_obj['company_name']}, [])
-        elif "倉庫" in chosen_module or "品質" in chosen_module:
+        elif "倉儲" in chosen_module or "製造" in chosen_module or "品質" in chosen_module:
             render_org_chart({"name": current_tenant_obj['company_name']})
-        elif "資訊管理部" in chosen_module:
-            st.markdown("### 💻 資訊管理部 (IT & System) 專屬後台")
+        elif "資訊管理部" in chosen_module or "永續" in chosen_module:
+            st.markdown("### 💻 資訊管理與永續治理專屬後台")
             it_tab1, it_tab2 = st.tabs(["🔒 組織權限與角色管理 (RBAC)", "🧩 本公司拼圖模組與 API 設定"])
             with it_tab1:
                 render_rbac({"name": current_tenant_obj['company_name']})
