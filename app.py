@@ -26,7 +26,7 @@ st.markdown("""
     h1, h2, h3 { color: #1e293b; }
     .stButton>button { border-radius: 6px; font-weight: 600; }
     </style>
-""", unsafe_allow_html=True, cite="1, 2, 3, 4, 5, 6, 7")
+""", unsafe_allow_html=True)
 
 # ==================== Session State 初始化 ====================
 if "master_logged_in" not in st.session_state:
@@ -243,7 +243,6 @@ elif not st.session_state.selected_tenant:
         st.markdown("### 🌳 全球 1~4 級組織架構與部門專屬拼圖配置")
         st.info("💡 點選下方左側按層級分類的全球標準部門，右側將即時載入該部門對應的專業業務模組與戰情儀表板。")
 
-        # 扁平化所有部門清單供選擇
         flat_dept_list = []
         for lvl_name, depts in st.session_state.global_departments_hierarchy.items():
             for d in depts:
@@ -253,7 +252,6 @@ elif not st.session_state.selected_tenant:
         with col_l:
             st.markdown("#### 📂 選擇目標部門 (按 1~4 級)")
             selected_flat_dept = st.radio("部門階層選擇", flat_dept_list, label_visibility="collapsed")
-            # 還原純部門名稱
             actual_dept_name = selected_flat_dept.split("] ")[1]
 
         with col_r:
@@ -261,7 +259,6 @@ elif not st.session_state.selected_tenant:
             st.caption("勾選此部門相對應的專屬業務模組與戰情拼圖：")
             st.markdown("---")
 
-            # 初始化勾選狀態
             if "dept_puzzle_mapping" not in st.session_state:
                 st.session_state.dept_puzzle_mapping = {}
 
@@ -356,7 +353,6 @@ elif not st.session_state.selected_tenant:
             if st.form_submit_button("🚀 確認註冊並開通租戶環境", type="primary", use_container_width=True):
                 if t_name:
                     new_id = f"TENANT-{len(st.session_state.tenant_licensing_db)+1:03d}"
-                    # 自動依方案解鎖對應模組
                     all_puzzles = [item for sublist in st.session_state.department_specific_puzzles_db.values() for item in sublist]
                     assigned_mods = all_puzzles if "旗艦版" in t_plan else all_puzzles[:6]
                     
@@ -375,7 +371,7 @@ elif not st.session_state.selected_tenant:
                 else:
                     st.warning("請填寫公司名稱！")
 
-# 層級三：已進入特定租戶環境 (即時連動方案與模組權限)
+# 層級三：已進入特定租戶環境
 else:
     current_tenant_obj = next((t for t in st.session_state.tenant_licensing_db if t["company_name"] == st.session_state.selected_tenant), None)
     
@@ -383,7 +379,6 @@ else:
         st.sidebar.markdown("---")
         st.sidebar.markdown("##### 📂 租戶專屬功能選單：")
         
-        # 根據租戶綁定的方案動態渲染選單
         tenant_menu_options = [
             "🌳 多級組織架構維護（部 ➔ 科 ➔ 組）",
             "🖱️ 組織架構圖與節點管理 (Org Chart)",
