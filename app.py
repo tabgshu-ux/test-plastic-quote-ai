@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-# 引入各大部門與組織模組
+# 引入各大部門模組
 from modules.executive_bi import render_executive_bi
 from modules.pos_retail import render_pos_retail
 from modules.mes_factory import render_mes_factory
@@ -14,7 +14,7 @@ from modules import executive_office
 from modules import system_licensing
 
 st.set_page_config(
-    page_title="全球多租戶 SaaS AI ERP 平台 - 全球 1~4 級組織與拼圖總控中心",
+    page_title="全球多租戶 SaaS AI ERP 平台 - 拼圖式功能選擇與組織總控中心",
     page_icon="⚡",
     layout="wide"
 )
@@ -34,95 +34,91 @@ if "master_logged_in" not in st.session_state:
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
 
-# 🌟 全球企業標準：完整涵蓋 1~4 級（處 ➔ 部 ➔ 課 ➔ 組）之 ERP 拼圖矩陣
-if "all_department_puzzles" not in st.session_state:
-    st.session_state.all_department_puzzles = [
-        # 【1級：總管理處 / 經營戰情】
-        {"level": "1級：總管理處 (Division)", "code": "L1-EXEC", "name": "📈 總經理室戰情室 (AR/AP, P&L, 財務現金流與全球原物料監控)"},
-        {"level": "1級：總管理處 (Division)", "code": "L1-IT", "name": "💻 資訊管理部 - 總部 IT 專屬後台、RBAC 與跨國 API 串聯"},
-        {"level": "1級：總管理處 (Division)", "code": "L1-ESG", "name": "🌱 永續與 ESG 治理中心 - 範疇一二三碳排與跨國法規合規"},
-
-        # 【2級：核心事業部 / 專業處】
-        {"level": "2級：核心事業部 (Department)", "code": "L2-ENG", "name": "⚡ 工程事業群 - 機電設計、BOM 零件自動展開與工程驗收"},
-        {"level": "2級：核心事業部 (Department)", "code": "L2-FIN", "name": "🇻🇳 越南在地化會計 (Thông tư 200) 與跨國電子發票管理"},
-        {"level": "2級：核心事業部 (Department)", "code": "L2-HR", "name": "👤 管理部 - 全球人事薪資與考勤 (含越南勞動法加班費/夜班加給)"},
-        {"level": "2級：核心事業部 (Department)", "code": "L2-SALES", "name": "🌐 業務貿易部 - 全球多幣別雙層報價與客戶關係管理 (CRM)"},
-
-        # 【3級：專屬課 / 營運中心】
-        {"level": "3級：營運課/中心 (Section)", "code": "L3-SIGN", "name": "✍️ 跨部門電子簽核中心 (呈核路由、估驗計價與手機端簽核)"},
-        {"level": "3級：營運課/中心 (Section)", "code": "L3-WH", "name": "📦 倉儲物流課 - 多倉庫條碼化管理、安全庫存水位與自動補貨"},
-        {"level": "3級：營運課/中心 (Section)", "code": "L3-PROD", "name": "🏭 製造生產課 - 板金加工組工單排程、派工與進度回報"},
-        {"level": "3級：營運課/中心 (Section)", "code": "L3-QA", "name": "🔍 品質保證課 (QA) - IQC進料檢驗、PQC製程品保與OQC出貨檢驗"},
-
-        # 【4級：現場組 / 班別 / 技術小組】
-        {"level": "4級：現場組/班別 (Group)", "code": "L4-ISO", "name": "🛡️ ISO 品質合規組 - CAPA 矯正預防措施與設備校驗履歷管理"},
-        {"level": "4級：現場組/班別 (Group)", "code": "L4-MAINT", "name": "🚗 廠區車輛與設備維修組 - 廠車維護、門禁保全與派車審核"},
-        {"level": "4級：現場組/班別 (Group)", "code": "L4-PACK", "name": "📦 包裝與出貨組 - 成品條碼貼標、棧板管理與海關出貨文件"}
+# 🌟 完整重現圖片中的全球跨國企業完整部門清單
+if "global_departments_list" not in st.session_state:
+    st.session_state.global_departments_list = [
+        "董事長室 / 總經理室 (Executive & Board Room)",
+        "經營企劃與策略發展部 (Corporate Strategy)",
+        "人力資源與行政管理部 (HR & Admin Dept)",
+        "法務與合規遵循部 (Legal & Compliance)",
+        "資訊安全與稽核中心 (Audit & Info Security)",
+        "財務與資本運作部 (Finance Dept)",
+        "會計與稅務管理部 (Accounting & Tax)",
+        "國內業務與通路發展部 (Domestic Sales)",
+        "國際貿易與海外業務部 (Global Export Sales)",
+        "市場行銷與品牌企劃部 (Marketing Dept)",
+        "客戶成功與售後服務部 (Customer Success / CS)",
+        "供應鏈與全球採購部 (Supply Chain & Procurement)",
+        "倉儲物流與庫存管理部 (Warehouse & Logistics)",
+        "生產製造與商務管理部 (Manufacturing & Plant)",
+        "工程與技術服務部 (Engineering & Technical)",
+        "生產管制與物料控制部 (PMC / Production Control)",
+        "品質保證與品管中心 (QA / QC Dept)",
+        "研發設計與創新中心 (R&D / Design Center)",
+        "資訊技術與系統開發部 (IT & Software Development)"
     ]
 
-# 商業方案與 1~4 級拼圖綁定資料庫
-if "subscription_plans_db" not in st.session_state:
-    st.session_state.subscription_plans_db = {
-        "🚀 企業旗艦版 (Enterprise Flagship)": {
-            "price_usd": 3500.0,
-            "modules": [p["name"] for p in st.session_state.all_department_puzzles]
-        },
-        "💼 正式商業版 (Standard Official)": {
-            "price_usd": 1500.0,
-            "modules": [p["name"] for p in st.session_state.all_department_puzzles[:8]]
-        },
-        "⏱️ 彈性訂閱版 (Flexible Subscription)": {
-            "price_usd": 600.0,
-            "modules": [p["name"] for p in st.session_state.all_department_puzzles[:4]]
-        }
+# 🌟 全功能模組市集大合集 (對應圖片右側的三大類別)
+if "master_app_store_puzzles" not in st.session_state:
+    st.session_state.master_app_store_puzzles = {
+        "📊 高階決策與即時行情": [
+            "全球原物料即時行情看板",
+            "國際匯率與多幣別換算中心",
+            "全球股市財經大盤監控",
+            "綜合損益表與資產負債表",
+            "現金流與應收/應付帳款水位",
+            "企業 KPI 與多維度 BI 戰情室"
+        ],
+        "📦 供應鏈與進銷存 (SCM)": [
+            "智能進銷存與批號效期管理",
+            "全球供應鏈採購與比價系統",
+            "倉儲物流與條碼PDA掃描(WMS)",
+            "供應商交期與品質評鑑系統",
+            "進出口報關與海運物流追蹤",
+            "條碼/QR Code與資產標籤列印"
+        ],
+        "💰 財會、生產與其他核心": [
+            "總帳會計、傳票與會計師報表",
+            "生產排程、BOM表與製程考考核",
+            "CRM 客戶關係與外貿商機管理",
+            "人事薪資、勞健保與考勤排班",
+            "電子簽核流程引擎 (BOM)",
+            "AI 智慧語音助理與跨國翻譯"
+        ]
     }
 
-# 租戶授權與結構資料庫 (內含多級組織與節點結構)
+# 初始化部門與勾選模組的對應資料庫
+if "dept_puzzle_mapping" not in st.session_state:
+    st.session_state.dept_puzzle_mapping = {
+        dept: [item for cat_list in st.session_state.master_app_store_puzzles.values() for item in cat_list[:3]]
+        for dept in st.session_state.global_departments_list
+    }
+
+# 商業方案與租戶資料庫
+if "subscription_plans_db" not in st.session_state:
+    st.session_state.subscription_plans_db = {
+        "🚀 企業旗艦版 (Enterprise Flagship)": {"price_usd": 3500.0},
+        "💼 正式商業版 (Standard Official)": {"price_usd": 1500.0},
+        "⏱️ 彈性訂閱版 (Flexible Subscription)": {"price_usd": 600.0}
+    }
+
 if "tenant_licensing_db" not in st.session_state:
     st.session_state.tenant_licensing_db = [
         {
             "tenant_id": "TENANT-001",
-            "name": "裕豐電機工業 (Reetech Industrial)",
             "company_name": "裕豐電機工業 (Reetech Industrial)",
             "tax_id": "0312345678",
             "plan": "🚀 企業旗艦版 (Enterprise Flagship)",
             "pricing_usd": 3500.0,
             "expiry_date": "2027-12-31",
-            "modules": [p["name"] for p in st.session_state.all_department_puzzles],
-            "status": "🟢 正常運行 (Active)",
-            "hierarchical_org_tree": [
-                {
-                    "id": "div_01",
-                    "level": "1級-事業群/處",
-                    "name": "生產製造事業群",
-                    "parent": "董事長室",
-                    "sub_departments": [
-                        {
-                            "dept_name": "配電盤製造部 (2級-部)",
-                            "sections": [
-                                {"sec_name": "高壓盤組裝科 (3級-科)", "groups": ["第一作業班", "第二測試班"]},
-                                {"sec_name": "低壓盤配線科 (3級-科)", "groups": ["焊接組", "佈線組"]}
-                            ]
-                        }
-                    ],
-                    "assigned_modules": ["MES 電機製造執行與車間排程", "工地師傅手機快速回報"]
-                }
-            ],
-            "org_nodes": [
-                {"id": "node_root", "name": "裕豐電機工業", "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"},
-                {"id": "node_hq", "name": "總管理處", "type": "👑 一級部門 (Headquarters)", "parent": "裕豐電機工業"},
-                {"id": "node_prod", "name": "生產製造事業群", "type": "⚙️ 二級部門 (Functional Dept)", "parent": "總管理處"}
-            ],
-            "dept_modules_db": {
-                "生產製造事業群": ["MES 電機製造執行與車間排程", "倉庫資材庫存與條碼管理"]
-            }
+            "status": "🟢 正常運行 (Active)"
         }
     ]
 
 # ==================== 側邊欄導覽 ====================
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/factory.png", width=64)
-    st.markdown("### ⚡ AI ERP 總控台")
+    st.markdown("### ⚡ SaaS ERP 總控台")
     st.markdown("---")
     
     if st.session_state.master_logged_in:
@@ -159,20 +155,64 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
-# 層級二：總控管理中心
+# 層級二：總控管理中心 (完全對齊圖片的雙欄互動介面)
 elif not st.session_state.selected_tenant:
-    st.markdown("## 🏢 平台總控管理中心 (Master Control Panel)")
-    st.markdown("在此檢視所有企業租戶、設定方案定價，並按 **全球標準 1~4 級組織架構（處 ➔ 部 ➔ 課 ➔ 組）** 動態勾選功能拼圖。")
+    st.markdown("## 🏢 平台總控管理中心 - 企業全功能模組市集與組織架構總控")
+    st.markdown("💡 *此展示系統【全功能模組大合集】。您可以點選左側任意部門，並自由勾選或組合市面上所有企業管理、高階決策、財會與供應鏈所需的完整模組拼圖。*")
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3 = st.tabs([
+        "🧩 選擇目標部門並配置拼圖市集 (App Store)",
         "📋 企業租戶總覽與快速進入",
-        "🧩 全球 1~4 級組織拼圖與動態價格設定",
-        "➕ 註冊新租戶與拼圖派發"
+        "➕ 註冊新租戶與授權方案設定"
     ])
 
-    # Tab 1: 租戶總覽
+    # Tab 1: 完美對齊圖片的雙欄互動介面 (左側部門選單 ➔ 右側功能市集勾選)
     with master_tab1:
+        col_dept_list, col_store_market = st.columns([1.2, 1.8])
+
+        with col_dept_list:
+            st.markdown("### 📂 選擇目標部門 / 管理層")
+            st.caption("請點選要配置的部門：")
+            
+            # 讓管理者在左側選擇要設定的部門
+            selected_dept = st.radio(
+                "部門清單", 
+                st.session_state.global_departments_list, 
+                label_visibility="collapsed"
+            )
+
+        with col_store_market:
+            st.markdown(f"### 🧩 【 {selected_dept} 】的企業全功能模組市集 (App Store)")
+            st.caption("賴勾選此部門/高階角色可解鎖啟用的所有功能與戰情儀表板：")
+            st.markdown("---")
+
+            current_dept_puzzles = st.session_state.dept_puzzle_mapping.get(selected_dept, [])
+            updated_dept_puzzles = []
+
+            # 依三大類別呈現勾選方塊（完全對齊圖片的三欄式視覺）
+            store_cats = st.session_state.master_app_store_puzzles
+            
+            for cat_name, items in store_cats.items():
+                st.markdown(f"#### {cat_name}")
+                for item in items:
+                    is_checked = st.checkbox(
+                        item, 
+                        value=(item in current_dept_puzzles), 
+                        key=f"chk_store_{selected_dept}_{item}"
+                    )
+                    if is_checked:
+                        updated_dept_puzzles.append(item)
+                st.markdown("")
+
+            st.markdown("---")
+            if st.button(f"💾 儲存【{selected_dept}】的全功能拼圖圈定", type="primary", use_container_width=True):
+                st.session_state.dept_puzzle_mapping[selected_dept] = updated_dept_puzzles
+                st.success(f"🎉 成功儲存！【{selected_dept}】已成功更新其專屬的拼圖市集模組。")
+                st.rerun()
+
+    # Tab 2: 租戶總覽與快速進入
+    with master_tab2:
         st.markdown("### 📋 現有企業租戶清單")
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
         
@@ -186,7 +226,7 @@ elif not st.session_state.selected_tenant:
                     with col_i:
                         st.markdown(f"#### 🏢 {t['company_name']} (`{t['tenant_id']}`)")
                         st.write(f"• **授權方案**：{t['plan']} | **年費**：${t['pricing_usd']:,.2f} USD")
-                        st.write(f"• **合約到期**：{t['expiry_date']} | **已開通拼圖數**：{len(t['modules'])} 個模組")
+                        st.write(f"• **合約到期**：{t['expiry_date']}")
                     with col_b:
                         st.markdown("<br>", unsafe_allow_html=True)
                         if st.button(f"🚀 進入租戶工作區", key=f"enter_{t['tenant_id']}", use_container_width=True):
@@ -196,46 +236,9 @@ elif not st.session_state.selected_tenant:
         else:
             st.warning("查無符合條件的租戶。")
 
-    # Tab 2: 全球 1~4 級組織拼圖與動態價格設定
-    with master_tab2:
-        st.markdown("### 🧩 全球企業標準 1~4 級組織架構與拼圖模組設定")
-        st.info("💡 完整整合全球跨國製造與企業的處、部、課、組組織階層，供管理者精確配置。")
-        
-        plans = st.session_state.subscription_plans_db
-        target_p = st.selectbox("選擇要編輯的授權方案", list(plans.keys()))
-        
-        with st.form("edit_plan_form"):
-            current_price = plans[target_p]["price_usd"]
-            new_price = st.number_input("設定年度授權價格 (USD)", value=float(current_price), step=100.0)
-            
-            st.markdown("##### 🌳 按全球 1~4 級組織階層勾選功能拼圖：")
-            current_mods = plans[target_p]["modules"]
-            updated_mods = []
-            
-            levels_order = [
-                "1級：總管理處 (Division)",
-                "2級：核心事業部 (Department)",
-                "3級：營運課/中心 (Section)",
-                "4級：現場組/班別 (Group)"
-            ]
-            
-            for lvl in levels_order:
-                st.markdown(f"**📂 【 {lvl} 】相關模組與課級單位：**")
-                lvl_puzzles = [p for p in st.session_state.all_department_puzzles if p["level"] == lvl]
-                for puz in lvl_puzzles:
-                    if st.checkbox(puz["name"], value=(puz["name"] in current_mods), key=f"puz_lvl_{target_p}_{puz['code']}"):
-                        updated_mods.append(puz["name"])
-                st.markdown("")
-            
-            if st.form_submit_button("💾 儲存全球 1~4 級拼圖與定價配置", type="primary"):
-                plans[target_p]["price_usd"] = new_price
-                plans[target_p]["modules"] = updated_mods
-                st.success(f"🎉 方案 [{target_p}] 的全球 1~4 級組織拼圖配置已成功更新！")
-                st.rerun()
-
-    # Tab 3: 註冊新租戶與拼圖派發
+    # Tab 3: 註冊新租戶與定價
     with master_tab3:
-        st.markdown("### ➕ 註冊新企業租戶與全球 1~4 級組織拼圖派發")
+        st.markdown("### ➕ 註冊新企業租戶與授權合約")
         with st.form("new_tenant_form"):
             c1, c2 = st.columns(2)
             with c1:
@@ -247,57 +250,33 @@ elif not st.session_state.selected_tenant:
                 t_price = st.number_input("合約定價金額 (USD)", value=float(default_pr))
                 t_exp = st.date_input("合約到期日", value=datetime.date(2027, 12, 31))
             
-            st.markdown("##### 🌳 針對此租戶客製化勾選全球 1~4 級組織與課級拼圖：")
-            default_puzzles = st.session_state.subscription_plans_db[t_plan]["modules"]
-            tenant_puzzles = []
-            
-            levels_order = [
-                "1級：總管理處 (Division)",
-                "2級：核心事業部 (Department)",
-                "3級：營運課/中心 (Section)",
-                "4級：現場組/班別 (Group)"
-            ]
-            
-            for lvl in levels_order:
-                st.markdown(f"**📂 【 {lvl} 】：**")
-                lvl_puzzles = [p for p in st.session_state.all_department_puzzles if p["level"] == lvl]
-                for puz in lvl_puzzles:
-                    if st.checkbox(puz["name"], value=(puz["name"] in default_puzzles), key=f"new_t_puz_{puz['code']}"):
-                        tenant_puzzles.append(puz["name"])
-                st.markdown("")
-            
             if st.form_submit_button("🚀 確認註冊並開通租戶環境", type="primary", use_container_width=True):
                 if t_name:
                     new_id = f"TENANT-{len(st.session_state.tenant_licensing_db)+1:03d}"
                     st.session_state.tenant_licensing_db.append({
                         "tenant_id": new_id,
-                        "name": t_name,
                         "company_name": t_name,
                         "tax_id": t_tax,
                         "plan": t_plan,
                         "pricing_usd": t_price,
                         "expiry_date": str(t_exp),
-                        "modules": tenant_puzzles,
-                        "status": "🟢 正常運行 (Active)",
-                        "hierarchical_org_tree": [],
-                        "org_nodes": [{"id": "node_root", "name": t_name, "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
-                        "dept_modules_db": {}
+                        "status": "🟢 正常運行 (Active)"
                     })
                     st.success(f"🎉 成功建立新租戶：{t_name}！")
                     st.rerun()
                 else:
                     st.warning("請填寫公司名稱！")
 
-# 層級三：已進入特定租戶環境 (無縫掛載 departments_manager 與 org_chart 模組)
+# 層級三：已進入特定租戶環境
 else:
     current_tenant_obj = next((t for t in st.session_state.tenant_licensing_db if t["company_name"] == st.session_state.selected_tenant), None)
     
     if current_tenant_obj:
         st.sidebar.markdown("---")
-        st.sidebar.markdown("##### 📂 租戶專屬營運與模組選單：")
+        st.sidebar.markdown("##### 📂 租戶專屬功能選單：")
         
         tenant_menu_options = [
-            "🌳 多級組織架構維護（部 ➔ 科 ➔ 組）與模組動態對應",
+            "🌳 多級組織架構維護（部 ➔ 科 ➔ 組）",
             "🖱️ 組織架構圖與節點管理 (Org Chart)",
             "📈 總經理室戰情室 (Executive Office)",
             "💻 資訊管理與 API 授權設定 (System Licensing)"
@@ -309,7 +288,6 @@ else:
         st.markdown(f"**授權方案**：{current_tenant_obj['plan']} | **合約到期**：{current_tenant_obj['expiry_date']}")
         st.markdown("---")
         
-        # 精準呼叫對應的模組檔案函數
         if "多級組織架構維護" in chosen_module:
             render_departments_manager(current_tenant_obj)
         elif "組織架構圖" in chosen_module:
