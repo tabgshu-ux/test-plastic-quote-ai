@@ -50,3 +50,6 @@ def render_master_portal():
                     st.rerun()
 
             st.markdown("---")
+     # 確保網頁載入時直接執行總控台渲染
+      if __name__ == "__main__":
+         render_master_portal()
