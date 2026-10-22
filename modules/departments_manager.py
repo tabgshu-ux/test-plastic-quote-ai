@@ -3,7 +3,7 @@ import pandas as pd
 import uuid
 
 def render_departments_manager(current_tenant):
-    st.markdown("## 🏢 裕豐電機：多級組織架構管理（部 ➔ 科 ➔ 組）與模組動態對應")
+    st.markdown("## 🏢 多級組織架構管理（部 ➔ 科 ➔ 組）與模組動態對應")
     st.info("💡 *支援製造業標準的多級階層組織（事業群 ➔ 部 ➔ 科 ➔ 組/班），並可將相同的作業功能彈性指派到任何層級。*")
     
     # 初始化多級組織樹狀結構資料庫
