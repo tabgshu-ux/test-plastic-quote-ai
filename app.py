@@ -14,7 +14,7 @@ from modules import executive_office
 from modules import system_licensing
 
 st.set_page_config(
-    page_title="全球多租戶 SaaS AI ERP 平台 - 拼圖式功能選擇與組織總控中心",
+    page_title="全球多租戶 SaaS AI ERP 平台 - 拼圖市集與訂閱制總控中心",
     page_icon="⚡",
     layout="wide"
 )
@@ -34,7 +34,7 @@ if "master_logged_in" not in st.session_state:
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
 
-# 🌟 完整重現圖片中的全球跨國企業完整部門清單
+# 1. 全球跨國企業完整部門清單
 if "global_departments_list" not in st.session_state:
     st.session_state.global_departments_list = [
         "董事長室 / 總經理室 (Executive & Board Room)",
@@ -58,7 +58,7 @@ if "global_departments_list" not in st.session_state:
         "資訊技術與系統開發部 (IT & Software Development)"
     ]
 
-# 🌟 全功能模組市集大合集 (對應圖片右側的三大類別)
+# 2. 全功能模組市集大合集 (對應圖片右側的三大類別)
 if "master_app_store_puzzles" not in st.session_state:
     st.session_state.master_app_store_puzzles = {
         "📊 高階決策與即時行情": [
@@ -94,14 +94,33 @@ if "dept_puzzle_mapping" not in st.session_state:
         for dept in st.session_state.global_departments_list
     }
 
-# 商業方案與租戶資料庫
+# 3. 三大商業授權方案與訂閱制/正式版/旗艦版費用設定資料庫
 if "subscription_plans_db" not in st.session_state:
     st.session_state.subscription_plans_db = {
-        "🚀 企業旗艦版 (Enterprise Flagship)": {"price_usd": 3500.0},
-        "💼 正式商業版 (Standard Official)": {"price_usd": 1500.0},
-        "⏱️ 彈性訂閱版 (Flexible Subscription)": {"price_usd": 600.0}
+        "🚀 企業旗艦版 (Enterprise Flagship)": {
+            "type": "年度旗艦買斷/授權",
+            "price_usd": 3500.0,
+            "billing_cycle": "每年計費",
+            "max_seats": "無限席位 (Unlimited)",
+            "desc": "適合大型集團，解鎖全公司所有 1~4 級部門與模組市集權限。"
+        },
+        "💼 正式商業版 (Standard Official)": {
+            "type": "正式商業授權",
+            "price_usd": 1500.0,
+            "billing_cycle": "每年計費",
+            "max_seats": "30 席位",
+            "desc": "適合中型製造業，支援核心生產、供應鏈與財會模組。"
+        },
+        "⏱️ 彈性訂閱版 (Flexible Subscription)": {
+            "type": "SaaS 月租訂閱制",
+            "price_usd": 150.0,
+            "billing_cycle": "每月計費 (Monthly)",
+            "max_seats": "10 席位",
+            "desc": "適合新創或彈性專案，按月隨選訂閱指定部門拼圖。"
+        }
     }
 
+# 4. 租戶授權資料庫
 if "tenant_licensing_db" not in st.session_state:
     st.session_state.tenant_licensing_db = [
         {
@@ -111,7 +130,10 @@ if "tenant_licensing_db" not in st.session_state:
             "plan": "🚀 企業旗艦版 (Enterprise Flagship)",
             "pricing_usd": 3500.0,
             "expiry_date": "2027-12-31",
-            "status": "🟢 正常運行 (Active)"
+            "status": "🟢 正常運行 (Active)",
+            "hierarchical_org_tree": [],
+            "org_nodes": [{"id": "node_root", "name": "裕豐電機工業", "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
+            "dept_modules_db": {}
         }
     ]
 
@@ -155,27 +177,26 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
-# 層級二：總控管理中心 (完全對齊圖片的雙欄互動介面)
+# 層級二：總控管理中心 (結合雙欄拼圖市集與訂閱制/正式版定價管理)
 elif not st.session_state.selected_tenant:
-    st.markdown("## 🏢 平台總控管理中心 - 企業全功能模組市集與組織架構總控")
-    st.markdown("💡 *此展示系統【全功能模組大合集】。您可以點選左側任意部門，並自由勾選或組合市面上所有企業管理、高階決策、財會與供應鏈所需的完整模組拼圖。*")
+    st.markdown("## 🏢 平台總控管理中心 - 拼圖市集與商業方案定價總控")
+    st.markdown("💡 *在此管理全球企業各部門的拼圖模組市集，並設定「旗艦版、正式版、彈性訂閱版」之合約費用與計費週期。*")
     st.markdown("---")
 
-    master_tab1, master_tab2, master_tab3 = st.tabs([
+    master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
         "🧩 選擇目標部門並配置拼圖市集 (App Store)",
+        "💰 商業方案與訂閱制/正式版費用設定",
         "📋 企業租戶總覽與快速進入",
-        "➕ 註冊新租戶與授權方案設定"
+        "➕ 註冊新租戶與方案指派"
     ])
 
-    # Tab 1: 完美對齊圖片的雙欄互動介面 (左側部門選單 ➔ 右側功能市集勾選)
+    # Tab 1: 雙欄互動介面 (左側部門選單 ➔ 右側功能市集勾選)
     with master_tab1:
         col_dept_list, col_store_market = st.columns([1.2, 1.8])
 
         with col_dept_list:
             st.markdown("### 📂 選擇目標部門 / 管理層")
             st.caption("請點選要配置的部門：")
-            
-            # 讓管理者在左側選擇要設定的部門
             selected_dept = st.radio(
                 "部門清單", 
                 st.session_state.global_departments_list, 
@@ -184,15 +205,13 @@ elif not st.session_state.selected_tenant:
 
         with col_store_market:
             st.markdown(f"### 🧩 【 {selected_dept} 】的企業全功能模組市集 (App Store)")
-            st.caption("賴勾選此部門/高階角色可解鎖啟用的所有功能與戰情儀表板：")
+            st.caption("勾選此部門/高階角色可解鎖啟用的所有功能與戰情儀表板：")
             st.markdown("---")
 
             current_dept_puzzles = st.session_state.dept_puzzle_mapping.get(selected_dept, [])
             updated_dept_puzzles = []
 
-            # 依三大類別呈現勾選方塊（完全對齊圖片的三欄式視覺）
             store_cats = st.session_state.master_app_store_puzzles
-            
             for cat_name, items in store_cats.items():
                 st.markdown(f"#### {cat_name}")
                 for item in items:
@@ -211,9 +230,47 @@ elif not st.session_state.selected_tenant:
                 st.success(f"🎉 成功儲存！【{selected_dept}】已成功更新其專屬的拼圖市集模組。")
                 st.rerun()
 
-    # Tab 2: 租戶總覽與快速進入
+    # Tab 2: 商業方案與訂閱制/正式版費用設定
     with master_tab2:
-        st.markdown("### 📋 現有企業租戶清單")
+        st.markdown("### 💰 商業授權方案、正式版與訂閱制費用設定")
+        st.info("💡 在此設定全球 SaaS 平台的各級方案定價、計費週期（年費/月租訂閱）與席位限制。")
+
+        plans_db = st.session_state.subscription_plans_db
+        
+        # 呈現目前方案卡片
+        c1, c2, c3 = st.columns(3)
+        cols = [c1, c2, c3]
+        for idx, (p_name, p_info) in enumerate(plans_db.items()):
+            with cols[idx]:
+                st.markdown(f"#### {p_name}")
+                st.write(f"• **方案屬性**：{p_info['type']}")
+                st.write(f"• **定價金額**：`${p_info['price_usd']:,.2f} USD`")
+                st.write(f"• **計費週期**：{p_info['billing_cycle']}")
+                st.write(f"• **席位限制**：{p_info['max_seats']}")
+                st.caption(p_info['desc'])
+
+        st.markdown("---")
+        st.markdown("#### ⚙️ 調整指定方案之定價與規範")
+        with st.form("edit_subscription_plan_form"):
+            target_plan = st.selectbox("選擇要編輯的授權方案", list(plans_db.keys()))
+            current_info = plans_db[target_plan]
+            
+            new_price = st.number_input("設定方案價格 (USD)", value=float(current_info["price_usd"]), step=50.0)
+            new_cycle = st.text_input("計費週期說明", value=current_info["billing_cycle"])
+            new_seats = st.text_input("席位限制說明", value=current_info["max_seats"])
+            new_desc = st.text_area("方案特色描述", value=current_info["desc"])
+
+            if st.form_submit_button("💾 儲存方案定價與設定", type="primary", use_container_width=True):
+                plans_db[target_plan]["price_usd"] = new_price
+                plans_db[target_plan]["billing_cycle"] = new_cycle
+                plans_db[target_plan]["max_seats"] = new_seats
+                plans_db[target_plan]["desc"] = new_desc
+                st.success(f"🎉 方案 [{target_plan}] 的財務定價與規範已成功更新！")
+                st.rerun()
+
+    # Tab 3: 企業租戶總覽與快速進入
+    with master_tab3:
+        st.markdown("### 📋 現有企業租戶清單與方案檢視")
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
         
         tenants = st.session_state.tenant_licensing_db
@@ -225,8 +282,8 @@ elif not st.session_state.selected_tenant:
                     col_i, col_b = st.columns([3, 1])
                     with col_i:
                         st.markdown(f"#### 🏢 {t['company_name']} (`{t['tenant_id']}`)")
-                        st.write(f"• **授權方案**：{t['plan']} | **年費**：${t['pricing_usd']:,.2f} USD")
-                        st.write(f"• **合約到期**：{t['expiry_date']}")
+                        st.write(f"• **採購方案**：{t['plan']} | **合約金額**：${t.get('pricing_usd', 0):,.2f} USD")
+                        st.write(f"• **合約到期日**：{t['expiry_date']} | **運行狀態**：{t['status']}")
                     with col_b:
                         st.markdown("<br>", unsafe_allow_html=True)
                         if st.button(f"🚀 進入租戶工作區", key=f"enter_{t['tenant_id']}", use_container_width=True):
@@ -236,18 +293,18 @@ elif not st.session_state.selected_tenant:
         else:
             st.warning("查無符合條件的租戶。")
 
-    # Tab 3: 註冊新租戶與定價
-    with master_tab3:
-        st.markdown("### ➕ 註冊新企業租戶與授權合約")
+    # Tab 4: 註冊新租戶與方案指派
+    with master_tab4:
+        st.markdown("### ➕ 註冊新企業租戶並綁定授權方案")
         with st.form("new_tenant_form"):
             c1, c2 = st.columns(2)
             with c1:
                 t_name = st.text_input("客戶公司名稱 *", placeholder="例: 越南精密工業股份公司")
                 t_tax = st.text_input("統一編號 / 稅號", placeholder="0312345678")
-                t_plan = st.selectbox("基礎授權方案", list(st.session_state.subscription_plans_db.keys()))
+                t_plan = st.selectbox("選擇商業授權方案 (旗艦/正式/訂閱)", list(st.session_state.subscription_plans_db.keys()))
             with c2:
                 default_pr = st.session_state.subscription_plans_db[t_plan]["price_usd"]
-                t_price = st.number_input("合約定價金額 (USD)", value=float(default_pr))
+                t_price = st.number_input("客製合約定價金額 (USD)", value=float(default_pr))
                 t_exp = st.date_input("合約到期日", value=datetime.date(2027, 12, 31))
             
             if st.form_submit_button("🚀 確認註冊並開通租戶環境", type="primary", use_container_width=True):
@@ -260,7 +317,10 @@ elif not st.session_state.selected_tenant:
                         "plan": t_plan,
                         "pricing_usd": t_price,
                         "expiry_date": str(t_exp),
-                        "status": "🟢 正常運行 (Active)"
+                        "status": "🟢 正常運行 (Active)",
+                        "hierarchical_org_tree": [],
+                        "org_nodes": [{"id": "node_root", "name": t_name, "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
+                        "dept_modules_db": {}
                     })
                     st.success(f"🎉 成功建立新租戶：{t_name}！")
                     st.rerun()
