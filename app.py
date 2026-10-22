@@ -14,7 +14,7 @@ from modules import executive_office
 from modules import system_licensing
 
 st.set_page_config(
-    page_title="全球多租戶 SaaS AI ERP 平台 - 部門專屬拼圖市集總控中心",
+    page_title="全球多租戶 SaaS AI ERP 平台 - 商業方案與 1~4 級組織拼圖總控中心",
     page_icon="⚡",
     layout="wide"
 )
@@ -26,7 +26,7 @@ st.markdown("""
     h1, h2, h3 { color: #1e293b; }
     .stButton>button { border-radius: 6px; font-weight: 600; }
     </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True, cite="1, 2, 3, 4, 5, 6, 7")
 
 # ==================== Session State 初始化 ====================
 if "master_logged_in" not in st.session_state:
@@ -34,31 +34,39 @@ if "master_logged_in" not in st.session_state:
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
 
-# 1. 全球跨國企業完整部門清單
-if "global_departments_list" not in st.session_state:
-    st.session_state.global_departments_list = [
-        "董事長室 / 總經理室 (Executive & Board Room)",
-        "經營企劃與策略發展部 (Corporate Strategy)",
-        "人力資源與行政管理部 (HR & Admin Dept)",
-        "法務與合規遵循部 (Legal & Compliance)",
-        "資訊安全與稽核中心 (Audit & Info Security)",
-        "財務與資本運作部 (Finance Dept)",
-        "會計與稅務管理部 (Accounting & Tax)",
-        "國內業務與通路發展部 (Domestic Sales)",
-        "國際貿易與海外業務部 (Global Export Sales)",
-        "市場行銷與品牌企劃部 (Marketing Dept)",
-        "客戶成功與售後服務部 (Customer Success / CS)",
-        "供應鏈與全球採購部 (Supply Chain & Procurement)",
-        "倉儲物流與庫存管理部 (Warehouse & Logistics)",
-        "生產製造與商務管理部 (Manufacturing & Plant)",
-        "工程與技術服務部 (Engineering & Technical)",
-        "生產管制與物料控制部 (PMC / Production Control)",
-        "品質保證與品管中心 (QA / QC Dept)",
-        "研發設計與創新中心 (R&D / Design Center)",
-        "資訊技術與系統開發部 (IT & Software Development)"
-    ]
+# 1. 全球跨國企業完整 1~4 級部門清單 (涵蓋處、部、課、組)
+if "global_departments_hierarchy" not in st.session_state:
+    st.session_state.global_departments_hierarchy = {
+        "1級：總管理處 / 經營戰情 (Division)": [
+            "董事長室 / 總經理室 (Executive & Board Room)",
+            "經營企劃與策略發展部 (Corporate Strategy)",
+            "資訊安全與稽核中心 (Audit & Info Security)"
+        ],
+        "2級：核心事業部 / 專業處 (Department)": [
+            "人力資源與行政管理部 (HR & Admin Dept)",
+            "法務與合規遵循部 (Legal & Compliance)",
+            "財務與資本運作部 (Finance Dept)",
+            "會計與稅務管理部 (Accounting & Tax)",
+            "國內業務與通路發展部 (Domestic Sales)",
+            "國際貿易與海外業務部 (Global Export Sales)",
+            "市場行銷與品牌企劃部 (Marketing Dept)"
+        ],
+        "3級：營運課 / 專屬中心 (Section)": [
+            "客戶成功與售後服務部 (Customer Success / CS)",
+            "供應鏈與全球採購部 (Supply Chain & Procurement)",
+            "倉儲物流與庫存管理部 (Warehouse & Logistics)",
+            "生產製造與商務管理部 (Manufacturing & Plant)",
+            "工程與技術服務部 (Engineering & Technical)",
+            "生產管制與物料控制部 (PMC / Production Control)",
+            "品質保證與品管中心 (QA / QC Dept)"
+        ],
+        "4級：現場組 / 班別 / 技術小組 (Group)": [
+            "研發設計與創新中心 (R&D / Design Center)",
+            "資訊技術與系統開發部 (IT & Software Development)"
+        ]
+    }
 
-# 2. 為每個部門量身打造的相對應專屬功能拼圖清單
+# 2. 各部門相對應的專業業務模組與拼圖資料庫
 if "department_specific_puzzles_db" not in st.session_state:
     st.session_state.department_specific_puzzles_db = {
         "董事長室 / 總經理室 (Executive & Board Room)": [
@@ -67,15 +75,15 @@ if "department_specific_puzzles_db" not in st.session_state:
         "經營企劃與策略發展部 (Corporate Strategy)": [
             "📈 長期策略目標 KPI 追蹤儀表板", "📈 市場競爭分析與競品情報庫", "📈 投資併購專案評估模型", "📈 企業年度預算編列與執行追蹤"
         ],
+        "資訊安全與稽核中心 (Audit & Info Security)": [
+            "🛡️ 內部控制與 ISO 內稽內控檢核", "🛡️ 資訊安全事件通報與資安軌跡日誌", "🛡️ 權限存取控制稽核 (RBAC Log)", "🛡️ 廠區門禁與個資保護合規檢查"
+        ],
         "人力資源與行政管理部 (HR & Admin Dept)": [
             "👥 全球人事組織與員工生命週期管理", "👥 跨國薪資計算引擎 (含越南勞動法加班費/夜班加給)", 
             "👥 多班別排班考勤與請假打卡系統", "👥 招募管理、面試評核與績效考核 (KPI/OKRs)", "👥 勞健保、社會保險與福委會管理"
         ],
         "法務與合規遵循部 (Legal & Compliance)": [
             "⚖️ 跨國合約生命週期管理與電子簽署", "⚖️ 企業法規遵循風險評估與稽核", "⚖️ 智財權與專利證照管家", "⚖️ 訴訟案件追蹤與法律文件庫"
-        ],
-        "資訊安全與稽核中心 (Audit & Info Security)": [
-            "🛡️ 內部控制與 ISO 內稽內控檢核", "🛡️ 資訊安全事件通報與資安軌跡日誌", "🛡️ 權限存取控制稽核 (RBAC Log)", "🛡️ 廠區門禁與個資保護合規檢查"
         ],
         "財務與資本運作部 (Finance Dept)": [
             "💰 應收帳款 (AR) 與應付帳款 (AP) 即時水位", "💰 多幣別資金調度與銀行信用狀 (L/C) 管理", 
@@ -132,28 +140,37 @@ if "department_specific_puzzles_db" not in st.session_state:
         ]
     }
 
-# 初始化部門與勾選模組的對應資料庫
-if "dept_puzzle_mapping" not in st.session_state:
-    st.session_state.dept_puzzle_mapping = {
-        dept: st.session_state.department_specific_puzzles_db.get(dept, [])[:3]
-        for dept in st.session_state.global_departments_list
-    }
-
-# 3. 三大商業授權方案與定價設定
+# 3. 四大商業授權方案定義 (企業旗艦版、正式商業版、彈性訂閱版、個人試用版)
 if "subscription_plans_db" not in st.session_state:
     st.session_state.subscription_plans_db = {
         "🚀 企業旗艦版 (Enterprise Flagship)": {
-            "type": "年度旗艦買斷/授權", "price_usd": 3500.0, "billing_cycle": "每年計費", "max_seats": "無限席位 (Unlimited)", "desc": "適合大型集團，解鎖全公司所有 1~4 級部門與模組市集權限。"
+            "price_usd": 3500.0,
+            "billing_cycle": "每年計費 (Annual)",
+            "max_seats": "無限席位 (Unlimited)",
+            "target_tier": "大型跨國集團",
+            "desc": "解鎖全公司所有 1~4 級部門與所有業務拼圖模組。"
         },
         "💼 正式商業版 (Standard Official)": {
-            "type": "正式商業授權", "price_usd": 1500.0, "billing_cycle": "每年計費", "max_seats": "30 席位", "desc": "適合中型製造業，支援核心生產、供應鏈與財會模組。"
+            "price_usd": 1500.0,
+            "billing_cycle": "每年計費 (Annual)",
+            "max_seats": "30 席位",
+            "desc": "適合中型製造業，支援核心生產、供應鏈與財會模組。"
         },
         "⏱️ 彈性訂閱版 (Flexible Subscription)": {
-            "type": "SaaS 月租訂閱制", "price_usd": 150.0, "billing_cycle": "每月計費 (Monthly)", "max_seats": "10 席位", "desc": "適合新創或彈性專案，按月隨選訂閱指定部門拼圖。"
+            "price_usd": 150.0,
+            "billing_cycle": "每月計費 (Monthly)",
+            "max_seats": "10 席位",
+            "desc": "適合新創或彈性專案，按月隨選訂閱指定部門拼圖。"
+        },
+        "👤 個人試用版 (Free Trial)": {
+            "price_usd": 0.0,
+            "billing_cycle": "14天免費試用",
+            "max_seats": "3 席位",
+            "desc": "供單一部門或評估人員進行功能體驗與沙盒測試。"
         }
     }
 
-# 4. 租戶授權資料庫
+# 4. 全系統租戶授權資料庫 (與組織、方案連動)
 if "tenant_licensing_db" not in st.session_state:
     st.session_state.tenant_licensing_db = [
         {
@@ -164,9 +181,7 @@ if "tenant_licensing_db" not in st.session_state:
             "pricing_usd": 3500.0,
             "expiry_date": "2027-12-31",
             "status": "🟢 正常運行 (Active)",
-            "hierarchical_org_tree": [],
-            "org_nodes": [{"id": "node_root", "name": "裕豐電機工業", "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
-            "dept_modules_db": {}
+            "active_modules": [item for sublist in st.session_state.department_specific_puzzles_db.values() for item in sublist]
         }
     ]
 
@@ -210,98 +225,98 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
-# 層級二：總控管理中心
+# 層級二：總控管理中心 (結合 1~4 級部門拼圖市集與四大商業方案綁定)
 elif not st.session_state.selected_tenant:
-    st.markdown("## 🏢 平台總控管理中心 - 部門專屬拼圖市集與方案定價總控")
-    st.markdown("💡 *在此點選左側任意部門，右側將即時載入該部門「相對應的專屬功能模組」供您自由勾選配置。*")
+    st.markdown("## 🏢 平台總控管理中心 - 1~4級組織拼圖與四大商業方案總控")
+    st.markdown("💡 *在此管理全球跨國企業 1~4 級組織架構及各部門專屬功能，並直接對應與綁定「旗艦版、正式版、訂閱版、試用版」的商業授權與定價引擎。*")
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
-        "🧩 選擇部門並配置專屬拼圖市集",
-        "💰 商業方案與訂閱制/正式版費用設定",
-        "📋 企業租戶總覽與快速進入",
+        "🧩 1~4級組織部門與專屬拼圖市集",
+        "💰 四大商業方案（旗艦/正式/訂閱/試用）設定",
+        "📋 企業租戶總覽與方案連動管理",
         "➕ 註冊新租戶與方案指派"
     ])
 
-    # Tab 1: 雙欄互動介面 (左側部門選單 ➔ 右側加載該部門專屬功能)
+    # Tab 1: 1~4級組織與部門專屬拼圖市集
     with master_tab1:
-        col_dept_list, col_store_market = st.columns([1.2, 1.8])
+        st.markdown("### 🌳 全球 1~4 級組織架構與部門專屬拼圖配置")
+        st.info("💡 點選下方左側按層級分類的全球標準部門，右側將即時載入該部門對應的專業業務模組與戰情儀表板。")
 
-        with col_dept_list:
-            st.markdown("### 📂 選擇目標部門 / 管理層")
-            st.caption("請點選要配置的部門：")
-            selected_dept = st.radio(
-                "部門清單", 
-                st.session_state.global_departments_list, 
-                label_visibility="collapsed"
-            )
+        # 扁平化所有部門清單供選擇
+        flat_dept_list = []
+        for lvl_name, depts in st.session_state.global_departments_hierarchy.items():
+            for d in depts:
+                flat_dept_list.append(f"[{lvl_name[:6]}] {d}")
 
-        with col_store_market:
-            st.markdown(f"### 🧩 【 {selected_dept} 】專屬功能模組市集")
-            st.caption("勾選此部門相對應的專屬業務模組與戰情儀表板：")
+        col_l, col_r = st.columns([1.3, 1.7])
+        with col_l:
+            st.markdown("#### 📂 選擇目標部門 (按 1~4 級)")
+            selected_flat_dept = st.radio("部門階層選擇", flat_dept_list, label_visibility="collapsed")
+            # 還原純部門名稱
+            actual_dept_name = selected_flat_dept.split("] ")[1]
+
+        with col_r:
+            st.markdown(f"#### 🧩 【 {actual_dept_name} 】專屬功能模組")
+            st.caption("勾選此部門相對應的專屬業務模組與戰情拼圖：")
             st.markdown("---")
 
-            current_dept_puzzles = st.session_state.dept_puzzle_mapping.get(selected_dept, [])
-            updated_dept_puzzles = []
+            # 初始化勾選狀態
+            if "dept_puzzle_mapping" not in st.session_state:
+                st.session_state.dept_puzzle_mapping = {}
 
-            # 抓取該部門專屬的模組清單
-            specific_puzzles = st.session_state.department_specific_puzzles_db.get(selected_dept, [])
+            current_mapped = st.session_state.dept_puzzle_mapping.get(actual_dept_name, st.session_state.department_specific_puzzles_db.get(actual_dept_name, []))
+            new_mapped = []
 
-            st.markdown(f"#### 📌 {selected_dept} 核心業務模組")
-            for item in specific_puzzles:
-                is_checked = st.checkbox(
-                    item, 
-                    value=(item in current_dept_puzzles), 
-                    key=f"chk_specific_{selected_dept}_{item}"
-                )
-                if is_checked:
-                    updated_dept_puzzles.append(item)
+            avail_puzzles = st.session_state.department_specific_puzzles_db.get(actual_dept_name, [])
+            for puz in avail_puzzles:
+                if st.checkbox(puz, value=(puz in current_mapped), key=f"puz_bind_{actual_dept_name}_{puz}"):
+                    new_mapped.append(puz)
 
             st.markdown("---")
-            if st.button(f"💾 儲存【{selected_dept}】的專屬拼圖配置", type="primary", use_container_width=True):
-                st.session_state.dept_puzzle_mapping[selected_dept] = updated_dept_puzzles
-                st.success(f"🎉 成功儲存！【{selected_dept}】已成功更新其相對應的專屬功能模組。")
+            if st.button(f"💾 儲存【{actual_dept_name}】的專屬拼圖配置", type="primary", use_container_width=True):
+                st.session_state.dept_puzzle_mapping[actual_dept_name] = new_mapped
+                st.success(f"🎉 成功儲存！【{actual_dept_name}】的業務拼圖已更新。")
                 st.rerun()
 
-    # Tab 2: 商業方案與訂閱制/正式版費用設定
+    # Tab 2: 四大商業方案（旗艦/正式/訂閱/試用）設定
     with master_tab2:
-        st.markdown("### 💰 商業授權方案、正式版與訂閱制費用設定")
-        st.info("💡 在此設定全球 SaaS 平台的各級方案定價、計費週期（年費/月租訂閱）與席位限制。")
+        st.markdown("### 💰 四大商業授權方案定價與規格設定")
+        st.info("💡 在此設定平台對外銷售的「企業旗艦版、正式商業版、彈性訂閱版、個人試用版」之定價金額與授權範圍。")
 
         plans_db = st.session_state.subscription_plans_db
-        c1, c2, c3 = st.columns(3)
-        cols = [c1, c2, c3]
+        c1, c2, c3, c4 = st.columns(4)
+        cols = [c1, c2, c3, c4]
         for idx, (p_name, p_info) in enumerate(plans_db.items()):
             with cols[idx]:
                 st.markdown(f"#### {p_name}")
-                st.write(f"• **方案屬性**：{p_info['type']}")
-                st.write(f"• **定價金額**：`${p_info['price_usd']:,.2f} USD`")
-                st.write(f"• **計費週期**：{p_info['billing_cycle']}")
-                st.write(f"• **席位限制**：{p_info['max_seats']}")
+                st.write(f"• **定價**：`${p_info['price_usd']:,.2f} USD`")
+                st.write(f"• **週期**：{p_info['billing_cycle']}")
+                st.write(f"• **席位**：{p_info['max_seats']}")
                 st.caption(p_info['desc'])
 
         st.markdown("---")
-        st.markdown("#### ⚙️ 調整指定方案之定價與規範")
-        with st.form("edit_subscription_plan_form"):
-            target_plan = st.selectbox("選擇要編輯的授權方案", list(plans_db.keys()))
-            current_info = plans_db[target_plan]
-            
-            new_price = st.number_input("設定方案價格 (USD)", value=float(current_info["price_usd"]), step=50.0)
-            new_cycle = st.text_input("計費週期說明", value=current_info["billing_cycle"])
-            new_seats = st.text_input("席位限制說明", value=current_info["max_seats"])
-            new_desc = st.text_area("方案特色描述", value=current_info["desc"])
+        with st.form("edit_plan_pricing_form"):
+            st.markdown("#### ⚙️ 調整指定商業方案定價")
+            target_p = st.selectbox("選擇要修改的方案", list(plans_db.keys()))
+            p_data = plans_db[target_p]
 
-            if st.form_submit_button("💾 儲存方案定價與設定", type="primary", use_container_width=True):
-                plans_db[target_plan]["price_usd"] = new_price
-                plans_db[target_plan]["billing_cycle"] = new_cycle
-                plans_db[target_plan]["max_seats"] = new_seats
-                plans_db[target_plan]["desc"] = new_desc
-                st.success(f"🎉 方案 [{target_plan}] 的財務定價與規範已成功更新！")
+            new_pr = st.number_input("設定方案價格 (USD)", value=float(p_data["price_usd"]), step=50.0)
+            new_cy = st.text_input("計費週期說明", value=p_data["billing_cycle"])
+            new_st = st.text_input("席位限制說明", value=p_data["max_seats"])
+            new_ds = st.text_area("方案特色描述", value=p_data["desc"])
+
+            if st.form_submit_button("💾 儲存商業方案設定", type="primary", use_container_width=True):
+                plans_db[target_p]["price_usd"] = new_pr
+                plans_db[target_p]["billing_cycle"] = new_cy
+                plans_db[target_p]["max_seats"] = new_st
+                plans_db[target_p]["desc"] = new_ds
+                st.success(f"🎉 商業方案 [{target_p}] 已成功更新！")
                 st.rerun()
 
-    # Tab 3: 企業租戶總覽與快速進入
+    # Tab 3: 企業租戶總覽與方案連動管理
     with master_tab3:
-        st.markdown("### 📋 現有企業租戶清單與方案檢視")
+        st.markdown("### 📋 現有企業租戶清單與方案綁定檢視")
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
         
         tenants = st.session_state.tenant_licensing_db
@@ -313,7 +328,7 @@ elif not st.session_state.selected_tenant:
                     col_i, col_b = st.columns([3, 1])
                     with col_i:
                         st.markdown(f"#### 🏢 {t['company_name']} (`{t['tenant_id']}`)")
-                        st.write(f"• **採購方案**：{t['plan']} | **合約金額**：${t.get('pricing_usd', 0):,.2f} USD")
+                        st.write(f"• **綁定商業方案**：{t['plan']} | **合約金額**：${t['pricing_usd']:,.2f} USD")
                         st.write(f"• **合約到期日**：{t['expiry_date']} | **運行狀態**：{t['status']}")
                     with col_b:
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -326,21 +341,25 @@ elif not st.session_state.selected_tenant:
 
     # Tab 4: 註冊新租戶與方案指派
     with master_tab4:
-        st.markdown("### ➕ 註冊新企業租戶並綁定授權方案")
+        st.markdown("### ➕ 註冊新企業租戶並綁定四大商業方案")
         with st.form("new_tenant_form"):
             c1, c2 = st.columns(2)
             with c1:
                 t_name = st.text_input("客戶公司名稱 *", placeholder="例: 越南精密工業股份公司")
                 t_tax = st.text_input("統一編號 / 稅號", placeholder="0312345678")
-                t_plan = st.selectbox("選擇商業授權方案 (旗艦/正式/訂閱)", list(st.session_state.subscription_plans_db.keys()))
+                t_plan = st.selectbox("選擇綁定商業方案", list(st.session_state.subscription_plans_db.keys()))
             with c2:
                 default_pr = st.session_state.subscription_plans_db[t_plan]["price_usd"]
-                t_price = st.number_input("客製合約定價金額 (USD)", value=float(default_pr))
+                t_price = st.number_input("合約定價金額 (USD)", value=float(default_pr))
                 t_exp = st.date_input("合約到期日", value=datetime.date(2027, 12, 31))
             
             if st.form_submit_button("🚀 確認註冊並開通租戶環境", type="primary", use_container_width=True):
                 if t_name:
                     new_id = f"TENANT-{len(st.session_state.tenant_licensing_db)+1:03d}"
+                    # 自動依方案解鎖對應模組
+                    all_puzzles = [item for sublist in st.session_state.department_specific_puzzles_db.values() for item in sublist]
+                    assigned_mods = all_puzzles if "旗艦版" in t_plan else all_puzzles[:6]
+                    
                     st.session_state.tenant_licensing_db.append({
                         "tenant_id": new_id,
                         "company_name": t_name,
@@ -349,16 +368,14 @@ elif not st.session_state.selected_tenant:
                         "pricing_usd": t_price,
                         "expiry_date": str(t_exp),
                         "status": "🟢 正常運行 (Active)",
-                        "hierarchical_org_tree": [],
-                        "org_nodes": [{"id": "node_root", "name": t_name, "type": "👑 頂層 (Board / 董事會)", "parent": "無 (頂層)"}],
-                        "dept_modules_db": {}
+                        "active_modules": assigned_mods
                     })
-                    st.success(f"🎉 成功建立新租戶：{t_name}！")
+                    st.success(f"🎉 成功建立新租戶 [{t_name}] 並自動綁定方案 [{t_plan}]！")
                     st.rerun()
                 else:
                     st.warning("請填寫公司名稱！")
 
-# 層級三：已進入特定租戶環境
+# 層級三：已進入特定租戶環境 (即時連動方案與模組權限)
 else:
     current_tenant_obj = next((t for t in st.session_state.tenant_licensing_db if t["company_name"] == st.session_state.selected_tenant), None)
     
@@ -366,6 +383,7 @@ else:
         st.sidebar.markdown("---")
         st.sidebar.markdown("##### 📂 租戶專屬功能選單：")
         
+        # 根據租戶綁定的方案動態渲染選單
         tenant_menu_options = [
             "🌳 多級組織架構維護（部 ➔ 科 ➔ 組）",
             "🖱️ 組織架構圖與節點管理 (Org Chart)",
@@ -376,7 +394,7 @@ else:
         chosen_module = st.sidebar.radio("選擇租戶模組", tenant_menu_options, label_visibility="collapsed")
         
         st.markdown(f"### ⚡ 租戶工作區：`{current_tenant_obj['company_name']}`")
-        st.markdown(f"**授權方案**：{current_tenant_obj['plan']} | **合約到期**：{current_tenant_obj['expiry_date']}")
+        st.markdown(f"**綁定授權方案**：{current_tenant_obj['plan']} | **合約到期**：{current_tenant_obj['expiry_date']}")
         st.markdown("---")
         
         if "多級組織架構維護" in chosen_module:
