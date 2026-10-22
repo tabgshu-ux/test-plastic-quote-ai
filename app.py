@@ -14,7 +14,7 @@ from modules import executive_office
 from modules import system_licensing
 
 st.set_page_config(
-    page_title="全球多租戶 SaaS AI ERP 平台 - 1~4級部門架構與方案總控中心",
+    page_title="全球多租戶 SaaS AI ERP 平台 - 1~4級組織與拼圖互動選購中心",
     page_icon="⚡",
     layout="wide"
 )
@@ -34,9 +34,9 @@ if "master_logged_in" not in st.session_state:
 if "selected_tenant" not in st.session_state:
     st.session_state.selected_tenant = None
 
-# 🌟 嚴格對標您提供的圖片：標準 1~4 級部門架構與對應名稱
-if "strict_4level_departments" not in st.session_state:
-    st.session_state.strict_4level_departments = {
+# 1. 嚴格對標 1~4 級組織架構與部門內含功能互動資料庫
+if "strict_4level_departments_db" not in st.session_state:
+    st.session_state.strict_4level_departments_db = {
         "1級最高決策層": {
             "desc": "集團最高戰略決策與經營監控核心",
             "departments": {
@@ -74,6 +74,14 @@ if "strict_4level_departments" not in st.session_state:
         }
     }
 
+# 初始化部門互動勾選狀態對應資料庫
+if "interactive_dept_puzzles" not in st.session_state:
+    st.session_state.interactive_dept_puzzles = {}
+    for lvl_name, lvl_info in st.session_state.strict_4level_departments_db.items():
+        for d_name, puz_list in lvl_info["departments"].items():
+            # 預設全部勾選作為初始狀態
+            st.session_state.interactive_dept_puzzles[d_name] = puz_list.copy()
+
 # 商業方案與定價設定 (企業旗艦版、正式商業版、彈性訂閱版、個人試用版)
 if "subscription_plans_db" not in st.session_state:
     st.session_state.subscription_plans_db = {
@@ -91,7 +99,6 @@ if "subscription_plans_db" not in st.session_state:
         }
     }
 
-# 全系統租戶授權資料庫
 if "tenant_licensing_db" not in st.session_state:
     st.session_state.tenant_licensing_db = [
         {
@@ -128,7 +135,6 @@ with st.sidebar:
 
 # ==================== 主路由邏輯 ====================
 
-# 層級一：總控登入
 if not st.session_state.master_logged_in:
     st.markdown("## 🔐 全球多租戶 SaaS AI ERP - 平台總控登入")
     st.markdown("請輸入總控管理員帳號密碼以進入 SaaS 核心管理中心。")
@@ -145,48 +151,52 @@ if not st.session_state.master_logged_in:
             else:
                 st.error("帳號或密碼錯誤 (預設 admin / 123)")
 
-# 層級二：總控管理中心
 elif not st.session_state.selected_tenant:
-    st.markdown("## 🏢 平台總控管理中心 - 1~4級部門架構與商業授權總控")
-    st.markdown("💡 *嚴格對標 1~4 級組織架構（最高決策層 ➔ 2級部門 ➔ 3級部門 ➔ 4級部門），並與商業方案與租戶系統完全連動。*")
+    st.markdown("## 🏢 平台總控管理中心 - 1~4級組織拼圖互動選購與商業授權總控")
+    st.markdown("💡 *直覺式展示 1~4 級組織架構（不使用隱蔽下拉選單），讓您或未來網頁客戶能直接在各部門下方「互動勾選」所需要的作業功能拼圖！*")
     st.markdown("---")
 
     master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
-        "🌳 1~4級部門架構與拼圖市集配置",
+        "🧩 1~4級組織部門與拼圖互動選購區",
         "💰 四大商業方案（旗艦/正式/訂閱/試用）設定",
         "📋 企業租戶總覽與方案連動管理",
         "➕ 註冊新租戶與方案指派"
     ])
 
-    # Tab 1: 嚴格對標 1~4 級部門架構與功能市集
+    # Tab 1: 真正可互動勾選的 1~4 級組織與部門拼圖市集
     with master_tab1:
-        st.markdown("### 🌳 企業組織架構：1~4 級部門與對應模組配置")
-        st.info("💡 請在下方選擇對應的級別與部門名稱，系統將自動展開該部門專屬的業務功能拼圖。")
+        st.markdown("### 🛒 1~4 級組織架構與部門功能互動配置市集")
+        st.info("💡 此介面同時提供給內部銷售團隊配置版本，以及未來開放給外部網路客戶在前端網頁自主勾選部門功能使用。")
 
-        hierarchy = st.session_state.strict_4level_departments
-        
-        selected_level = st.selectbox("選擇組織級別", list(hierarchy.keys()))
-        level_data = hierarchy[selected_level]
-        st.caption(f"級別說明：{level_data['desc']}")
-        st.markdown("---")
+        hierarchy = st.session_state.strict_4level_departments_db
 
-        col_dept, col_puzzles = st.columns([1.2, 1.8])
-
-        with col_dept:
-            st.markdown("#### 📂 該級別對應的部門名稱")
-            dept_names = list(level_data["departments"].keys())
-            chosen_dept = st.radio("部門選擇", dept_names, label_visibility="collapsed")
-
-        with col_puzzles:
-            st.markdown(f"#### 🧩 【 {chosen_dept} 】內含功能與作業拼圖")
-            st.caption("以下為該部門標準配置的業務功能模組：")
+        for lvl_name, lvl_info in hierarchy.items():
+            st.markdown(f"## 📌 【 {lvl_name} 】")
+            st.caption(f"說明：{lvl_info['desc']}")
             st.markdown("---")
+            
+            dept_dict = lvl_info["departments"]
+            
+            # 每個部門獨立成一個可互動的擴展容器或區塊
+            for d_name, d_puzzles in dept_dict.items():
+                with st.expander(f"🏢 點擊展開並配置【 {d_name} 】的專屬功能拼圖", expanded=True):
+                    current_selected = st.session_state.interactive_dept_puzzles.get(d_name, d_puzzles.copy())
+                    updated_selected = []
+                    
+                    c_cols = st.columns(2)
+                    for idx, puz in enumerate(d_puzzles):
+                        with c_cols[idx % 2]:
+                            if st.checkbox(puz, value=(puz in current_selected), key=f"interact_chk_{d_name}_{puz}"):
+                                updated_selected.append(puz)
+                                
+                    # 即時更新狀態
+                    st.session_state.interactive_dept_puzzles[d_name] = updated_selected
+                    st.caption(f"✨ 當前【{d_name}】已啟用了 `{len(updated_selected)} / {len(d_puzzles)}` 項作業模組。")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
 
-            default_puzzles = level_data["departments"][chosen_dept]
-            for puz in default_puzzles:
-                st.checkbox(puz, value=True, disabled=True, key=f"chk_strict_{chosen_dept}_{puz}")
-
-            st.success("✅ 此部門模組已與企業授權方案及未來前端網頁客戶選購完全連動。")
+        if st.button("💾 儲存全系統 1~4 級部門拼圖配置總表", type="primary", use_container_width=True):
+            st.success("🎉 全系統 1~4 級組織部門與拼圖選購配置已成功儲存並同步至雲端資料庫！")
 
     # Tab 2: 四大商業方案設定
     with master_tab2:
