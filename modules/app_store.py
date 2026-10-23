@@ -5,11 +5,27 @@ import uuid
 def render_app_store(current_tenant, all_departments=None):
     """
     樂高積木式模組市集與版本定價中心 (App Store)
-    完美對齊：上方純粹勾選部門功能並寫入；下方藍色總覽區塊顯示已開通部門與功能，並在下方直接設定版本名稱與金額。
+    修復資料無法寫入與總覽無法顯示的問題，確保勾選後即時同步至全域 session_state。
     """
     st.markdown("## 🧩 企業部門樂高拼圖市集與版本定價中心 (App Store)")
-    st.info("💡 *說明：在上方勾選各部門的 ERP 拼圖功能並儲存；下方藍色總覽區塊將顯示已開通的部門與功能，並可在此直接設定自訂版本名稱與每月訂閱金額。*")
+    st.info("💡 *說明：在上方勾選各部門的 ERP 拼圖功能並點擊儲存；下方藍色總覽區塊將立即顯示已開通的部門與功能，並可在此設定自訂版本名稱與每月訂閱金額。*")
     
+    # 確保 session_state 中有穩固的租戶資料儲存結構
+    if "current_tenant_mock" not in st.session_state:
+        st.session_state.current_tenant_mock = {
+            "name": "裕豐電機工業 (Reetech)",
+            "edition_name": "🚀 旗艦企業版 (Enterprise)",
+            "price_usd": 2500.0,
+            "dept_modules_db": {}
+        }
+    
+    # 若傳入的 current_tenant 是字典但沒有 dept_modules_db，初始化它
+    if current_tenant is not None and isinstance(current_tenant, dict):
+        if "dept_modules_db" not in current_tenant:
+            current_tenant["dept_modules_db"] = {}
+    else:
+        current_tenant = st.session_state.current_tenant_mock
+
     col_left, col_right = st.columns([1, 2.2])
     
     company_hierarchy_departments = [
@@ -91,12 +107,9 @@ def render_app_store(current_tenant, all_departments=None):
         matched_key = next((k for k in department_modules_mapping if k in selected_dept), "董事長室 / 總經理室")
         available_mods_for_dept = department_modules_mapping[matched_key]
         
-        if not current_tenant or not isinstance(current_tenant, dict):
-            current_tenant = {"name": "預設租戶", "price_usd": 2500.0, "edition_name": "🚀 旗艦企業版 (Enterprise)", "dept_modules_db": {}}
-            
+        # 讀取已儲存的部門模組
         saved_dept_mods = current_tenant.get("dept_modules_db", {}).get(selected_dept, [])
         
-        # 紅色按鈕區：純粹用來勾選與加入功能
         with st.form(f"form_store_{selected_dept}"):
             curr_selected = []
             st.markdown(f"#### 📌 勾選【{clean_dept_name}】需要的 ERP 功能拼圖：")
@@ -108,9 +121,12 @@ def render_app_store(current_tenant, all_departments=None):
             
             st.markdown("---")
             if st.form_submit_button(f"💾 立即加入：儲存【{clean_dept_name}】的功能拼圖", type="primary", use_container_width=True):
+                # 強制寫入字典與 session_state
                 if "dept_modules_db" not in current_tenant:
                     current_tenant["dept_modules_db"] = {}
                 current_tenant["dept_modules_db"][selected_dept] = curr_selected
+                st.session_state.current_tenant_mock = current_tenant
+                
                 st.success(f"🎉 成功！【{clean_dept_name}】的功能拼圖已加入儲存！")
                 st.rerun()
 
@@ -122,10 +138,11 @@ def render_app_store(current_tenant, all_departments=None):
     st.info("💡 *在此檢視目前已加入的部門與功能明細，並直接在下方設定該租戶的自訂銷售版本名稱與每月總訂閱金額 (USD)。*")
 
     active_db = current_tenant.get("dept_modules_db", {})
+    
     if active_db:
         summary_data = []
         for d_name, m_list in active_db.items():
-            if m_list:
+            if m_list and len(m_list) > 0:
                 summary_data.append({
                     "已開通部門/管理層": d_name,
                     "已勾選模組數量": f"{len(m_list)} 項",
@@ -134,9 +151,9 @@ def render_app_store(current_tenant, all_departments=None):
         if summary_data:
             st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
         else:
-            st.warning("⚠️ 目前尚未加入任何部門的模組勾選。")
+            st.warning("⚠️ 目前各部門雖有記錄，但尚未勾選任何功能項目。")
     else:
-        st.info("ℹ️ 尚無已加入的模組資料，請在上方勾選並點擊儲存按鈕。")
+        st.warning("⚠️ 目前尚未加入任何部門的模組勾選，請在上方勾選並點擊儲存按鈕。")
     
     # 藍色區塊內的版本名稱與金額設定表單
     with st.form("bottom_version_pricing_form"):
@@ -150,5 +167,6 @@ def render_app_store(current_tenant, all_departments=None):
         if st.form_submit_button("💾 儲存下方版本名稱與總訂閱金額設定", type="primary", use_container_width=True):
             current_tenant["edition_name"] = custom_edition_name
             current_tenant["price_usd"] = current_custom_price
-            st.success(f"🎉 成功更新！版本名稱已設為 [{custom_edition_name}]，總訂閱金額 `$ {current_custom_price} USD` 已同步至財務 AR 系統！")
+            st.session_state.current_tenant_mock = current_tenant
+            st.success(f"🎉 成功更新！版本名稱已設為 [{custom_edition_name}]，總訂閱金額 `$ {current_custom_price} USD` 已同步！")
             st.rerun()
