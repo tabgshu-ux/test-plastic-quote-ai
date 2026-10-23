@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
 import psycopg2
-import datetime
 
 def get_db_connection():
     conn_str = "postgresql://postgres:tassos660823@db.vgviddgtkbtuxnwfopi.supabase.co:5432/postgres"
     return psycopg2.connect(conn_str)
 
-def render_app_store(tenant_info, user_perms):
+def render_approval_center(tenant_info, user_perms):
     st.markdown("### ✍️ 全方位跨部門電子簽核與審核中心")
-    st.info("💡 *統一管理來自請假差勤、總務採購、財務報銷等各模組的待審核表單，支援一鍵同意、駁回與歷史簽核軌跡追蹤。*")
+    st.info("💡 *獨立模組：統一管理來自請假差勤、總務採購等各模組的待審核表單，支援一鍵同意、駁回與歷史簽核軌跡追蹤。*")
     st.markdown("---")
 
     tab1, tab2 = st.tabs(["📋 待簽核佇列與審核作業", "📜 歷史簽核日誌與軌跡"])
@@ -48,7 +47,7 @@ def render_app_store(tenant_info, user_perms):
                         # 1. 更新 approval_queue 狀態
                         cur.execute("UPDATE approval_queue SET status = %s WHERE approval_id = %s", (final_status, target_id))
                         
-                        # 2. 同步更新來源表單狀態 (簡單判斷單號開頭)
+                        # 2. 同步更新來源表單狀態
                         if target_id.startswith("PO"):
                             cur.execute("UPDATE ga_procurements SET status = %s WHERE po_id = %s", (final_status, target_id))
                         elif target_id.startswith("LV"):
