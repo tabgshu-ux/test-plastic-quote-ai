@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "八、 生技醫藥開發業（Biotech & Pharmaceutical R&D）",
+    "name": "生技醫藥開發業（Biotech & Pharmaceutical R&D）",
     "desc": "實驗室原物料、專利智財、臨床試驗與藥證法規申請。",
     "departments": [
         "👑 董事會 / 總經理室",
