@@ -1,19 +1,20 @@
-# modules/app_store.py - 樂高模組拼圖市集與外掛調用程式
+# modules/app_store.py - 樂高積木式模組市集與版本定價中心
 import streamlit as st
 import pandas as pd
+import importlib
+import pkgutil
+import industries
 
 def render_app_store(current_tenant=None, all_departments=None):
     """
     樂高積木式模組市集與版本定價中心 (App Store)
-    外掛模組化架構：從 industries/ 資料夾動態載入產業外掛。
+    外掛架構：自動掃描 industries/ 資料夾下的所有外掛檔案，將 12 大產業動態載入並全部顯示！
     """
-    st.info("💡 *說明：請在下方選擇產業別外掛，左側展開對應部門，右側勾選拼圖模組，下方即時總覽與版本金額設定。*")
+    st.info("💡 *說明：系統正從 industries/ 外部資料夾動態載入所有產業外掛。請在下方下拉選單選擇您的產業別，左側將自動展開對應部門。*")
     
-    # 確保租戶資料庫安全連動
     if "global_tenants_db" not in st.session_state:
         st.session_state.global_tenants_db = {}
     
-    # 若未傳入指定租戶，預設抓取第一個或建立暫存
     if not current_tenant:
         current_tenant = "裕豐電機工業 (Reetech Industrial)"
         
@@ -28,34 +29,35 @@ def render_app_store(current_tenant=None, all_departments=None):
     if "dept_modules_db" not in tenant_data:
         tenant_data["dept_modules_db"] = {}
 
-    # 動態引入 industries/tech_it.py 外掛
+    # 🚀 核心外掛動態掃描：自動抓取 industries/ 資料夾底下的所有 .py 檔案
+    industries_options = {}
     try:
-        import industries.tech_it as tech_module
-        tech_matrix = getattr(tech_module, "INDUSTRY_DATA", {
-            "name": "二、 科技與軟體業（Tech & Software / SaaS）",
-            "desc": "強調敏捷開發與訂閱制管理。",
-            "departments": ["👑 董事會 / CEO Office", "🔬 產品研發處", "💻 資料與運維處", "🛠️ 工程部 (Engineering Department)"]
-        })
+        for _, modname, _ in pkgutil.iter_modules(industries.__path__):
+            try:
+                module = importlib.import_module(f"industries.{modname}")
+                if hasattr(module, "INDUSTRY_DATA"):
+                    ind_data = module.INDUSTRY_DATA
+                    ind_name = ind_data.get("name", modname)
+                    industries_options[ind_name] = ind_data
+            except Exception:
+                continue
     except Exception:
-        tech_matrix = {
-            "name": "二、 科技與軟體業（Tech & Software / SaaS）",
-            "desc": "科技軟體業外掛載入中",
+        pass
+
+    # 若暫時還沒放其他外掛，提供防呆備用
+    if not industries_options:
+        industries_options["二、 科技與軟體業（Tech & Software / SaaS）"] = {
+            "desc": "科技與軟體業預設外掛",
             "departments": ["👑 董事會 / CEO Office", "🔬 產品研發處", "🛠️ 工程部 (Engineering Department)"]
         }
 
-    industries_options = {
-        tech_matrix["name"]: tech_matrix,
-        "一、 製造與代工業（Manufacturing & OEM）": {
-            "desc": "ERP 系統最複雜、層級最嚴謹的傳統大宗。",
-            "departments": ["👑 董事會 / CEO Office", "💰 資產財務處", "🏭 生產製造處", "🛠️ 工程部 (Engineering Department)"]
-        }
-    }
-
-    selected_industry_name = st.selectbox("📂 請選擇企業所屬的全球產業別（來自 industries/ 外掛）", list(industries_options.keys()), key=f"ind_select_{current_tenant}")
-    current_industry_info = industries_options[selected_industry_name]
-    current_dept_list = current_industry_info["departments"]
+    industry_keys = list(industries_options.keys())
+    selected_industry_name = st.selectbox("📂 請選擇企業所屬的全球產業別（動態讀取 industries/ 外掛）", industry_keys, key=f"dyn_ind_sel_{current_tenant}")
     
-    st.markdown(f"📌 **外掛產業說明**：*{current_industry_info['desc']}*")
+    current_industry_info = industries_options[selected_industry_name]
+    current_dept_list = current_industry_info.get("departments", [])
+    
+    st.markdown(f"📌 **外掛產業說明**：*{current_industry_info.get('desc', '')}*")
     st.markdown("---")
 
     col_left, col_right = st.columns([1.1, 2.2])
@@ -67,7 +69,7 @@ def render_app_store(current_tenant=None, all_departments=None):
             current_dept_list,
             index=0,
             label_visibility="collapsed",
-            key=f"dept_radio_{current_tenant}"
+            key=f"dyn_dept_radio_{current_tenant}"
         )
         
     with col_right:
