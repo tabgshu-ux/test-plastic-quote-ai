@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "三、 零售與電商業（Retail & E-Commerce）",
+    "name": "零售與電商業（Retail & E-Commerce）",
     "desc": "強調多通路整合（OMNI）、快速周轉、高頻次物流與大量小額交易。",
     "departments": [
         "👑 董事會 / CEO Office",
