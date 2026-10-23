@@ -5,33 +5,25 @@ import uuid
 def render_app_store(current_tenant, all_departments=None):
     """
     樂高積木式模組市集與版本定價中心 (App Store)
-    完美修復：使用 st.session_state 完整記憶勾選狀態，確保點擊加入後下方即時總覽正確顯示。
+    嚴格遵循您的要求：部門完全展開顯示（使用 radio），讓客人一目了然看到所有選項，並完美支援記憶與下方即時總覽。
     """
     st.markdown("## 🧩 企業部門樂高拼圖市集與版本定價中心 (App Store)")
-    st.info("💡 *說明：在上方勾選各部門的 ERP 拼圖功能並點擊儲存；下方總覽區塊將立即顯示已開通的部門與功能，並可在此設定自訂版本名稱與每月訂閱金額。*")
+    st.info("💡 *說明：左側完整展開所有部門與管理層供客戶一目了然地選擇；勾選功能後點擊儲存，下方即時總覽將完整顯示已開通的部門與模組明細。*")
     
-    # 1. 確保全域 session_state 中有穩固的租戶與模組儲存結構
+    # 確保全域 session_state 中有穩固的租戶與模組儲存結構
     if "current_tenant_mock" not in st.session_state:
         st.session_state.current_tenant_mock = {
             "name": "裕豐電機工業 (Reetech)",
             "edition_name": "🚀 旗艦企業版 (Enterprise)",
             "price_usd": 2500.0,
-            "dept_modules_db": {
-                "👑 董事長室 / 總經理室 (Executive & CEO Office)": [
-                    "老闆專屬現金流與 AR/AP 逾期預警看板",
-                    "即時綜合損益與動態成本分攤 (P&L)",
-                    "全球股市、匯率與原料期貨行情 API 串聯",
-                    "溫室氣體盤查 (ESG 範疇一二三) 與碳排總體指標",
-                    "全方位數位簽核中心與多級呈核路由 (BPM)"
-                ]
-            }
+            "dept_modules_db": {}
         }
     
     tenant_data = st.session_state.current_tenant_mock
     if "dept_modules_db" not in tenant_data:
         tenant_data["dept_modules_db"] = {}
 
-    col_left, col_right = st.columns([1, 2.2])
+    col_left, col_right = st.columns([1.1, 2.2])
     
     company_hierarchy_departments = [
         "👑 董事長室 / 總經理室 (Executive & CEO Office)",
@@ -47,9 +39,11 @@ def render_app_store(current_tenant, all_departments=None):
     
     with col_left:
         st.markdown("### 🏢 選擇目標管理層 / 部門")
-        selected_dept = st.selectbox(
+        # 嚴格使用 st.radio 讓所有選項全部展開顯示，不使用下拉選單
+        selected_dept = st.radio(
             "部門選擇",
             company_hierarchy_departments,
+            index=0,
             label_visibility="collapsed"
         )
         
@@ -120,13 +114,11 @@ def render_app_store(current_tenant, all_departments=None):
             temp_selected = []
             for mod in available_mods_for_dept:
                 is_currently_checked = mod in saved_mods
-                # 建立穩定獨立的 checkbox
                 if st.checkbox(mod, value=is_currently_checked, key=f"chk_{selected_dept}_{mod}"):
                     temp_selected.append(mod)
             
             st.markdown("---")
             if st.form_submit_button(f"💾 立即加入：儲存【{clean_dept_name}】的功能拼圖", type="primary", use_container_width=True):
-                # 直接寫入全域 session_state
                 tenant_data["dept_modules_db"][selected_dept] = temp_selected
                 st.session_state.current_tenant_mock = tenant_data
                 st.success(f"🎉 成功！【{clean_dept_name}】的功能拼圖已加入並即時生效！")
