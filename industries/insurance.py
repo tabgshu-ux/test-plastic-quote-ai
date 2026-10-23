@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "六、 保險業（Insurance Industry - 產險/壽險）",
+    "name": "保險業（Insurance Industry - 產險/壽險）",
     "desc": "龐大的業務員佣金制度、精算核保流程與理賠收付款對帳。",
     "departments": [
         "👑 董事會 / 總經理室",
