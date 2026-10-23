@@ -2,7 +2,7 @@
 # 科技與軟體業（Tech & Software / SaaS）- 1~4級組織架構外掛
 
 INDUSTRY_DATA = {
-    "name": "二、 科技與軟體業（Tech & Software / SaaS）",
+    "name": "科技與軟體業（Tech & Software / SaaS）",
     "desc": "強調敏捷開發、SaaS 訂閱制、雲端運維與客戶生命週期維護的 1~4 級多層級組織。",
     "departments": [
         "👑 1. 董事會 / 總經理辦公室 (CEO Office)",
