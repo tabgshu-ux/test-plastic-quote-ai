@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "七、 銀行業（Banking Industry）",
+    "name": "銀行業（Banking Industry）",
     "desc": "處理分行據點、對外採購、資產管理及跨部門分攤。",
     "departments": [
         "👑 董事會 / 總經理室",
