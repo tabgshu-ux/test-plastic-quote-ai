@@ -1,24 +1,24 @@
 import inspect
-import modules.approval_workflow as approval_workflow
+import modules.approval_center as approval_center
 import modules.asset_management as asset_management
-import modules.db_connection as db_conn
+import modules.database as db_conn
 import modules.employee_management as employee_management
 import modules.engineering_pipeline as engineering_pipeline
 import modules.executive_dashboard as executive_dashboard
 import modules.field_attendance as field_attendance
-import modules.invoice_management as invoice_management
+import modules.invoice_parsing as invoice_management
 import modules.payroll_management as payroll_management
-import modules.procurement_ap as procurement_ap
-import modules.sales_order_ar as sales_order_ar
+import modules.finance_ap as procurement_ap
+import modules.supply_chain as sales_order_ar
 import modules.system_licensing as system_licensing
 import modules.user_management as user_management
 import modules.vehicle_gate_log as vehicle_gate_log
 import modules.vehicle_maintenance as vehicle_maintenance
-import modules.warehouse_management as warehouse_management
+import modules.inventory_wms as warehouse_management
 import pandas as pd
 import streamlit as st
 
-# 📱 100% 移動優先與 RWD 設定
+# 📱 100% 移動優先：設定頁面並預設手機側邊欄展開
 st.set_page_config(
     page_title="裕豐電機工業 REETECH INDUSTRIAL AI ERP",
     page_icon="⚡",
@@ -76,7 +76,7 @@ RECH_LOGO_HTML = """
 """
 
 # ----------------------------------------------------
-# 🌐 多語系字典與模組對照表（扁平化設計，免去多層切換）
+# 🌐 多語系與扁平化導航結構
 # ----------------------------------------------------
 APP_TRANSLATIONS = {
     "繁體中文": {
@@ -112,7 +112,7 @@ if "current_lang" not in st.session_state:
     st.session_state.current_lang = "繁體中文"
 
 t = APP_TRANSLATIONS.get(st.session_state.current_lang, APP_TRANSLATIONS["繁體中文"])
-engine = db_conn.get_db_engine()
+engine = db_conn.get_db_connection()
 
 def safe_call_module(func, *args, **kwargs):
     if not callable(func): return
@@ -157,7 +157,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ----------------------------------------------------
-# 側邊欄設定（語言切換、登出與保全模式簡化）
+# 側邊欄設定
 # ----------------------------------------------------
 st.sidebar.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
 
@@ -173,31 +173,23 @@ if st.sidebar.button(t["logout_btn"], use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-
 current_role_clean = str(st.session_state.user_role).strip().lower()
 
 # ----------------------------------------------------
-# 主介面：直覺的大型分頁導航 (Tabs)，免去大腦思考
+# 主介面：直覺的大型分頁導航 (Tabs)
 # ----------------------------------------------------
 st.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
 
-# 保全人員專用簡化視圖（免去複雜選單）
 if current_role_clean == "security":
     st.info("🛡️ 保全快速通道：廠區車輛進出與門禁時間登記")
     safe_call_module(vehicle_gate_log.render_vehicle_gate_log_page, engine=engine, lang=st.session_state.current_lang)
     st.stop()
 
-# 一般與管理人員分頁導航
 tab_exec, tab_mgmt, tab_eng, tab_prod, tab_it = st.tabs(t["tabs"])
 
-# --- Tab 1: 營運戰情室 ---
 with tab_exec:
     st.markdown("### 📈 營運戰情與分析總覽")
-    exec_option = st.radio(
-        "選擇戰情項目：",
-        ["🔴 原料價格與隨時股市物價/匯率", "📊 財務類顯示資料 (AR/AP & P&L)", "⚡ 工程專案進度與驗收資料"],
-        horizontal=True
-    )
+    exec_option = st.radio("選擇戰情項目：", ["🔴 原料價格與隨時股市物價/匯率", "📊 財務類顯示資料 (AR/AP & P&L)", "⚡ 工程專案進度與驗收資料"], horizontal=True)
     if "原料價格" in exec_option:
         safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="commodities_fx", lang=st.session_state.current_lang)
     elif "財務類" in exec_option:
@@ -205,7 +197,6 @@ with tab_exec:
     else:
         safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="project_progress", lang=st.session_state.current_lang)
 
-# --- Tab 2: 管理與財務部 ---
 with tab_mgmt:
     st.markdown("### 👔 管理部與財務會計中心")
     mgmt_option = st.selectbox(
@@ -224,10 +215,13 @@ with tab_mgmt:
         ]
     )
     
+    tenant_info = {"tenant_id": "TENANT-001", "company_name": "裕豐電機工業"}
+    user_perms = ["admin", "finance", "ga"]
+
     if "固定資產" in mgmt_option:
-        safe_call_module(asset_management.render_asset_management_page, lang=st.session_state.current_lang)
+        safe_call_module(asset_management.render_asset_management, tenant_info, user_perms)
     elif "電子簽核" in mgmt_option:
-        safe_call_module(approval_workflow.render_approval_center, lang=st.session_state.current_lang)
+        safe_call_module(approval_center.render_approval_center, tenant_info, user_perms)
     elif "員工個人檔案" in mgmt_option:
         safe_call_module(employee_management.render_employee_management, engine=engine, t=t, lang=st.session_state.current_lang)
     elif "車輛進出" in mgmt_option:
@@ -237,52 +231,33 @@ with tab_mgmt:
     elif "外勤工程" in mgmt_option:
         safe_call_module(field_attendance.render_field_attendance_page, engine=engine, lang=st.session_state.current_lang)
     elif "採購與應付" in mgmt_option:
-        safe_call_module(procurement_ap.render_procurement_ap_page, engine=engine, lang=st.session_state.current_lang)
+        safe_call_module(procurement_ap.render_finance_ap, tenant_info, user_perms)
     elif "銷售與應收" in mgmt_option:
-        safe_call_module(sales_order_ar.render_sales_order_ar_page, engine=engine, lang=st.session_state.current_lang)
+        safe_call_module(sales_order_ar.render_supply_chain, tenant_info, user_perms)
     elif "全球員工薪資" in mgmt_option:
         safe_call_module(payroll_management.render_payroll_management_page, engine=engine, lang=st.session_state.current_lang)
     elif "越南電子發票" in mgmt_option:
-        safe_call_module(invoice_management.render_invoice_management, engine=engine, lang=st.session_state.current_lang)
+        safe_call_module(invoice_management.render_invoice_parsing, tenant_info, user_perms)
 
-# --- Tab 3: 工程技術部 ---
 with tab_eng:
     st.markdown("### 🛠️ 工程技術與設計估價中心")
-    eng_option = st.radio(
-        "選擇工程功能：",
-        ["📐 配電盤電氣與機構設計圖庫 / 估價", "🔍 工程驗收與品質檢驗紀錄"],
-        horizontal=True
-    )
+    eng_option = st.radio("選擇工程功能：", ["📐 配電盤電氣與機構設計圖庫 / 估價", "🔍 工程驗收與品質檢驗紀錄"], horizontal=True)
     if "配電盤" in eng_option:
         safe_call_module(engineering_pipeline.render_engineering_page)
     else:
         safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="project_progress", lang=st.session_state.current_lang)
 
-# --- Tab 4: 生產與倉儲部 ---
 with tab_prod:
     st.markdown("### 🏭 生產製造與倉庫管理中心")
-    prod_option = st.selectbox(
-        "選擇生產與倉儲功能：",
-        [
-            "📦 倉庫庫存與資材條碼管理",
-            "✂️ 板金加工組工單與條碼",
-            "🎨 粉體塗裝烤漆組品管",
-            "⚡ 配電盤組裝配線組"
-        ]
-    )
+    prod_option = st.selectbox("選擇生產與倉儲功能：", ["📦 倉庫庫存與資材條碼管理", "✂️ 板金加工組工單與條碼", "🎨 粉體塗裝烤漆組品管", "⚡ 配電盤組裝配線組"])
     if "倉庫庫存" in prod_option:
         safe_call_module(warehouse_management.render_warehouse_management, engine=engine, t=t, lang=st.session_state.current_lang)
     else:
         st.info("🛠️ 現場工單追蹤與 QC 品質檢驗模組順利運作中 / Hệ thống đang hoạt động bình thường.")
 
-# --- Tab 5: 資訊管理部 (IT) ---
 with tab_it:
     st.markdown("### 💻 資訊管理與系統授權中心")
-    it_option = st.radio(
-        "選擇管理項目：",
-        ["🔒 帳號權限與全系統稽核軌跡", "🎛️ 客戶 ERP 模組授權與功能開關"],
-        horizontal=True
-    )
+    it_option = st.radio("選擇管理項目：", ["🔒 帳號權限與全系統稽核軌跡", "🎛️ 客戶 ERP 模組授權與功能開關"], horizontal=True)
     if "帳號權限" in it_option:
         safe_call_module(user_management.render_user_management_page, lang=st.session_state.current_lang)
     else:
