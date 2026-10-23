@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "十二、 遊戲與數位內容產業（Gaming & Digital Content）",
+    "name": "遊戲與數位內容產業（Gaming & Digital Content）",
     "desc": "虛擬寶物錢包、通路分潤與版權授權金。",
     "departments": [
         "👑 董事會 / 總經理室",
