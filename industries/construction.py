@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "九、 營造與營建工程業（Construction & Engineering）",
+    "name": "營造與營建工程業（Construction & Engineering）",
     "desc": "工程專案（WBS）合約、下包商點工計價與原物料請款。",
     "departments": [
         "👑 董事會 / 總經理室",
