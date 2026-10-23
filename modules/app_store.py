@@ -1,13 +1,12 @@
-# modules/app_store.py - 自由樂高組織圖建構與功能拼圖隨選市集
+# modules/app_store.py - 租戶專屬的自由組織圖拼圖板與模組市集
 import streamlit as st
 import pandas as pd
 
 def render_app_store(current_tenant=None, all_departments=None):
     """
-    全球 SaaS ERP 組織圖自由拼裝與模組市集 (Org-Chart & App Store Builder)
-    核心理念：不綁死階級，讓客戶依自身特性自由拼出組織圖，並在下方隨選對應功能拼圖。
+    租戶專屬介面：自由組織圖建構與 ERP 功能拼圖隨選 (Org-Chart Builder & App Store)
     """
-    st.info("💡 *說明：這是專屬於該租戶的【自由組織圖與功能拼圖生成器】。您可以先在上方自行新增與建構公司組織（不限層級），接著在下方點選該部門，勾選專屬的 ERP 功能模組！*")
+    st.info("💡 *說明：這是該租戶專屬的【自由組織圖與功能拼圖配置台】。您可以先在上方自行新增與建構公司組織架構，接著在下方點選該部門，勾選專屬的 ERP 功能模組！*")
     
     if "global_tenants_db" not in st.session_state:
         st.session_state.global_tenants_db = {}
@@ -32,7 +31,6 @@ def render_app_store(current_tenant=None, all_departments=None):
         
     tenant_data = st.session_state.global_tenants_db[current_tenant]
     
-    # 確保自訂組織清單存在
     if "custom_org_chart" not in tenant_data:
         tenant_data["custom_org_chart"] = ["👑 董事會 / CEO Office", "🛠️ 工程部", "🏭 生產部"]
         
@@ -42,7 +40,7 @@ def render_app_store(current_tenant=None, all_departments=None):
     st.markdown("---")
     
     # ==========================================================
-    # 🧩 第一區塊：客戶自定義組織圖自由拼裝區 (Org-Chart Builder)
+    # 🏢 第一區塊：租戶自定義組織圖自由拼裝區
     # ==========================================================
     st.markdown("### 🏢 第一步：自由建構與拼裝您的企業組織架構")
     
@@ -52,7 +50,6 @@ def render_app_store(current_tenant=None, all_departments=None):
         st.markdown("📌 **目前該租戶已建立的組織部門清單**：")
         current_org_list = tenant_data["custom_org_chart"]
         
-        # 讓客戶檢視或刪除部門
         for idx, dept in enumerate(current_org_list):
             c_d1, c_d2 = st.columns([4, 1])
             with c_d1:
