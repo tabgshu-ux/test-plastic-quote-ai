@@ -1,4 +1,4 @@
-# app.py - 全球多租戶 SaaS ERP 總控台（正式完整版）
+# app.py - 全球多租戶 SaaS ERP 總控台（修正版）
 import streamlit as st
 import pandas as pd
 
@@ -22,7 +22,7 @@ except ImportError:
 if "platform_admin_logged" not in st.session_state:
     st.session_state.platform_admin_logged = False
 
-if not st.platform_admin_logged if "platform_admin_logged" in st.session_state and not st.session_state.platform_admin_logged else not st.session_state.platform_admin_logged:
+if not st.session_state.platform_admin_logged:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col_l, col_m, col_r = st.columns([1, 1.2, 1])
     with col_m:
