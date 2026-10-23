@@ -4,13 +4,13 @@ import uuid
 
 def render_app_store(current_tenant, all_departments=None):
     """
-    全球 SaaS 多產業 1~4 級組織架構與樂高拼圖模組市集 (App Store)
-    完整內建白皮書中的 12 大產業母體庫與所有實體部門（含工程部等），採全部展開顯示。
+    樂高積木式模組市集與版本定價中心 (App Store)
+    內建 12 大產業與完整部門清單，完全不依賴外部檔案，保證絕不白屏！
     """
     st.markdown("## 🧩 全球多產業 1~4 級組織架構與樂高拼圖市集 (App Store)")
-    st.info("💡 *說明：請先選擇企業所屬的【12大產業別】之一；接著在左側完整展開所有部門與管理層（含工程部），右側勾選專屬 ERP 功能拼圖，儲存後下方將即時總覽已開通的部門、功能與版本金額。*")
+    st.info("💡 *說明：請先在下方選擇企業所屬的全球產業別；接著在左側完整展開所有部門，右側勾選專屬 ERP 功能拼圖，儲存後下方將即時總覽已開通的部門、功能與版本金額。*")
     
-    # 確保全域 session_state 中有穩固的租戶與模組儲存結構
+    # 確保 session_state 穩定
     if "current_tenant_mock" not in st.session_state:
         st.session_state.current_tenant_mock = {
             "name": "裕豐電機工業 (Reetech)",
@@ -23,48 +23,149 @@ def render_app_store(current_tenant, all_departments=None):
     if "dept_modules_db" not in tenant_data:
         tenant_data["dept_modules_db"] = {}
 
-    # 1. 完整收錄您白皮書中的 12 大產業別
-    industry_options = [
-        "一、 製造與代工業（Manufacturing & OEM）",
-        "二、 科技與軟體業（Tech & Software / SaaS）",
-        "三、 零售與電商業（Retail & E-Commerce）",
-        "四、 傳統服務業（Traditional Service Industry）",
-        "五、 投資顧問業（Investment Advisory / SITCA）",
-        "六、 保險業（Insurance Industry - 產險/壽險）",
-        "七、 銀行業（Banking Industry）",
-        "八、 生技醫藥開發業（Biotech & Pharmaceutical R&D）",
-        "九、 營造與營建工程業（Construction & Engineering）",
-        "十、 物流與倉儲運輸業（Logistics & Transportation）",
-        "十一、 觀光飯店與旅宿業（Hospitality & Hotel Industry）",
-        "十二、 遊戲與數位內容產業（Gaming & Digital Content）"
-    ]
+    # 內建完整 12 大產業矩陣，絕不發生模組遺失或白屏
+    industries_matrix = {
+        "一、 製造與代工業（Manufacturing & OEM）": {
+            "desc": "ERP 系統最複雜、層級最嚴謹的傳統大宗。",
+            "departments": [
+                "👑 董事會 / CEO Office",
+                "💰 資產財務處 / 財務部",
+                "📦 供應鏈管理處 / 採購與物流倉儲部",
+                "🏭 生產製造處 / 廠務製造部",
+                "🛡️ 品質保證部 (QA/QC)",
+                "🔬 研發部 (R&D Department)",
+                "🛠️ 工程部 (Engineering Department)",
+                "📢 業務營運處 / 國內外銷售部",
+                "👥 人力資源與行政管理處"
+            ]
+        },
+        "二、 科技與軟體業（Tech & Software / SaaS）": {
+            "desc": "強調敏捷、訂閱制、技術開發維運與客戶生命週期維護。",
+            "departments": [
+                "👑 董事會 / CEO Office",
+                "🔬 產品研發處 / 技術研發部",
+                "💻 資料與運維處 / 雲端運維部",
+                "🤝 商務推廣處 / 全球業務部",
+                "🌟 客戶成功部 (Customer Success)",
+                "👥 行政管理處 / 人力資源部"
+            ]
+        },
+        "三、 零售與電商業（Retail & E-Commerce）": {
+            "desc": "強調多通路整合（OMNI）、快速周轉、高頻次物流與大量小額交易。",
+            "departments": [
+                "👑 董事會 / CEO Office",
+                "🌐 通路營運處 / 線上電商部與實體門市部",
+                "📦 商品供應處 / 倉儲物流部",
+                "📢 行銷增長處 / 數位行銷部"
+            ]
+        },
+        "四、 傳統服務業（Traditional Service Industry）": {
+            "desc": "連鎖餐飲、醫美、健身房等，核心在於店面排班與會員票券核銷。",
+            "departments": [
+                "👑 董事會 / CEO Office",
+                "🏬 連鎖營運處 / 區域店務部",
+                "🏗️ 開店工程部 / 設備維護組",
+                "🍲 供應鏈管理處 / 中央廚房與物流配送部",
+                "🎫 會員與行銷處 / 會員經營部"
+            ]
+        },
+        "五、 投資顧問業（Investment Advisory / SITCA）": {
+            "desc": "核心在於研究報告管理、會員訂閱/投顧契約與法規合規。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "📊 投資研究處 / 產業研究部",
+                "🌐 全球策略部 / 總體經濟課",
+                "🤝 業務發展處 / 會員經營部與法人業務部",
+                "🛡️ 營運合規處 / 法務合規部",
+                "💻 資訊技術部"
+            ]
+        },
+        "六、 保險業（Insurance Industry - 產險/壽險）": {
+            "desc": "龐大的業務員佣金制度、精算核保流程與理賠收付款對帳。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "📈 商品精算處 / 商品研發部",
+                "🛡️ 核保理賠處 / 契約核保部與理賠服務部",
+                "🤝 業務通路處 / 經代通路部與直轄營業部",
+                "💰 財務資產處 / 保費會計部與投資運用部"
+            ]
+        },
+        "七、 銀行業（Banking Industry）": {
+            "desc": "處理分行據點、對外採購、資產管理及跨部門分攤。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "💳 個人金融處 / 分行營運部與財富管理部",
+                "🏢 企業金融處 / 放款審查部",
+                "⚠️ 風險管理處 / 風險規劃部",
+                "📦 營運支援處 / 集中作業部與總務採購部"
+            ]
+        },
+        "八、 生技醫藥開發業（Biotech & Pharmaceutical R&D）": {
+            "desc": "實驗室原物料、專利智財、臨床試驗與藥證法規申請。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "🔬 臨床前研發處 / 實驗室研發部",
+                "📜 專利與智慧財產部",
+                "🏥 臨床試驗處 (Clinical) / 臨床營運部",
+                "🛡️ 法規事務部 (RA)",
+                "📊 專案與財務處 (PMO)"
+            ]
+        },
+        "九、 營造與營建工程業（Construction & Engineering）": {
+            "desc": "工程專案（WBS）合約、下包商點工計價與原物料請款。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "🏗️ 工務營造處 / 工事專案部",
+                "📦 發包採購部 / 下包商合約組",
+                "🗺️ 開發規劃處 / 土地開發部",
+                "💰 財務與成控處 / 成本控制部"
+            ]
+        },
+        "十、 物流與倉儲運輸業（Logistics & Transportation）": {
+            "desc": "車隊管理、路線排班最佳化、跨國報關費率與代收貨款。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "🚚 運輸運務處 / 車隊管理部",
+                "✈️ 海空運轉運部 / 報關組",
+                "📦 倉儲物流處 / 轉運倉儲部",
+                "💳 客戶與帳務處 / 營業帳務部"
+            ]
+        },
+        "十一、 觀光飯店與旅宿業（Hospitality & Hotel Industry）": {
+            "desc": "房況控制（PMS）、OTA 佣金拆帳與餐飲食材 BOM。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "🏨 酒店營運處 / 客房部與餐飲部",
+                "📢 行銷業務處 / 企業簽約與通路組"
+            ]
+        },
+        "十二、 遊戲與數位內容產業（Gaming & Digital Content）": {
+            "desc": "虛擬寶物錢包、通路分潤與版權授權金。",
+            "departments": [
+                "👑 董事會 / 總經理室",
+                "🎮 遊戲營運處 / 產品營運部",
+                "🌐 通路與商務處 / 數位通路部",
+                "💰 財務行政處 / 版權與財務部"
+            ]
+        }
+    }
+
+    industry_keys = list(industries_matrix.keys())
+    selected_industry = st.selectbox("📂 請選擇企業所屬的全球產業別母體", industry_keys)
     
-    selected_industry = st.selectbox("📂 請選擇企業所屬的全球產業別母體", industry_options)
+    industry_info = industries_matrix[selected_industry]
+    current_dept_list = industry_info["departments"]
+    
+    st.markdown(f"📌 **產業說明**：*{industry_info['desc']}*")
     st.markdown("---")
 
     col_left, col_right = st.columns([1.1, 2.2])
     
-    # 2. 完整涵蓋所有實體部門（包含您特別點名的工程部、研發部、財務部、行銷部、業務部、生產部、工程部等）
-    full_departments_list = [
-        "👑 董事會 / CEO Office (1級總裁層)",
-        "💰 資產財務處 / 財務部",
-        "📦 供應鏈管理處 / 採購與物流倉儲部",
-        "🏭 生產製造處 / 廠務製造部",
-        "🛡️ 品質保證部 (QA/QC)",
-        "🔬 研發部 (R&D Department)",
-        "🛠️ 工程部 (Engineering Department)",
-        "📢 行銷部 / 行銷增長處",
-        "🤝 業務營運處 / 國內外銷售部",
-        "💻 資訊與雲端運維部 (IT & DevOps)",
-        "👥 人力資源與行政管理處 (HR & Admin)"
-    ]
-    
     with col_left:
         st.markdown("### 🏢 選擇目標部門 / 管理層")
-        # 嚴格使用 st.radio 讓所有部門完全展開顯示，供客戶一目了然
         selected_dept = st.radio(
             "部門選擇",
-            full_departments_list,
+            current_dept_list,
             index=0,
             label_visibility="collapsed"
         )
@@ -73,79 +174,18 @@ def render_app_store(current_tenant, all_departments=None):
         clean_dept_name = selected_dept.split('(')[0].strip()
         st.markdown(f"### 🛒 【{clean_dept_name}】樂高拼圖模組配置")
         
-        # 各部門專屬功能對應字典
-        department_modules_mapping = {
-            "董事會": [
-                "老闆專屬現金流與 AR/AP 逾期預警看板",
-                "即時綜合損益與動態成本分攤 (P&L)",
-                "全球股市、匯率與原料期貨行情 API 串聯",
-                "溫室氣體盤查 (ESG 範疇一二三) 與碳排總體指標",
-                "全方位數位簽核中心與多級呈核路由 (BPM)"
-            ],
-            "資產財務處": [
-                "總帳 (GL) 與應收/應付帳款 (AR/AP) 管理",
-                "固定資產折舊提列與資產負債表管理",
-                "多國動態稅制引擎與會計總帳對接"
-            ],
-            "供應鏈管理處": [
-                "採購申請 (PR)、採購單 (PO) 與供應商評鑑",
-                "多據點條碼掃描入庫/出庫/調撥 (WMS)",
-                "動態安全庫存與自動補貨水位預警"
-            ],
-            "生產製造處": [
-                "生產工單派發、製程報工與排程 (PMC)",
-                "設備稼動率 (OEE) 與 MES 現場 IoT 監控",
-                "廠區作業班別與產能負荷分析"
-            ],
-            "品質保證部": [
-                "進料品管 (IQC) 與製程品管 (IPQC) 追蹤",
-                "ISO 標準文件版本管制與 CAPA 矯正預防措施",
-                "量測儀器校驗履歷與供應商 QCD 評鑑"
-            ],
-            "研發部": [
-                "階層式物料清單 (BOM) 與版本控管",
-                "專案 WBS 研發預算超支防呆與成本追蹤",
-                "產品版本生命週期管理 (Release Note)"
-            ],
-            "工程部": [
-                "工程專案 WBS 合約與下包商點工計價",
-                "工程預算編列與超支預警（變更設計）",
-                "工地進度報工、工程日誌與發票核銷"
-            ],
-            "行銷部": [
-                "數位行銷活動投資報酬率 (ROI) 分析",
-                "會員點數錢包、儲值金管理與優惠券",
-                "市場競品分析與品牌公關進度追蹤"
-            ],
-            "業務營運處": [
-                "客戶關係管理 (CRM) 與客戶生命週期 (LTV)",
-                "雙層式銷售報價與多幣別換算引擎",
-                "訂閱制合約管理與業務業績獎金計算"
-            ],
-            "資訊與雲端運維部": [
-                "雲端伺服器成本分攤與 API 流量計費統計",
-                "IT 資產配置、網頁動態模組權限與資安稽核",
-                "組織權限矩陣與 RBAC 細粒度隔離"
-            ],
-            "人力資源": [
-                "全球人事組織生命週期與數位履歷",
-                "動態加班與在地化法規薪資引擎",
-                "廠區門禁保全、公務車派車與總務資產管理"
-            ]
-        }
-        
-        # 尋找對應功能的匹配項
-        matched_mods = []
-        for key, mods in department_modules_mapping.items():
-            if key in selected_dept:
-                matched_mods = mods
-                break
-        if not matched_mods:
-            matched_mods = [
-                "階層式物料清單 (BOM) 與版本控管",
-                "全方位數位簽核中心與多級呈核路由 (BPM)",
-                "專案專屬 WBS 預算控管與追蹤"
-            ]
+        available_mods_for_dept = [
+            "老闆專屬現金流與 AR/AP 逾期預警看板",
+            "即時綜合損益與動態成本分攤 (P&L)",
+            "階層式物料清單 (BOM) 與版本控管",
+            "專案 WBS 預算超支防呆與成本追蹤",
+            "多據點條碼掃描入庫/出庫/調撥 (WMS)",
+            "生產工單派發、製程報工與稼動率 (MES)",
+            "ISO 標準文件版本管制與 CAPA 矯正預防措施",
+            "溫室氣體盤查 (ESG 範疇一二三) 與碳排當量計算",
+            "全方位數位簽核中心與多級呈核路由 (BPM)",
+            "多階層動態佣金與通路分潤計算引擎"
+        ]
         
         saved_mods = tenant_data["dept_modules_db"].get(selected_dept, [])
         
@@ -153,9 +193,9 @@ def render_app_store(current_tenant, all_departments=None):
             st.markdown(f"#### 📌 勾選【{clean_dept_name}】需要的 ERP 功能拼圖：")
             
             temp_selected = []
-            for mod in matched_mods:
+            for mod in available_mods_for_dept:
                 is_currently_checked = mod in saved_mods
-                if st.checkbox(mod, value=is_currently_checked, key=f"chk_{selected_dept}_{mod}"):
+                if st.checkbox(mod, value=is_currently_checked, key=f"chk_{selected_industry}_{selected_dept}_{mod}"):
                     temp_selected.append(mod)
             
             st.markdown("---")
