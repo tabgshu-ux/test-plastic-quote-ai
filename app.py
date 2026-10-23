@@ -1,27 +1,24 @@
-# app.py - 全球多租戶 SaaS ERP 總控台（支援多租戶切換與動態管理）
+# app.py - 全球多租戶 SaaS ERP 總控台（系統進入點）
 import streamlit as st
 import pandas as pd
 
-# 頁面基本設定
 st.set_page_config(
     page_title="全球多產業 AI ERP 雲端總控台",
     page_icon="☁️",
     layout="wide"
 )
 
-# 安全載入拼圖市集模組 (app_store)
+# 從 modules 資料夾安全載入拼圖市集模組 (app_store)
 try:
-    from app_store import render_app_store
+    from modules.app_store import render_app_store
 except ImportError:
     try:
-        from modules.app_store import render_app_store
+        from app_store import render_app_store
     except ImportError:
         def render_app_store(current_tenant=None, all_departments=None):
-            st.error("⚠️ 找不到 app_store.py 模組，請確認該檔案是否存在於專案中。")
+            st.error("⚠️ 找不到 modules/app_store.py 模組，請確認檔案位置。")
 
-# ==========================================================
-# 🔐 1. 平台管理員登入機制
-# ==========================================================
+# 1. 平台管理員登入機制
 if "platform_admin_logged" not in st.session_state:
     st.session_state.platform_admin_logged = False
 
@@ -46,9 +43,7 @@ if not st.session_state.platform_admin_logged:
                     st.error("❌ 帳號或密碼錯誤（預設：admin / 123456）")
     st.stop()
 
-# ==========================================================
-# 🏢 2. 全球多租戶資料庫初始化 (支援多個不同租戶)
-# ==========================================================
+# 2. 全球多租戶資料庫初始化
 if "global_tenants_db" not in st.session_state:
     st.session_state.global_tenants_db = {
         "裕豐電機工業 (Reetech Industrial)": {
@@ -74,17 +69,13 @@ if "global_tenants_db" not in st.session_state:
         }
     }
 
-# ==========================================================
-# 🧭 3. 側邊欄：全球總控導覽與當前租戶切換
-# ==========================================================
+# 3. 側邊欄總控導覽與當前租戶切換
 st.sidebar.markdown("### ☁️ 全球 SaaS ERP 總控台")
 st.sidebar.success("👤 平台總管理者 (Platform Admin)")
 
-# 讓總控台可以動態切換正在設定或檢視哪一個「租戶」
 tenant_names = list(st.session_state.global_tenants_db.keys())
-selected_tenant_name = st.sidebar.selectbox("🌐 切換當前操作租戶", tenant_names)
+selected_tenant_name = st.sidebar.selectbox("🌐 切換當前操作租戶", tenant_names, key="tenant_selector_box")
 
-# 取得當前選中租戶的資料
 current_tenant_data = st.session_state.global_tenants_db[selected_tenant_name]
 
 st.sidebar.markdown("---")
@@ -96,23 +87,17 @@ nav_mode = st.sidebar.radio(
         "💰 多租戶對帳與帳務結算",
         "⚙️ 全球租戶管理與新增"
     ],
-    key="global_main_nav"
+    key="global_main_nav_radio"
 )
 
 if st.sidebar.button("🔒 登出總控台", use_container_width=True):
     st.session_state.platform_admin_logged = False
     st.rerun()
 
-# ==========================================================
 # 4. 頁面功能分流渲染
-# ==========================================================
 if nav_mode == "🧩 樂高模組拼圖市集 (App Store)":
     st.markdown(f"### 🧩 App Store 配置中：【{selected_tenant_name}】")
-    # 將當前租戶資料傳入拼圖市集
-    if render_app_store is not None:
-        render_app_store(current_tenant=selected_tenant_name, all_departments=None)
-    else:
-        st.error("⚠️ 無法載入 app_store 模組。")
+    render_app_store(current_tenant=selected_tenant_name)
 
 elif nav_mode == "📊 當前租戶營運總覽":
     st.markdown(f"## 📊 租戶營運總覽：{selected_tenant_name}")
