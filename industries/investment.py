@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "五、 投資顧問業（Investment Advisory / SITCA）",
+    "name": "投資顧問業（Investment Advisory / SITCA）",
     "desc": "核心在於研究報告管理、會員訂閱/投顧契約與法規合規。",
     "departments": [
         "👑 董事會 / 總經理室",
