@@ -1,95 +1,289 @@
+import inspect
+import modules.approval_workflow as approval_workflow
+import modules.asset_management as asset_management
+import modules.db_connection as db_conn
+import modules.employee_management as employee_management
+import modules.engineering_pipeline as engineering_pipeline
+import modules.executive_dashboard as executive_dashboard
+import modules.field_attendance as field_attendance
+import modules.invoice_management as invoice_management
+import modules.payroll_management as payroll_management
+import modules.procurement_ap as procurement_ap
+import modules.sales_order_ar as sales_order_ar
+import modules.system_licensing as system_licensing
+import modules.user_management as user_management
+import modules.vehicle_gate_log as vehicle_gate_log
+import modules.vehicle_maintenance as vehicle_maintenance
+import modules.warehouse_management as warehouse_management
+import pandas as pd
 import streamlit as st
 
-# 設定頁面配置
+# 📱 100% 移動優先與 RWD 設定
 st.set_page_config(
-    page_title="Global SaaS AI ERP - Platform Control Center",
-    page_icon="🌐",
+    page_title="裕豐電機工業 REETECH INDUSTRIAL AI ERP",
+    page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-def main():
-    st.sidebar.markdown("### 🌐 SaaS 總控台 (Platform Control Center)")
-    st.sidebar.info("💡 *平台運營商總控路由：管理樂高拼圖模組市集、租戶模組開通、拼圖定價方案與總控權限設定。*")
-    st.sidebar.markdown("---")
-    
-    # 總控台導航選單
-    control_choice = st.sidebar.radio(
-        "總控台功能導航：",
+# ----------------------------------------------------
+# 📱 注入手機優先 RWD CSS 與 側邊欄滑動/點擊手勢優化 JS
+# ----------------------------------------------------
+MOBILE_CSS_AND_JS = """
+<style>
+@media only screen and (max-width: 768px) {
+    h1 { font-size: 1.35rem !important; font-weight: 700 !important; }
+    h2 { font-size: 1.15rem !important; }
+    h3, .stSubheader { font-size: 1.05rem !important; }
+    p, div, span, label { font-size: 0.9rem !important; }
+    .block-container { padding: 1rem 0.5rem !important; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let touchstartX = 0;
+    let touchendX = 0;
+
+    function handleGesure() {
+        if (touchendX < touchstartX - 50) {
+            const sidebar = document.querySelector('[data-testid="stSidebar"]');
+            if (sidebar && window.innerWidth <= 768) {
+                const closeBtn = document.querySelector('[data-testid="stSidebar"] button');
+                if (closeBtn) { closeBtn.click(); }
+            }
+        }
+    }
+
+    document.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, false);
+    document.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleGesure(); }, false);
+});
+</script>
+"""
+st.markdown(MOBILE_CSS_AND_JS, unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# 🏢 RECH 企業品牌 Logo 橫幅
+# ----------------------------------------------------
+RECH_LOGO_HTML = """
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 6px 8px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #000055;">
+    <div style="font-size: 26px; font-weight: 900; color: #000055; letter-spacing: -1px; line-height: 1;">RECH</div>
+    <div style="border-left: 2px solid #cbd5e1; padding-left: 8px; line-height: 1.15;">
+        <div style="font-size: 12.5px; font-weight: 800; color: #000055;">裕豐電機工業有限公司</div>
+        <div style="font-size: 8px; font-weight: 700; color: #475569;">REETECH INDUSTRIAL CO., LTD • CÔNG TY TNHH CN DŨ PHONG</div>
+    </div>
+</div>
+"""
+
+# ----------------------------------------------------
+# 🌐 多語系字典與模組對照表（扁平化設計，免去多層切換）
+# ----------------------------------------------------
+APP_TRANSLATIONS = {
+    "繁體中文": {
+        "login_title": "⚡ 裕豐電機工業 REETECH - 系統登入",
+        "username": "帳號 (admin / manager / security / staff)",
+        "password": "密碼 (預設 123)",
+        "login_btn": "🔑 登入系統",
+        "logout_btn": "🚪 登出系統",
+        "lang_label": "🌐 語言切換 / Language",
+        "tabs": ["📈 營運戰情", "👔 管理與財務", "🛠️ 工程技術", "🏭 生產倉儲", "💻 系統管理"],
+    },
+    "Tiếng Việt": {
+        "login_title": "⚡ REETECH INDUSTRIAL - Đăng nhập hệ thống",
+        "username": "Tài khoản",
+        "password": "Mật khẩu (123)",
+        "login_btn": "🔑 Đăng nhập",
+        "logout_btn": "🚪 Đăng xuất",
+        "lang_label": "🌐 Chọn ngôn ngữ",
+        "tabs": ["📈 Ban Giám đốc", "👔 Quản lý & Tài chính", "🛠️ Kỹ thuật", "🏭 Sản xuất & Kho", "💻 Quản trị IT"],
+    },
+    "English": {
+        "login_title": "⚡ REETECH INDUSTRIAL - System Login",
+        "username": "Username",
+        "password": "Password (123)",
+        "login_btn": "🔑 Login",
+        "logout_btn": "🚪 Logout",
+        "lang_label": "🌐 Select Language",
+        "tabs": ["📈 Executive", "👔 Management & Finance", "🛠️ Engineering", "🏭 Production & WMS", "💻 IT Admin"],
+    }
+}
+
+if "current_lang" not in st.session_state:
+    st.session_state.current_lang = "繁體中文"
+
+t = APP_TRANSLATIONS.get(st.session_state.current_lang, APP_TRANSLATIONS["繁體中文"])
+engine = db_conn.get_db_engine()
+
+def safe_call_module(func, *args, **kwargs):
+    if not callable(func): return
+    try:
+        sig = inspect.signature(func)
+        valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        if "engine" in sig.parameters and "engine" not in valid_kwargs:
+            valid_kwargs["engine"] = engine
+        func(*args, **valid_kwargs)
+    except Exception:
+        try: func()
+        except Exception as e: st.error(f"模組載入異常: {str(e)}")
+
+# ----------------------------------------------------
+# 登入驗證畫面
+# ----------------------------------------------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_role = ""
+    st.session_state.user_name = ""
+
+if not st.session_state.logged_in:
+    st.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
+    st.title(t["login_title"])
+    st.markdown("---")
+    col1, _ = st.columns([1, 2])
+    with col1:
+        username = st.text_input(t["username"])
+        password = st.text_input(t["password"], type="password")
+        if st.button(t["login_btn"], use_container_width=True):
+            if password == "123":
+                st.session_state.logged_in = True
+                u_clean = username.strip().lower()
+                if u_clean in ["admin", "executive", "boss"]: st.session_state.user_role = "admin"
+                elif u_clean in ["manager", "supervisor"]: st.session_state.user_role = "manager"
+                elif u_clean in ["security", "guard", "門禁保全"]: st.session_state.user_role = "security"
+                else: st.session_state.user_role = "staff"
+                st.session_state.user_name = username
+                st.rerun()
+            else:
+                st.error("帳號或密碼錯誤 / Incorrect password")
+    st.stop()
+
+# ----------------------------------------------------
+# 側邊欄設定（語言切換、登出與保全模式簡化）
+# ----------------------------------------------------
+st.sidebar.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
+
+lang_list = ["繁體中文", "Tiếng Việt", "English"]
+selected_lang = st.sidebar.selectbox(t["lang_label"], lang_list, index=lang_list.index(st.session_state.current_lang))
+if selected_lang != st.session_state.current_lang:
+    st.session_state.current_lang = selected_lang
+    st.rerun()
+
+st.sidebar.markdown(f"**👤 {st.session_state.user_name}** (`{st.session_state.user_role.upper()}`)")
+if st.sidebar.button(t["logout_btn"], use_container_width=True):
+    st.session_state.logged_in = False
+    st.rerun()
+
+st.sidebar.markdown("---")
+
+current_role_clean = str(st.session_state.user_role).strip().lower()
+
+# ----------------------------------------------------
+# 主介面：直覺的大型分頁導航 (Tabs)，免去大腦思考
+# ----------------------------------------------------
+st.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
+
+# 保全人員專用簡化視圖（免去複雜選單）
+if current_role_clean == "security":
+    st.info("🛡️ 保全快速通道：廠區車輛進出與門禁時間登記")
+    safe_call_module(vehicle_gate_log.render_vehicle_gate_log_page, engine=engine, lang=st.session_state.current_lang)
+    st.stop()
+
+# 一般與管理人員分頁導航
+tab_exec, tab_mgmt, tab_eng, tab_prod, tab_it = st.tabs(t["tabs"])
+
+# --- Tab 1: 營運戰情室 ---
+with tab_exec:
+    st.markdown("### 📈 營運戰情與分析總覽")
+    exec_option = st.radio(
+        "選擇戰情項目：",
+        ["🔴 原料價格與隨時股市物價/匯率", "📊 財務類顯示資料 (AR/AP & P&L)", "⚡ 工程專案進度與驗收資料"],
+        horizontal=True
+    )
+    if "原料價格" in exec_option:
+        safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="commodities_fx", lang=st.session_state.current_lang)
+    elif "財務類" in exec_option:
+        safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="financials_pl", lang=st.session_state.current_lang)
+    else:
+        safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="project_progress", lang=st.session_state.current_lang)
+
+# --- Tab 2: 管理與財務部 ---
+with tab_mgmt:
+    st.markdown("### 👔 管理部與財務會計中心")
+    mgmt_option = st.selectbox(
+        "選擇管理與財務功能模組：",
         [
-            "🧩 樂高拼圖模組市集與定價管理",
-            "🏢 全球租戶開通與模組派送",
-            "⚙️ 總控系統設定與權限管理"
+            "🏢 固定資產設備與總務採購",
+            "✍️ 電子簽核與請款審核中心",
+            "👤 員工個人檔案與人事管理",
+            "🚗 廠區車輛進出與門禁時間紀錄",
+            "🛠️ 車輛維修保養與 Excel 批次匯入",
+            "📍 外勤工程人員 GPS 拍照打卡",
+            "🛒 採購與應付帳款 (AP)",
+            "📋 銷售與應收帳款 (AR)",
+            "💰 全球員工薪資與保險扣款試算",
+            "📄 越南電子發票綜合管理中心"
         ]
     )
+    
+    if "固定資產" in mgmt_option:
+        safe_call_module(asset_management.render_asset_management_page, lang=st.session_state.current_lang)
+    elif "電子簽核" in mgmt_option:
+        safe_call_module(approval_workflow.render_approval_center, lang=st.session_state.current_lang)
+    elif "員工個人檔案" in mgmt_option:
+        safe_call_module(employee_management.render_employee_management, engine=engine, t=t, lang=st.session_state.current_lang)
+    elif "車輛進出" in mgmt_option:
+        safe_call_module(vehicle_gate_log.render_vehicle_gate_log_page, engine=engine, lang=st.session_state.current_lang)
+    elif "車輛維修" in mgmt_option:
+        safe_call_module(vehicle_maintenance.render_vehicle_maintenance_page, engine=engine, lang=st.session_state.current_lang)
+    elif "外勤工程" in mgmt_option:
+        safe_call_module(field_attendance.render_field_attendance_page, engine=engine, lang=st.session_state.current_lang)
+    elif "採購與應付" in mgmt_option:
+        safe_call_module(procurement_ap.render_procurement_ap_page, engine=engine, lang=st.session_state.current_lang)
+    elif "銷售與應收" in mgmt_option:
+        safe_call_module(sales_order_ar.render_sales_order_ar_page, engine=engine, lang=st.session_state.current_lang)
+    elif "全球員工薪資" in mgmt_option:
+        safe_call_module(payroll_management.render_payroll_management_page, engine=engine, lang=st.session_state.current_lang)
+    elif "越南電子發票" in mgmt_option:
+        safe_call_module(invoice_management.render_invoice_management, engine=engine, lang=st.session_state.current_lang)
 
-    st.sidebar.markdown("---")
-    st.sidebar.caption("© 2026 Global SaaS AI ERP Platform Control Center.")
+# --- Tab 3: 工程技術部 ---
+with tab_eng:
+    st.markdown("### 🛠️ 工程技術與設計估價中心")
+    eng_option = st.radio(
+        "選擇工程功能：",
+        ["📐 配電盤電氣與機構設計圖庫 / 估價", "🔍 工程驗收與品質檢驗紀錄"],
+        horizontal=True
+    )
+    if "配電盤" in eng_option:
+        safe_call_module(engineering_pipeline.render_engineering_page)
+    else:
+        safe_call_module(executive_dashboard.render_executive_dashboard_page, sub_route="project_progress", lang=st.session_state.current_lang)
 
-    # ==================== 1. 樂高拼圖模組市集與定價管理 ====================
-    if "樂高拼圖模組市集" in control_choice:
-        st.markdown("### 🧩 樂高拼圖模組市集與 SaaS 訂閱定價")
-        st.info("💡 *在此管理所有可供租戶選購與開通的 ERP 模組、功能說明及其對應的訂閱定價方案。*")
-        st.markdown("---")
-
-        # 模擬模組與定價清單
-        modules_pricing_data = [
-            {"module_code": "MOD-01", "module_name": "📈 企業戰情室與 BI 分析", "category": "高階管理", "desc": "全球廠區營收、稼動率與異常警報戰情室", "price_usd": 49.0},
-            {"module_code": "MOD-02", "module_name": "🌐 組織架構與匯率設定", "category": "系統底層", "desc": "多廠區、部門主檔與動態多幣別匯率引擎", "price_usd": 29.0},
-            {"module_code": "MOD-03", "module_name": "👤 員工與薪資管理", "category": "人事行政", "desc": "員工主檔、合約與在地化薪資基準對接", "price_usd": 39.0},
-            {"module_code": "MOD-04", "module_name": "⏱️ 請假與差勤管理", "category": "人事行政", "desc": "跨國請假申請、天數計算與打卡紀錄維護", "price_usd": 29.0},
-            {"module_code": "MOD-05", "module_name": "📦 總務採購與請購單", "category": "行政總務", "desc": "多幣別請購單填寫、折合美金換算與自動拋轉", "price_usd": 39.0},
-            {"module_code": "MOD-06", "module_name": "✍️ 全方位電子簽核中心", "category": "協同辦公", "desc": "跨部門表單統一審核、同意、駁回與稽核日誌", "price_usd": 59.0},
-            {"module_code": "MOD-07", "module_name": "💰 跨國應付帳款 (Finance AP)", "category": "財務會計", "desc": "零用金報銷、多幣別帳款與付訖處理", "price_usd": 49.0},
-            {"module_code": "MOD-08", "module_name": "🏷️ 固定資產與模具防混淆", "category": "廠務資產", "desc": "結合條碼/QR Code與實體照片，解決現場辨識痛點", "price_usd": 49.0},
-            {"module_code": "MOD-09", "module_name": "🏭 MES 生產製造與 IoT 監控", "category": "生產製造", "desc": "射出機桶溫、壓力 IoT 數據監控與工單排程", "price_usd": 89.0},
-            {"module_code": "MOD-10", "module_name": "📊 供應鏈與業務報價", "category": "業務營運", "desc": "依尺寸與鎖模力計算報價、多幣別支援", "price_usd": 49.0},
-            {"module_code": "MOD-11", "module_name": "🧾 跨國電子發票解析", "category": "財務會計", "desc": "管理各國電子發票、稅號 MST 與 XML 憑證", "price_usd": 39.0},
-            {"module_code": "MOD-12", "module_name": "📜 行政公文與合約列管", "category": "法務行政", "desc": "廠房租約、商務合約效期追蹤與提醒", "price_usd": 29.0},
-            {"module_code": "MOD-13", "module_name": "🤖 AI 多模態無門檻輸入", "category": "AI 智慧", "desc": "語音轉文字口述填單、現場照片 AI 解析入庫", "price_usd": 69.0},
-            {"module_code": "MOD-14", "module_name": "📊 多國動態稅制與總帳", "category": "財務會計", "desc": "動態稅率配置（如 VAT 10%）與總帳分錄", "price_usd": 59.0},
-            {"module_code": "MOD-15", "module_name": "📦 全球供應鏈倉儲 (WMS)", "category": "供應鏈", "desc": "多廠區倉庫庫存、原料入庫與安全水位監控", "price_usd": 59.0},
-            {"module_code": "MOD-16", "module_name": "🔌 第三方 API 閘道器配置", "category": "系統擴充", "desc": "網頁端配置第三方 API 與 JSON Schema 供 AI 調用", "price_usd": 79.0},
+# --- Tab 4: 生產與倉儲部 ---
+with tab_prod:
+    st.markdown("### 🏭 生產製造與倉庫管理中心")
+    prod_option = st.selectbox(
+        "選擇生產與倉儲功能：",
+        [
+            "📦 倉庫庫存與資材條碼管理",
+            "✂️ 板金加工組工單與條碼",
+            "🎨 粉體塗裝烤漆組品管",
+            "⚡ 配電盤組裝配線組"
         ]
+    )
+    if "倉庫庫存" in prod_option:
+        safe_call_module(warehouse_management.render_warehouse_management, engine=engine, t=t, lang=st.session_state.current_lang)
+    else:
+        st.info("🛠️ 現場工單追蹤與 QC 品質檢驗模組順利運作中 / Hệ thống đang hoạt động bình thường.")
 
-        import pandas as pd
-        pricing_df = pd.DataFrame(modules_pricing_data)
-        st.dataframe(pricing_df, use_container_width=True)
-
-    # ==================== 2. 全球租戶開通與模組派送 ====================
-    elif "全球租戶開通" in control_choice:
-        st.markdown("### 🏢 全球租戶開通與樂高模組派送")
-        st.info("💡 *在此管理各個企業租戶（如裕豐電機、海外分公司）的訂閱狀態，並勾選派送其專屬的 ERP 模組。*")
-        st.markdown("---")
-
-        tenants_df = pd.DataFrame([
-            {"tenant_id": "TENANT-001", "company_name": "裕豐電機工業 (Reetech)", "country": "台灣 / 越南", "active_modules_count": 16, "status": "🟢 正常訂閱中"},
-            {"tenant_id": "TENANT-002", "company_name": "某亞太精密科技", "country": "馬來西亞", "active_modules_count": 8, "status": "🟡 試用期中"}
-        ])
-        st.dataframe(tenants_df, use_container_width=True)
-
-        st.markdown("#### ⚙️ 租戶模組動態派送設定")
-        with st.form("tenant_assignment_form"):
-            t_id = st.selectbox("選擇租戶", ["TENANT-001 - 裕豐電機工業", "TENANT-002 - 某亞太精密科技"])
-            selected_modules = st.multiselect(
-                "勾選要派送給該租戶的樂高模組：",
-                ["MES 生產製造", "電子簽核中心", "員工與薪資", "總務採購", "固定資產與模具", "AI 多模態輸入"],
-                default=["MES 生產製造", "電子簽核中心", "員工與薪資"]
-            )
-            if st.form_submit_button("🚀 儲存租戶模組授權配置", type="primary", use_container_width=True):
-                st.success(f"🎉 租戶 [{t_id}] 的模組授權已成功更新！")
-
-    # ==================== 3. 總控系統設定與權限管理 ====================
-    elif "總控系統設定" in control_choice:
-        st.markdown("### ⚙️ 總控平台系統設定與超級管理者權限")
-        st.info("💡 *平台級參數設定、多租戶資料隔離檢核及超級管理員 (Super Admin) 帳號管理。*")
-        st.markdown("---")
-        
-        st.markdown("#### 🔐 超級管理者清單")
-        admin_df = pd.DataFrame([
-            {"admin_id": 1, "username": "super_admin", "name": "許福村", "role": "Global Platform Architect", "last_login": "2026-10-23 11:00"}
-        ])
-        st.dataframe(admin_df, use_container_width=True)
-
-if __name__ == "__main__":
-    main()
+# --- Tab 5: 資訊管理部 (IT) ---
+with tab_it:
+    st.markdown("### 💻 資訊管理與系統授權中心")
+    it_option = st.radio(
+        "選擇管理項目：",
+        ["🔒 帳號權限與全系統稽核軌跡", "🎛️ 客戶 ERP 模組授權與功能開關"],
+        horizontal=True
+    )
+    if "帳號權限" in it_option:
+        safe_call_module(user_management.render_user_management_page, lang=st.session_state.current_lang)
+    else:
+        safe_call_module(system_licensing.render_licensing_control_page, lang=st.session_state.current_lang)
