@@ -1,13 +1,14 @@
 import streamlit as st
+import pandas as pd
 import uuid
 
 def render_app_store(current_tenant, all_departments=None):
     """
     樂高積木式模組市集與版本定價中心 (App Store)
-    完整支援：部門獨立勾選、記憶儲存、版本金額自訂、以及下方「全公司已開通模組即時總覽清單」。
+    完美對齊：上方勾選部門功能與設定版本金額，下方即時總覽已開通的部門、功能與總訂閱狀況。
     """
     st.markdown("## 🧩 企業部門樂高拼圖市集與版本定價中心 (App Store)")
-    st.info("💡 *說明：在此點選各部門勾選專屬 ERP 功能拼圖。系統會自動記憶並在下方即時顯示【全公司已開通模組總覽】，讓您隨時確認版本內容與計費！*")
+    st.info("💡 *說明：在上方勾選各部門的 ERP 拼圖功能並設定版本金額；儲存後，下方將即時列出全公司已開通的部門與功能總覽。*")
     
     col_left, col_right = st.columns([1, 2.2])
     
@@ -93,7 +94,6 @@ def render_app_store(current_tenant, all_departments=None):
         if not current_tenant or not isinstance(current_tenant, dict):
             current_tenant = {"name": "預設租戶", "price_usd": 2500.0, "edition_name": "🚀 旗艦企業版 (Enterprise)", "dept_modules_db": {}}
             
-        # 讀取該部門已儲存的勾選狀態
         saved_dept_mods = current_tenant.get("dept_modules_db", {}).get(selected_dept, [])
         
         with st.form(f"form_store_{selected_dept}"):
@@ -101,7 +101,6 @@ def render_app_store(current_tenant, all_departments=None):
             st.markdown(f"#### 📌 勾選【{clean_dept_name}】需要的 ERP 功能拼圖：")
             
             for mod in available_mods_for_dept:
-                # 記憶已儲存的勾選狀態
                 is_checked = mod in saved_dept_mods
                 if st.checkbox(mod, value=is_checked, key=f"store_{selected_dept}_{mod}"):
                     curr_selected.append(mod)
@@ -113,8 +112,7 @@ def render_app_store(current_tenant, all_departments=None):
             with col_v1:
                 custom_edition_name = st.text_input("自訂銷售版本名稱", value=current_tenant.get("edition_name", "🚀 旗艦企業版 (Enterprise)"))
             with col_v2:
-                suggested_price = 500.0 + (sum(len(mods) for mods in current_tenant.get("dept_modules_db", {}).values()) * 100.0)
-                current_custom_price = st.number_input("設定每月總訂閱金額 (USD)", value=float(current_tenant.get("price_usd", suggested_price)), step=100.0)
+                current_custom_price = st.number_input("設定每月總訂閱金額 (USD)", value=float(current_tenant.get("price_usd", 2500.0)), step=100.0)
             
             if st.form_submit_button(f"💾 立即寫入資料庫：儲存【{clean_dept_name}】模組與版本定價", type="primary", use_container_width=True):
                 if "dept_modules_db" not in current_tenant:
@@ -123,11 +121,11 @@ def render_app_store(current_tenant, all_departments=None):
                 current_tenant["edition_name"] = custom_edition_name
                 current_tenant["price_usd"] = current_custom_price
                 
-                st.success(f"🎉 成功寫入資料庫！【{clean_dept_name}】的樂高拼圖已記憶儲存！")
+                st.success(f"🎉 成功寫入資料庫！【{clean_dept_name}】的樂高拼圖已儲存並同步更新版本定價！")
                 st.rerun()
 
     # ========================================================
-    # 📋 畫面下方新增：全公司已開通部門與模組即時總覽（解決看不到的問題）
+    # 📋 下方區塊：全公司已開通的部門與樂高模組即時總覽 (對應圖二)
     # ========================================================
     st.markdown("---")
     st.markdown("### 📋 【全公司租戶】目前已開通的部門與樂高模組即時總覽")
@@ -139,9 +137,9 @@ def render_app_store(current_tenant, all_departments=None):
         for d_name, m_list in active_db.items():
             if m_list:
                 summary_data.append({
-                    "部門/管理層名稱": d_name,
-                    "已開通功能拼圖數量": f"{len(m_list)} 項",
-                    "詳細功能清單": ", ".join(m_list)
+                    "已開通部門/管理層": d_name,
+                    "已勾選模組數量": f"{len(m_list)} 項",
+                    "詳細功能明細": ", ".join(m_list)
                 })
         if summary_data:
             st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
@@ -150,4 +148,4 @@ def render_app_store(current_tenant, all_departments=None):
     else:
         st.info("ℹ️ 尚無已儲存的模組資料，請在上方勾選並點擊儲存按鈕。")
     
-    st.markdown(f"**📌 當前版本方案**：`{current_tenant.get('edition_name', '未設定')}` | **💰 當前設定月費**：`$ {current_tenant.get('price_usd', 0)} USD/月`")
+    st.markdown(f"📌 **當前版本方案**：`{current_tenant.get('edition_name', '未設定')}` | 💰 **當前設定月費**：`$ {current_tenant.get('price_usd', 0)} USD/月`")
