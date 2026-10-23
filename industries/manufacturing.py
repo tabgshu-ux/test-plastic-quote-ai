@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "一、 製造與代工業（Manufacturing & OEM）",
+    "name": "製造與代工業（Manufacturing & OEM）",
     "desc": "ERP 系統最複雜、層級最嚴謹的傳統大宗。",
     "departments": [
         "👑 董事會 / CEO Office",
