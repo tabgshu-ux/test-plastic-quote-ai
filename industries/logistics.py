@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "十、 物流與倉儲運輸業（Logistics & Transportation）",
+    "name": "物流與倉儲運輸業（Logistics & Transportation）",
     "desc": "車隊管理、路線排班最佳化、跨國報關費率與代收貨款。",
     "departments": [
         "👑 董事會 / 總經理室",
