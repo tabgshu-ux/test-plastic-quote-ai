@@ -1,6 +1,4 @@
 # modules/industries_matrix.py
-# 全球 12 大產業與 1~4 級組織架構母體庫（模組化外掛檔案）
-
 GLOBAL_INDUSTRIES_MATRIX = {
     "一、 製造與代工業（Manufacturing & OEM）": {
         "desc": "ERP 系統最複雜、層級最嚴謹的傳統大宗。",
