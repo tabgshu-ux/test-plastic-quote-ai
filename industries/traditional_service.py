@@ -1,5 +1,5 @@
 INDUSTRY_DATA = {
-    "name": "四、 傳統服務業（Traditional Service Industry）",
+    "name": "傳統服務業（Traditional Service Industry）",
     "desc": "連鎖餐飲、醫美、健身房等，核心在於店面排班與會員票券核銷。",
     "departments": [
         "👑 董事會 / CEO Office",
