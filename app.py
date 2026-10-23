@@ -40,18 +40,18 @@ if "selected_tenant" not in st.session_state:
 # 🌐 多國語言字典檔支援
 lang_dict = {
     "繁體中文": {
-        "title": "全球多租戶 SaaS AI ERP 平台 - 產業別與 1~4 級組織總控中心",
+        "title": "全球多租戶 SaaS AI ERP 平台 - 全產業別與 1~4 級組織總控中心",
         "sidebar_title": "⚡ SaaS ERP 總控台",
         "lang_label": "🌐 選擇介面語系 / Select Language",
         "logged_in": "🟢 總控管理員已登入",
         "logout": "🚪 登出系統",
-        "tab1": "🏭 選擇產業與 1~4 級部門拼圖市集",
+        "tab1": "🏭 全球產業與 1~4 級部門拼圖市集",
         "tab2": "💰 四大商業授權方案定價設定",
         "tab3": "📋 企業租戶總覽與方案綁定",
         "tab4": "➕ 註冊新租戶與方案指派"
     },
     "English": {
-        "title": "Global Multi-Tenant SaaS AI ERP - Industry & Org Control Center",
+        "title": "Global Multi-Tenant SaaS AI ERP - Global Industry & Org Control Center",
         "sidebar_title": "⚡ SaaS ERP Master",
         "lang_label": "🌐 Select Language",
         "logged_in": "🟢 Master Admin Logged In",
@@ -62,12 +62,12 @@ lang_dict = {
         "tab4": "➕ Register New Tenant"
     },
     "Tiếng Việt": {
-        "title": "Nền tảng SaaS AI ERP Đa người thuê - Trung tâm điều khiển ngành nghề",
+        "title": "Nền tảng SaaS AI ERP Đa người thuê - Trung tâm điều khiển toàn cầu",
         "sidebar_title": "⚡ SaaS ERP Tổng",
         "lang_label": "🌐 Chọn ngôn ngữ",
         "logged_in": "🟢 Quản trị viên đã đăng nhập",
         "logout": "Đăng xuất",
-        "tab1": "🏭 Chọn ngành & Chợ tính năng 1-4 cấp",
+        "tab1": "🏭 Chợ ngành nghề toàn cầu & 1-4 cấp",
         "tab2": "💰 Cài đặt gói thương mại",
         "tab3": "📋 Tổng quan khách hàng",
         "tab4": "➕ Đăng ký khách hàng mới"
@@ -78,7 +78,6 @@ lang_dict = {
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/factory.png", width=64)
     
-    # 使用 native key 管理語系，避免手動 rerun 造成迴圈
     current_lang = st.selectbox(
         "🌐 選擇介面語系 / Select Language", 
         ["繁體中文", "English", "Tiếng Việt"], 
@@ -104,12 +103,70 @@ with st.sidebar:
     else:
         st.info("狀態：等待總控台登入驗證")
 
-# ==================== Tab 1: 全產業與 1~4 級組織拼圖總控市集 ====================
+# ==================== 核心資料庫初始化 ====================
+if "subscription_plans_db" not in st.session_state:
+    st.session_state.subscription_plans_db = {
+        "🚀 企業旗艦版 (Enterprise Flagship)": {
+            "price_usd": 3500.0, "billing_cycle": "每年計費", "max_seats": "無限席位", "desc": "解鎖全公司所有 1~4 級部門與所有業務拼圖模組。"
+        },
+        "💼 正式商業版 (Standard Official)": {
+            "price_usd": 1500.0, "billing_cycle": "每年計費", "max_seats": "30 席位", "desc": "支援核心生產、供應鏈與財會模組。"
+        },
+        "⏱️ 彈性訂閱版 (Flexible Subscription)": {
+            "price_usd": 150.0, "billing_cycle": "每月計費", "max_seats": "10 席位", "desc": "按月隨選訂閱指定部門拼圖。"
+        },
+        "👤 個人試用版 (Free Trial)": {
+            "price_usd": 0.0, "billing_cycle": "14天免費", "max_seats": "3 席位", "desc": "供單一部門進行功能體驗。"
+        }
+    }
+
+if "tenant_licensing_db" not in st.session_state:
+    st.session_state.tenant_licensing_db = [
+        {
+            "tenant_id": "TENANT-001",
+            "company_name": "裕豐電機工業 (Reetech Industrial)",
+            "tax_id": "0312345678",
+            "plan": "🚀 企業旗艦版 (Enterprise Flagship)",
+            "pricing_usd": 3500.0,
+            "expiry_date": "2027-12-31",
+            "status": "🟢 正常運行 (Active)"
+        }
+    ]
+
+# ==================== 主路由邏輯 ====================
+
+# 1. 總控台登入驗證
+if not st.session_state.master_logged_in:
+    st.markdown("## 🔐 全球多租戶 SaaS AI ERP - 平台總控登入")
+    st.markdown("請輸入總控管理員帳號密碼以進入 SaaS 核心管理中心。")
+    st.markdown("---")
+    
+    with st.form("login_form"):
+        acc = st.text_input("管理員帳號", value="admin")
+        pwd = st.text_input("密碼", type="password", value="123")
+        if st.form_submit_button("安全登入總控台", type="primary", use_container_width=True):
+            if acc == "admin" and pwd == "123":
+                st.session_state.master_logged_in = True
+                st.success("登入成功！")
+                st.rerun()
+            else:
+                st.error("帳號或密碼錯誤 (預設 admin / 123)")
+
+# 2. 總控中心首頁 (未選定特定租戶時)
+elif not st.session_state.selected_tenant:
+    st.markdown(f"## 🏢 {t['title']}")
+    st.markdown("💡 *請自由選擇全球產業別、檢視完整 1~4 級部門階層、管理商業授權方案與查看所有企業租戶！*")
+    st.markdown("---")
+
+    master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
+        t["tab1"], t["tab2"], t["tab3"], t["tab4"]
+    ])
+
+    # Tab 1: 全產業與 1~4 級組織拼圖總控市集
     with master_tab1:
         st.markdown("### 🏭 全球全產業標準市集與 1~4 級組織拼圖總控配置")
         st.info("💡 *請選擇企業所屬的全球產業領域，系統將自動展開完整的 1~4 級部門架構與白話功能拼圖，供總控管理員進行勾選與配置。*")
         
-        # 🌐 全球涵蓋的全產業矩陣資料庫
         global_industries_db = {
             "科技資訊業 (Tech & IT Software)": {
                 "desc": "專為軟體研發、系統整合、雲端服務與高科技企業設計之多級組織架構",
@@ -126,7 +183,7 @@ with st.sidebar:
                     "3級：科 / 營運中心": {
                         "資訊處 - 資訊部": ["💻 企業內部 ERP 系統維運與資料庫備份管理", "💻 總部與各廠區網路架構與 VPN 監控", "💻 使用者端硬體設備與資安派送管理"],
                         "資訊處 - 軟體開發部": ["💻 AI 模組串聯、Function Calling 與工作流程引擎", "💻 跨國多語系自動翻譯快取與前端動態渲染", "💻 客製化 API 開發與 Webhook 整合"],
-                        "研發專案科": ["💡 新產品研發專案管理與階段閘門審查", "💡 研發實驗數據記錄與原型機測試追蹤"]
+                        "研發專案課": ["💡 新產品研發專案管理與階段閘門審查", "💡 研發實驗數據記錄與原型機測試追蹤"]
                     },
                     "4級：組 / 班別": {
                         "資訊安全小組": ["🛡️ 資訊安全事件通報與資安軌跡日誌", "🛡️ 權限存取控制稽核 (RBAC Log)"],
@@ -212,7 +269,6 @@ with st.sidebar:
             }
         }
 
-        # 下拉選擇產業
         all_industries = list(global_industries_db.keys())
         selected_ind = st.selectbox("🌐 選擇全球產業領域類別：", all_industries, key="master_industry_dropdown")
         ind_info = global_industries_db[selected_ind]
@@ -221,7 +277,6 @@ with st.sidebar:
 
         st.markdown(f"### 🌳 【 {selected_ind} 】之完整 1~4 級組織階層與功能拼圖市集")
         
-        # 逐級展開 1~4 級組織與對應功能勾選
         for lvl_name, dept_dict in ind_info["levels"].items():
             st.markdown(f"## 📌 ── 【 {lvl_name} 】 ──")
             
@@ -235,62 +290,6 @@ with st.sidebar:
 
         if st.button("💾 儲存並發布該產業之 1~4 級組織與拼圖配置至客戶端", type="primary", use_container_width=True):
             st.success(f"🎉 成功儲存【{selected_ind}】的 1~4 級組織與功能拼圖市集設定！客戶登入後即可同步生效。")
-
-# ==================== 主路由邏輯 ====================
-
-# 1. 總控台登入驗證
-if not st.session_state.master_logged_in:
-    st.markdown("## 🔐 全球多租戶 SaaS AI ERP - 平台總控登入")
-    st.markdown("請輸入總控管理員帳號密碼以進入 SaaS 核心管理中心。")
-    st.markdown("---")
-    
-    with st.form("login_form"):
-        acc = st.text_input("管理員帳號", value="admin")
-        pwd = st.text_input("密碼", type="password", value="123")
-        if st.form_submit_button("安全登入總控台", type="primary", use_container_width=True):
-            if acc == "admin" and pwd == "123":
-                st.session_state.master_logged_in = True
-                st.success("登入成功！")
-                st.rerun()
-            else:
-                st.error("帳號或密碼錯誤 (預設 admin / 123)")
-
-# 2. 總控中心首頁 (未選定特定租戶時)
-elif not st.session_state.selected_tenant:
-    st.markdown(f"## 🏢 {t['title']}")
-    st.markdown("💡 *請自由選擇產業別、自訂 1~4 級部門拼圖模組、管理商業授權方案與查看所有企業租戶！*")
-    st.markdown("---")
-
-    master_tab1, master_tab2, master_tab3, master_tab4 = st.tabs([
-        t["tab1"], t["tab2"], t["tab3"], t["tab4"]
-    ])
-
-    # Tab 1: 產業別選擇 ➔ 1~4 級部門拼圖勾選
-    with master_tab1:
-        st.markdown("### 🏭 第一步：選擇企業所屬產業別與 1~4 級組織拼圖")
-        industries = list(st.session_state.industry_hierarchy_db.keys())
-        
-        # 使用 key 讓 Streamlit 自動維護狀態，避免重新整理迴圈
-        selected_ind = st.selectbox("選擇產業類型", industries, key="industry_type_selector")
-
-        ind_info = st.session_state.industry_hierarchy_db[selected_ind]
-        st.info(f"💡 產業架構說明：{ind_info['desc']}")
-        st.markdown("---")
-
-        st.markdown(f"### 🌳 【 {selected_ind} 】之 1~4 級完整組織架構與拼圖市集配置")
-        
-        for lvl_name, dept_dict in ind_info["levels"].items():
-            st.markdown(f"## 📌 ── 【 {lvl_name} 】 ──")
-            for d_name, puz_list in dept_dict.items():
-                with st.expander(f"🏢 展開配置【 {d_name} 】專屬作業模組", expanded=True):
-                    c_cols = st.columns(2)
-                    for idx, puz in enumerate(puz_list):
-                        with c_cols[idx % 2]:
-                            st.checkbox(puz, value=True, key=f"ind_chk_{selected_ind}_{d_name}_{puz}")
-            st.markdown("<br>", unsafe_allow_html=True)
-
-        if st.button("💾 儲存該產業別之 1~4 級拼圖與授權設定", type="primary", use_container_width=True):
-            st.success(f"🎉 成功儲存【{selected_ind}】的 1~4 級組織與模組拼圖配置！")
 
     # Tab 2: 四大商業方案設定
     with master_tab2:
@@ -324,7 +323,7 @@ elif not st.session_state.selected_tenant:
                 st.success(f"🎉 商業方案 [{target_p}] 已成功更新！")
                 st.rerun()
 
-    # Tab 3: 企業租戶總覽 (CRUD 搜尋與進入工作區)
+    # Tab 3: 企業租戶總覽
     with master_tab3:
         st.markdown("### 📋 現有企業租戶清單與方案綁定檢視")
         search = st.text_input("🔍 快速搜尋租戶 (公司名稱或代號)：", placeholder="例如：裕豐 或 TENANT-001")
