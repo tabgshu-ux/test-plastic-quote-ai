@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import uuid
 
 def render_app_store(current_tenant=None, all_departments=None):
     """
     樂高積木式模組市集與版本定價中心 (App Store)
-    完美內建 12 大產業與所有實體部門，保證無路徑匯入錯誤、絕不白屏。
+    內建 12 大產業與所有部門，無任何外部依賴，保證畫面正常顯示。
     """
     st.markdown("## 🧩 全球多產業 1~4 級組織架構與樂高拼圖市集 (App Store)")
     st.info("💡 *說明：請先在下方選擇企業所屬的全球產業別；接著在左側完整展開所有部門，右側勾選專屬 ERP 功能拼圖，儲存後下方將即時總覽已開通的部門、功能與版本金額。*")
@@ -22,7 +21,7 @@ def render_app_store(current_tenant=None, all_departments=None):
     if not isinstance(tenant_data.get("dept_modules_db"), dict):
         tenant_data["dept_modules_db"] = {}
 
-    # 2. 完整 12 大產業矩陣（內建，絕對不會發生找不到檔案的 KeyError）
+    # 2. 完整 12 大產業矩陣（內建）
     industries_matrix = {
         "一、 製造與代工業（Manufacturing & OEM）": [
             "👑 董事會 / CEO Office",
