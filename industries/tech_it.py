@@ -2,7 +2,7 @@
 # 科技與軟體業（Tech & Software / SaaS）專屬外掛資料模組
 
 INDUSTRY_DATA = {
-    "name": "二、 科技與軟體業（Tech & Software / SaaS）",
+    "name": "科技與軟體業（Tech & Software / SaaS）",
     "desc": "強調敏捷開發、訂閱制（SaaS）、雲端運維與客戶生命週期維護。",
     "departments": [
         "👑 董事會 / CEO Office",
