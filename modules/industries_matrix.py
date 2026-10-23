@@ -1,6 +1,4 @@
 # modules/industries_matrix.py
-# 全球 12 大產業與 1~4 級部門功能母體庫（嚴格鎖定，絕不隨意刪減）
-
 GLOBAL_INDUSTRIES_MATRIX = {
     "一、 製造與代工業（Manufacturing & OEM）": {
         "desc": "ERP 系統最複雜、層級最嚴謹的傳統大宗。",
@@ -47,7 +45,7 @@ GLOBAL_INDUSTRIES_MATRIX = {
         ]
     },
     "五、 投資顧問業（Investment Advisory / SITCA）": {
-        "desc": "核心在於研究報告管理、會員訂閱/投顧契約、法規合規與投單稽核。",
+        "desc": "核心在於研究報告管理、會員訂閱/投顧契約與法規合規。",
         "departments": [
             "👑 董事會 / 總經理室",
             "📊 投資研究處 / 產業研究部",
@@ -117,7 +115,7 @@ GLOBAL_INDUSTRIES_MATRIX = {
         ]
     },
     "十二、 遊戲與數位內容產業（Gaming & Digital Content）": {
-        "desc": "虛擬寶物錢包、通路分潤（Apple/Google 30%抽成）與版權授權金。",
+        "desc": "虛擬寶物錢包、通路分潤與版權授權金。",
         "departments": [
             "👑 董事會 / 總經理室",
             "🎮 遊戲營運處 / 產品營運部",
