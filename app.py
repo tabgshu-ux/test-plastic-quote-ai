@@ -1,111 +1,133 @@
-# app.py - 完整多租戶 SaaS ERP 總控主程式（含登入、對帳、拼圖市集與外掛調用）
+# app.py - 全球多租戶 SaaS ERP 總控台（支援多租戶切換與動態管理）
 import streamlit as st
 import pandas as pd
-import uuid
 
 # 頁面基本設定
 st.set_page_config(
-    page_title="全球多產業 AI ERP 企業總控平台",
-    page_icon="🏢",
+    page_title="全球多產業 AI ERP 雲端總控台",
+    page_icon="☁️",
     layout="wide"
 )
 
-# 1. 安全載入拼圖市集模組 (app_store)
+# 安全載入拼圖市集模組 (app_store)
 try:
-    from modules.app_store import render_app_store
+    from app_store import render_app_store
 except ImportError:
     try:
-        from app_store import render_app_store
+        from modules.app_store import render_app_store
     except ImportError:
         def render_app_store(current_tenant=None, all_departments=None):
-            st.error("⚠️ 找不到 modules/app_store.py 模組，請確認檔案位置。")
+            st.error("⚠️ 找不到 app_store.py 模組，請確認該檔案是否存在於專案中。")
 
 # ==========================================================
-# 🔐 2. 帳號登入與授權管理機制 (Authentication)
+# 🔐 1. 平台管理員登入機制
 # ==========================================================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+if "platform_admin_logged" not in st.session_state:
+    st.session_state.platform_admin_logged = False
 
-if not st.session_state.logged_in:
+if not st.session_state.platform_admin_logged:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col_l, col_m, col_r = st.columns([1, 1.2, 1])
     with col_m:
-        st.markdown("## 🔐 全球 SaaS ERP 企業登入中心")
-        st.info("💡 請輸入您的租戶帳號與密碼以進入企業總控台。")
+        st.markdown("## ☁️ 全球 SaaS ERP 平台總控登入")
+        st.info("💡 請輸入總控台管理員帳號以管理全球多租戶與 App Store 配置。")
         
-        with st.form("login_form"):
-            username = st.text_input("租戶帳號 (Username)", value="admin")
-            password = st.text_input("密碼 (Password)", type="password", value="123456")
-            login_btn = st.form_submit_button("登入總控台", type="primary", use_container_width=True)
+        with st.form("admin_login_form"):
+            admin_user = st.text_input("管理員帳號", value="admin")
+            admin_pass = st.text_input("管理員密碼", type="password", value="123456")
+            login_submit = st.form_submit_button("登入全球總控台", type="primary", use_container_width=True)
             
-            if login_btn:
-                if username == "admin" and password == "123456":
-                    st.session_state.logged_in = True
-                    st.success("🎉 登入成功！正在載入總控台...")
+            if login_submit:
+                if admin_user == "admin" and admin_pass == "123456":
+                    st.session_state.platform_admin_logged = True
+                    st.success("🎉 登入總控台成功！")
                     st.rerun()
                 else:
-                    st.error("❌ 帳號或密碼錯誤（預設帳號：admin / 密碼：123456）")
+                    st.error("❌ 帳號或密碼錯誤（預設：admin / 123456）")
     st.stop()
 
 # ==========================================================
-# 🏢 3. 已登入後：完整企業總控台與多模組導覽
+# 🏢 2. 全球多租戶資料庫初始化 (支援多個不同租戶)
 # ==========================================================
-st.sidebar.markdown("### 🚀 裕豐電機 (Reetech) 總控台")
-st.sidebar.success("👤 當前登入：系統管理員 (Admin)")
-
-nav_mode = st.sidebar.radio(
-    "系統導覽選單", 
-    [
-        "🧩 樂高模組拼圖市集 (App Store)", 
-        "📊 企業租戶營運總覽", 
-        "💰 租戶對帳與帳務結算中心",
-        "⚙️ 系統參數與外掛維護"
-    ]
-)
-
-if st.sidebar.button("🔒 登出系統", use_container_width=True):
-    st.session_state.logged_in = False
-    st.rerun()
-
-# 4. 初始化全域租戶與對帳資料庫
-if "safe_tenant_db" not in st.session_state:
-    st.session_state.safe_tenant_db = {
-        "tenant_name": "裕豐電機工業 (Reetech Industrial)",
-        "edition_name": "🚀 旗艦企業版 (Enterprise)",
-        "price_usd": 2500.0,
-        "dept_modules_db": {},
-        "billing_history": [
-            {"期數": "2026/Q1", "應收金額 (USD)": 2500.0, "狀態": "已結算", "對帳單號": "INV-2026-001"},
-            {"期數": "2026/Q2", "應收金額 (USD)": 2500.0, "狀態": "待對帳", "對帳單號": "INV-2026-002"}
-        ]
+if "global_tenants_db" not in st.session_state:
+    st.session_state.global_tenants_db = {
+        "裕豐電機工業 (Reetech Industrial)": {
+            "tenant_id": "TENANT-001",
+            "industry": "一、 製造與代工業（Manufacturing & OEM）",
+            "edition_name": "🚀 旗艦企業版 (Enterprise)",
+            "price_usd": 2500.0,
+            "dept_modules_db": {},
+            "billing_history": [
+                {"期數": "2026/Q1", "應收金額 (USD)": 2500.0, "狀態": "已結算", "對帳單號": "INV-2026-001"},
+                {"期數": "2026/Q2", "應收金額 (USD)": 2500.0, "狀態": "待對帳", "對帳單號": "INV-2026-002"}
+            ]
+        },
+        "全球雲端科技 SaaS (Global Cloud Inc.)": {
+            "tenant_id": "TENANT-002",
+            "industry": "二、 科技與軟體業（Tech & Software / SaaS）",
+            "edition_name": "🌟 專業 SaaS 版",
+            "price_usd": 1200.0,
+            "dept_modules_db": {},
+            "billing_history": [
+                {"期數": "2026/Q1", "應收金額 (USD)": 1200.0, "狀態": "已結算", "對帳單號": "INV-2026-003"}
+            ]
+        }
     }
 
-tenant_data = st.session_state.safe_tenant_db
+# ==========================================================
+# 🧭 3. 側邊欄：全球總控導覽與當前租戶切換
+# ==========================================================
+st.sidebar.markdown("### ☁️ 全球 SaaS ERP 總控台")
+st.sidebar.success("👤 平台總管理者 (Platform Admin)")
+
+# 讓總控台可以動態切換正在設定或檢視哪一個「租戶」
+tenant_names = list(st.session_state.global_tenants_db.keys())
+selected_tenant_name = st.sidebar.selectbox("🌐 切換當前操作租戶", tenant_names)
+
+# 取得當前選中租戶的資料
+current_tenant_data = st.session_state.global_tenants_db[selected_tenant_name]
+
+st.sidebar.markdown("---")
+nav_mode = st.sidebar.radio(
+    "平台導覽選單", 
+    [
+        "🧩 樂高模組拼圖市集 (App Store)", 
+        "📊 當前租戶營運總覽", 
+        "💰 多租戶對帳與帳務結算",
+        "⚙️ 全球租戶管理與新增"
+    ],
+    key="global_main_nav"
+)
+
+if st.sidebar.button("🔒 登出總控台", use_container_width=True):
+    st.session_state.platform_admin_logged = False
+    st.rerun()
 
 # ==========================================================
-# 頁面分流渲染
+# 4. 頁面功能分流渲染
 # ==========================================================
 if nav_mode == "🧩 樂高模組拼圖市集 (App Store)":
-    # 呼叫拼圖選擇與版本定價中心
+    st.markdown(f"### 🧩 App Store 配置中：【{selected_tenant_name}】")
+    # 將當前租戶資料傳入拼圖市集
     if render_app_store is not None:
-        render_app_store()
+        render_app_store(current_tenant=selected_tenant_name, all_departments=None)
     else:
         st.error("⚠️ 無法載入 app_store 模組。")
 
-elif nav_mode == "📊 企業租戶營運總覽":
-    st.markdown("## 📊 企業租戶營運與組織架構總覽")
-    st.info("💡 在此檢視目前全球租戶的啟用狀況、部門組織與雲端資源佔用。")
+elif nav_mode == "📊 當前租戶營運總覽":
+    st.markdown(f"## 📊 租戶營運總覽：{selected_tenant_name}")
+    st.info("💡 在此檢視該租戶的訂閱版本、產業別與已開通部門模組明細。")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("目前租戶名稱", tenant_data.get("tenant_name", ""))
+        st.metric("租戶代號", current_tenant_data.get("tenant_id", ""))
     with col2:
-        st.metric("當前銷售版本", tenant_data.get("edition_name", ""))
+        st.metric("當前銷售版本", current_tenant_data.get("edition_name", ""))
     with col3:
-        st.metric("每月總訂閱金額", f"$ {tenant_data.get('price_usd', 0)} USD")
+        st.metric("每月總訂閱金額", f"$ {current_tenant_data.get('price_usd', 0)} USD")
     
-    st.markdown("### 🏢 已開通部門與模組明細清單")
-    active_db = tenant_data.get("dept_modules_db", {})
+    st.markdown("### 🏢 已開通部門與模組明細")
+    active_db = current_tenant_data.get("dept_modules_db", {})
     if active_db:
         overview_list = []
         for dept, mods in active_db.items():
@@ -116,38 +138,68 @@ elif nav_mode == "📊 企業租戶營運總覽":
             })
         st.dataframe(pd.DataFrame(overview_list), use_container_width=True)
     else:
-        st.warning("⚠️ 目前尚未在拼圖市集中勾選任何部門模組。")
+        st.warning("⚠️ 此租戶目前尚未在拼圖市集中勾選任何部門模組。")
 
-elif nav_mode == "💰 租戶對帳與帳務結算中心":
-    st.markdown("## 💰 全球多租戶對帳與帳務結算中心 (Reconciliation & Billing)")
-    st.info("💡 在此執行跨國租戶的訂閱對帳、期數帳單確認與發票結算。")
+elif nav_mode == "💰 多租戶對帳與帳務結算":
+    st.markdown(f"## 💰 帳務與對帳中心：{selected_tenant_name}")
+    st.info("💡 管理該租戶的歷史帳單、期數結算與應收帳款對帳。")
     
-    st.markdown("### 📄 歷史對帳單與結算紀錄")
-    billing_df = pd.DataFrame(tenant_data.get("billing_history", []))
+    st.markdown("### 📄 歷史對帳單清單")
+    billing_df = pd.DataFrame(current_tenant_data.get("billing_history", []))
     st.dataframe(billing_df, use_container_width=True)
     
     st.markdown("---")
-    st.markdown("### ➕ 手動新增對帳期數與應收調整")
-    with st.form("reconciliation_form"):
-        r_col1, r_col2 = st.columns(2)
-        with r_col1:
-            new_period = st.text_input("結算期數 (例如 2026/Q3)", value="2026/Q3")
-        with r_col2:
-            new_amount = st.number_input("調整金額 (USD)", value=float(tenant_data.get("price_usd", 2500.0)), step=100.0)
+    st.markdown("### ➕ 手動新增該租戶對帳單")
+    with st.form("tenant_billing_form"):
+        b_col1, b_col2 = st.columns(2)
+        with b_col1:
+            period_val = st.text_input("結算期數", value="2026/Q3")
+        with b_col2:
+            amount_val = st.number_input("應收金額 (USD)", value=float(current_tenant_data.get("price_usd", 2500.0)), step=100.0)
             
-        if st.form_submit_button("📥 產生並送出新對帳單", type="primary", use_container_width=True):
-            new_inv = f"INV-2026-{len(tenant_data['billing_history']) + 1:03d}"
-            tenant_data["billing_history"].append({
-                "期數": new_period,
-                "應收金額 (USD)": new_amount,
+        if st.form_submit_button("📥 產生新帳單", type="primary", use_container_width=True):
+            new_inv_id = f"INV-2026-{len(current_tenant_data['billing_history']) + 1:03d}"
+            current_tenant_data["billing_history"].append({
+                "期數": period_val,
+                "應收金額 (USD)": amount_val,
                 "狀態": "待對帳",
-                "對帳單號": new_inv
+                "對帳單號": new_inv_id
             })
-            st.session_state.safe_tenant_db = tenant_data
-            st.success(f"🎉 成功產生對帳單號 [{new_inv}]！")
+            st.success(f"🎉 成功為 {selected_tenant_name} 產生帳單 [{new_inv_id}]！")
             st.rerun()
 
-elif nav_mode == "⚙️ 系統參數與外掛維護":
-    st.markdown("## ⚙️ 系統參數與外掛矩陣維護中心")
-    st.info("💡 管理系統底層設定、語言切換與 `industries/` 外掛資料夾連線狀態。")
-    st.success("✅ 目前系統外掛模組運作正常，支援多租戶與 12 大產業動態外掛載入。")
+elif nav_mode == "⚙️ 全球租戶管理與新增":
+    st.markdown("## ⚙️ 全球 SaaS 租戶清單與新增中心")
+    st.info("💡 在此擴增新的全球企業客戶（租戶），實現真正的多租戶架構隔離與管理。")
+    
+    st.markdown("### 🏢 當前平台所有租戶列表")
+    tenant_summary = []
+    for t_name, t_info in st.session_state.global_tenants_db.items():
+        tenant_summary.append({
+            "租戶名稱": t_name,
+            "租戶ID": t_info.get("tenant_id"),
+            "版本": t_info.get("edition_name"),
+            "月費 (USD)": t_info.get("price_usd")
+        })
+    st.dataframe(pd.DataFrame(tenant_summary), use_container_width=True)
+    
+    st.markdown("---")
+    st.markdown("### ➕ 註冊新租戶 (New Tenant Onboarding)")
+    with st.form("new_tenant_form"):
+        new_t_name = st.text_input("新企業租戶名稱 (例如：台灣積體電路)")
+        new_t_id = st.text_input("租戶代號 (例如：TENANT-003)", value="TENANT-003")
+        
+        if st.form_submit_button("🚀 快速開通新租戶", type="primary", use_container_width=True):
+            if new_t_name and new_t_name not in st.session_state.global_tenants_db:
+                st.session_state.global_tenants_db[new_t_name] = {
+                    "tenant_id": new_t_id,
+                    "industry": "一、 製造與代工業（Manufacturing & OEM）",
+                    "edition_name": "🚀 旗艦企業版 (Enterprise)",
+                    "price_usd": 3000.0,
+                    "dept_modules_db": {},
+                    "billing_history": []
+                }
+                st.success(f"🎉 成功開通新租戶 [{new_t_name}]！現在可以在左側選單切換並為其配置 App Store 拼圖了！")
+                st.rerun()
+            else:
+                st.error("❌ 租戶名稱不可為空或已存在！")
