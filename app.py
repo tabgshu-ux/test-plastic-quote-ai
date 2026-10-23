@@ -19,46 +19,36 @@ import modules.api_gateway_config as api_gateway_config
 import pandas as pd
 import streamlit as st
 
-# 📱 100% 移動優先：設定頁面並預設手機側邊欄展開
+# 📱 移動優先與全螢幕佈局設定
 st.set_page_config(
     page_title="Global Multi-Tenant SaaS AI ERP",
-    page_icon="⚡",
+    page_icon="🌐",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ----------------------------------------------------
-# 🏢 RECH 企業品牌 Logo 橫幅
+# 🏢 SaaS 總控平台品牌 Logo 橫幅
 # ----------------------------------------------------
-RECH_LOGO_HTML = """
-<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 6px 8px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #000055;">
-    <div style="font-size: 26px; font-weight: 900; color: #000055; letter-spacing: -1px; line-height: 1;">RECH</div>
-    <div style="border-left: 2px solid #cbd5e1; padding-left: 8px; line-height: 1.15;">
-        <div style="font-size: 12.5px; font-weight: 800; color: #000055;">裕豐電機工業有限公司 (Reetech)</div>
-        <div style="font-size: 8px; font-weight: 700; color: #475569;">GLOBAL MULTI-TENANT SAAS AI ERP SYSTEM</div>
+SAAS_LOGO_HTML = """
+<div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border-bottom: 3px solid #2563eb;">
+    <div style="font-size: 28px; font-weight: 900; color: #2563eb; letter-spacing: -1px; line-height: 1;">SaaS AI ERP</div>
+    <div style="border-left: 2px solid #cbd5e1; padding-left: 10px; line-height: 1.15;">
+        <div style="font-size: 13px; font-weight: 800; color: #1e293b;">全球多租戶雲端 SaaS 總控平台</div>
+        <div style="font-size: 8.5px; font-weight: 700; color: #64748b;">GLOBAL MULTI-TENANT SAAS CLOUD PLATFORM • (當前測試租戶：裕豐電機工業)</div>
     </div>
 </div>
 """
 
-# ----------------------------------------------------
-# 🌐 多語系與扁平化導航結構
-# ----------------------------------------------------
-APP_TRANSLATIONS = {
-    "繁體中文": {
-        "login_title": "⚡ 裕豐電機工業 REETECH - 系統登入",
-        "username": "帳號 (admin / manager / staff)",
-        "password": "密碼 (預設 123)",
-        "login_btn": "🔑 登入系統",
-        "logout_btn": "🚪 登出系統",
-        "lang_label": "🌐 語言切換 / Language",
-        "tabs": ["📈 企業戰情", "👔 行政人事", "💰 財務會計", "🏭 生產與資產", "📦 供應鏈與系統"],
-    }
+t = {
+    "login_title": "🌐 SaaS AI ERP 雲端平台登入",
+    "subtitle": "Global Multi-Tenant SaaS Platform Control Center",
+    "username": "平台管理員帳號 (admin)",
+    "password": "密碼 (預設 123)",
+    "login_btn": "🔑 安全登入系統",
+    "logout_btn": "🚪 登出系統",
+    "tabs": ["📈 企業戰情", "👔 行政人事", "💰 財務會計", "🏭 生產與資產", "📦 供應鏈與系統"],
 }
-
-if "current_lang" not in st.session_state:
-    st.session_state.current_lang = "繁體中文"
-
-t = APP_TRANSLATIONS["繁體中文"]
 
 def safe_call_module(func, *args, **kwargs):
     if not callable(func): return
@@ -71,7 +61,7 @@ def safe_call_module(func, *args, **kwargs):
         except Exception as err: st.error(f"模組載入異常: {str(err)}")
 
 # ----------------------------------------------------
-# 登入驗證畫面
+# 登入驗證畫面（置中對齊優化）
 # ----------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -79,28 +69,37 @@ if "logged_in" not in st.session_state:
     st.session_state.user_name = ""
 
 if not st.session_state.logged_in:
-    st.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
-    st.title(t["login_title"])
-    st.markdown("---")
-    col1, _ = st.columns([1, 2])
-    with col1:
-        username = st.text_input(t["username"])
-        password = st.text_input(t["password"], type="password")
-        if st.button(t["login_btn"], use_container_width=True):
+    # 完美置中配置：使用三欄式版面，將登入卡片置於中間
+    col_left, col_center, col_right = st.columns([1, 1.5, 1])
+    
+    with col_center:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown(SAAS_LOGO_HTML, unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #1e293b;'>{t['login_title']}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: #64748b; font-size: 0.9rem;'>{t['subtitle']}</p>", unsafe_allow_html=True)
+        st.markdown("---")
+        
+        username = st.text_input(t["username"], value="admin")
+        password = st.text_input(t["password"], type="password", value="123")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button(t["login_btn"], use_container_width=True, type="primary"):
             if password == "123":
                 st.session_state.logged_in = True
                 st.session_state.user_role = "admin"
                 st.session_state.user_name = username
                 st.rerun()
             else:
-                st.error("帳號或密碼錯誤 / Incorrect password")
+                st.error("❌ 帳號或密碼錯誤 / Incorrect password")
+        st.markdown("<br><br>", unsafe_allow_html=True)
     st.stop()
 
 # ----------------------------------------------------
 # 側邊欄設定
 # ----------------------------------------------------
-st.sidebar.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
+st.sidebar.markdown("### 🌐 SaaS 總控平台")
 st.sidebar.markdown(f"**👤 {st.session_state.user_name}** (`{st.session_state.user_role.upper()}`)")
+st.sidebar.info("🏢 當前依附測試租戶：\n**裕豐電機工業 (Reetech)**")
 if st.sidebar.button(t["logout_btn"], use_container_width=True):
     st.session_state.logged_in = False
     st.rerun()
@@ -110,7 +109,7 @@ st.sidebar.markdown("---")
 # ----------------------------------------------------
 # 主介面：直覺的大型分頁導航 (Tabs)
 # ----------------------------------------------------
-st.markdown(RECH_LOGO_HTML, unsafe_allow_html=True)
+st.markdown(SAAS_LOGO_HTML, unsafe_allow_html=True)
 
 tenant_info = {"tenant_id": "TENANT-001", "company_name": "裕豐電機工業 (Reetech Industrial)"}
 user_perms = ["admin", "finance", "mes", "ga"]
