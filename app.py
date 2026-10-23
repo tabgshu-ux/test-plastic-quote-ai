@@ -19,20 +19,19 @@ import modules.api_gateway_config as api_gateway_config
 import pandas as pd
 import streamlit as st
 
-# 📱 移動優先與全螢幕佈局設定
 st.set_page_config(
-    page_title="Global SaaS AI ERP - Control Center",
-    page_icon="🌐",
+    page_title="Global SaaS AI ERP - Lego Brick Control Hub",
+    page_icon="🧩",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 SAAS_LOGO_HTML = """
 <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border-bottom: 3px solid #2563eb;">
-    <div style="font-size: 26px; font-weight: 900; color: #2563eb; letter-spacing: -1px; line-height: 1;">SaaS Control Hub</div>
+    <div style="font-size: 26px; font-weight: 900; color: #2563eb; letter-spacing: -1px; line-height: 1;">LEGO ERP Control Hub</div>
     <div style="border-left: 2px solid #cbd5e1; padding-left: 10px; line-height: 1.15;">
-        <div style="font-size: 12.5px; font-weight: 800; color: #1e293b;">全球多租戶 SaaS 總控、版本銷售與模組拼圖管理中心</div>
-        <div style="font-size: 8px; font-weight: 700; color: #64748b;">GLOBAL SAAS MULTI-TENANT ENTERPRISE PLATFORM</div>
+        <div style="font-size: 12.5px; font-weight: 800; color: #1e293b;">全球 SaaS 樂高拼圖模組串連、版本定義與租戶授權總控中心</div>
+        <div style="font-size: 8px; font-weight: 700; color: #64748b;">MODULAR LEGO APP STORE & TENANT LICENSING SYSTEM</div>
     </div>
 </div>
 """
@@ -48,7 +47,7 @@ def safe_call_module(func, *args, **kwargs):
         except Exception as err: st.error(f"模組載入異常: {str(err)}")
 
 # ----------------------------------------------------
-# 1. 登入驗證畫面（置中對齊）
+# 1. 總控安全登入
 # ----------------------------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -60,15 +59,15 @@ if not st.session_state.logged_in:
     with col_c:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown(SAAS_LOGO_HTML, unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #1e293b;'>🔐 SaaS 總控中心安全登入</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #64748b; font-size: 0.9rem;'>限平台最高管理者與授權總控人員進入</p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #1e293b;'>🔐 樂高總控中心安全登入</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #64748b; font-size: 0.9rem;'>限平台最高架構師與總控管理員進入</p>", unsafe_allow_html=True)
         st.markdown("---")
         
-        username = st.text_input("總控管理員帳號", value="super_admin")
+        username = st.text_input("總控帳號", value="super_admin")
         password = st.text_input("密碼", type="password", value="123")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🔑 進入 SaaS 總控平台", use_container_width=True, type="primary"):
+        if st.button("🔑 進入樂高總控平台", use_container_width=True, type="primary"):
             if password == "123":
                 st.session_state.logged_in = True
                 st.session_state.user_role = "super_admin"
@@ -79,11 +78,11 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ----------------------------------------------------
-# 側邊欄狀態
+# 側邊欄控制
 # ----------------------------------------------------
-st.sidebar.markdown("### 🌐 SaaS 總控後台")
+st.sidebar.markdown("### 🧩 SaaS 樂高總控台")
 st.sidebar.markdown(f"**👤 管理員: {st.session_state.user_name}**")
-st.sidebar.success("🟢 總控中心存取權限：已授權")
+st.sidebar.success("🟢 總控存取權限：已授權")
 if st.sidebar.button("🚪 登出總控中心", use_container_width=True):
     st.session_state.logged_in = False
     st.rerun()
@@ -96,52 +95,20 @@ st.sidebar.markdown("---")
 st.markdown(SAAS_LOGO_HTML, unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs([
-    "🏢 1. 租戶版本、銷售與定價管理", 
-    "🧩 2. 各部門層級與模組拼圖勾選 (App Store)", 
+    "🧩 1. 樂高拼圖模組市集與版本定價定義", 
+    "🏢 2. 客戶租戶方案指派與動態串連", 
     "📊 3. 財務 AR/AP 與內部免計費專區", 
-    "🔐 4. 總控權限與存取設定"
+    "🔐 4. 總控權限與人員設定"
 ])
 
-# --- TAB 1: 租戶版本、銷售與定價管理 ---
+# --- TAB 1: 樂高拼圖模組市集與版本定價定義 ---
 with tab1:
-    st.markdown("### 🏢 租戶銷售版本、方案定價與狀態管理")
-    st.info("💡 *在此管理各個客戶租戶的銷售方案（旗艦企業版、正式商務版、訂閱彈性版、個人微型版）與自訂訂閱金額。*")
+    st.markdown("### 🧩 樂高拼圖模組選擇、部門歸屬與版本定價設定")
+    st.info("💡 *在此選擇部門並透過 App Store 勾選拼圖模組，設定各版本的包含項目與價格，作為後續租戶開通與功能串連的依據。*")
     
-    tenant_list = st.selectbox("選擇要設定的目標租戶：", [
-        "TENANT-001 | 裕豐電機工業 (Reetech Industrial) - 越南/台灣",
-        "TENANT-002 | 亞太精密科技 - 馬來西亞分公司"
-    ])
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        edition_type = st.selectbox(
-            "選擇 SaaS 銷售版本 (Edition)",
-            ["🚀 旗艦企業版 (Enterprise Edition)", "💼 正式商務版 (Professional Edition)", "🔄 訂閱彈性版 (Subscription Edition)", "👤 個人微型版 (Personal Edition)"],
-            index=0
-        )
-        custom_price = st.number_input("自訂月訂閱金額 (USD / 月)", value=2500.0, step=100.0)
-    with c2:
-        billing_cycle = st.selectbox("計費週期", ["月繳 (Monthly)", "季繳 (Quarterly)", "年繳 (Annually - 9折優惠)"])
-        tenant_status = st.selectbox("租戶運行狀態", ["🟢 正式運營中 (Active)", "🟡 試用期中 (Trial)", "🔴 已停權/未繳費 (Suspended)"])
-
-    if st.button("💾 儲存該租戶的版本與定價設定", type="primary"):
-        st.success(f"🎉 成功更新租戶方案為 [{edition_type}]，月費設定：`$ {custom_price} USD`！")
-
-    st.markdown("---")
-    st.markdown("#### 📋 全球租戶方案與定價總覽表")
-    tenant_df = pd.DataFrame([
-        {"tenant_id": "TENANT-001", "company": "裕豐電機工業", "edition": "旗艦企業版", "monthly_fee_usd": 2500, "status": "🟢 運營中"},
-        {"tenant_id": "TENANT-002", "company": "亞太精密科技", "edition": "正式商務版", "monthly_fee_usd": 1200, "status": "🟡 試用期"}
-    ])
-    st.dataframe(tenant_df, use_container_width=True)
-
-# --- TAB 2: 各部門層級與模組拼圖勾選 (App Store) ---
-with tab2:
-    st.markdown("### 🧩 依部門層級與模組拼圖勾選 (App Store 模式)")
-    st.info("💡 *勾選目標部門與對應的高階/基礎模組拼圖，為選定的租戶動態配置與解鎖功能。*")
-    
-    selected_dept = st.selectbox(
-        "請選擇要配置的目標部門 / 管理層：",
+    # 選擇目標部門
+    target_dept = st.selectbox(
+        "選擇要配置的企業部門層級：",
         [
             "📈 董事長室 / 經營企劃室 (Executive & Board)",
             "👔 人力資源與行政管理部 (HR & Admin Dept)",
@@ -154,45 +121,76 @@ with tab2:
     )
     
     st.markdown("---")
-    st.markdown(f"#### ⚙️ 配置部門：`{selected_dept}` 的可用模組拼圖")
+    st.markdown(f"#### 📦 定義 `{target_dept}` 的樂高拼圖模組與定價")
     
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown("##### 🌟 核心與高階戰情模組")
-        m1 = st.checkbox("🔴 全球原料與即時匯率看板", value=True)
-        m2 = st.checkbox("📈 跨國總損益與資產負債表", value=True)
-        m3 = st.checkbox("⚡ MES 生產製造與 IoT 稼動率監控", value=True)
-        m4 = st.checkbox("🤖 AI 語音與多模態智慧輸入", value=True)
-    with col_b:
-        st.markdown("##### 📦 業務、行政與供應鏈模組")
-        m5 = st.checkbox("🛒 總務採購與多幣別請購單", value=True)
-        m6 = st.checkbox("✍️ 全方位電子簽核中心 (BPM)", value=True)
-        m7 = st.checkbox("🧾 跨國電子發票與稅號 MST 解析", value=True)
-        m8 = st.checkbox("📦 全球供應鏈倉儲與條碼 (WMS)", value=True)
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        st.markdown("##### 🌟 高階與戰情模組拼圖")
+        p1 = st.checkbox("🔴 全球原料價格與即時匯率看板 ($20/月)", value=True)
+        p2 = st.checkbox("📊 跨國總損益與資產負債表 ($30/月)", value=True)
+        p3 = st.checkbox("⚡ MES 生產製造與 IoT 稼動率監控 ($80/月)", value=True)
+        p4 = st.checkbox("🤖 AI 語音與多模態智慧輸入 ($50/月)", value=True)
+    with col_p2:
+        st.markdown("##### 📦 業務、行政與供應鏈模組拼圖")
+        p5 = st.checkbox("🛒 總務採購與多幣別請購單 ($30/月)", value=True)
+        p6 = st.checkbox("✍️ 全方位電子簽核中心 (BPM) ($40/月)", value=True)
+        p7 = st.checkbox("🧾 跨國電子發票與稅號 MST 解析 ($30/月)", value=True)
+        p8 = st.checkbox("📦 全球供應鏈倉儲與條碼 WMS ($50/月)", value=True)
 
-    if st.button("💾 儲存並套用此部門的模組拼圖權限", type="primary"):
-        st.success(f"🎉 成功為部門 [{selected_dept}] 更新模組拼圖配置！")
+    edition_mapping = st.selectbox(
+        "將此部門拼圖組合對應至 SaaS 銷售版本：",
+        ["🚀 旗艦企業版 (Enterprise - 全功能打包)", "💼 正式商務版 (Professional)", "🔄 訂閱彈性版 (Subscription)", "👤 個人微型版 (Personal)"]
+    )
+    
+    if st.button("💾 儲存該部門的樂高拼圖與版本定價規則", type="primary"):
+        st.success(f"🎉 成功將所選拼圖模組綁定至 [{edition_type if 'edition_type' in locals() else edition_mapping}]！租戶勾選此版本後將自動串連並解鎖對應功能。")
+
+# --- TAB 2: 客戶租戶方案指派與動態串連 ---
+with tab2:
+    st.markdown("### 🏢 客戶租戶方案指派與樂高功能串連開關")
+    st.info("💡 *在此選擇您的客戶（例如：裕豐電機工業），為其指派銷售版本。系統會自動串連並開啟對應的樂高拼圖模組功能。*")
+    
+    tenant_name = st.selectbox("選擇目標客戶租戶：", ["TENANT-001 | 裕豐電機工業 (Reetech Industrial) - 越南/台灣", "TENANT-002 | 亞太精密科技 - 馬來西亞分公司"])
+    
+    tc1, tc2 = st.columns(2)
+    with tc1:
+        assigned_edition = st.selectbox("指派 SaaS 銷售版本", ["🚀 旗艦企業版 (Enterprise)", "💼 正式商務版 (Professional)", "🔄 訂閱彈性版 (Subscription)", "👤 個人微型版 (Personal)"])
+        tenant_fee = st.number_input("確認每月訂閱金額 (USD / 月)", value=2500.0, step=100.0)
+    with tc2:
+        tenant_run_status = st.selectbox("租戶運行狀態", ["🟢 正式運營中 (Active)", "🟡 試用期中 (Trial)", "🔴 已停權 (Suspended)"])
+        st.markdown("**🔗 樂高拼圖串連狀態**：已根據版本自動解鎖 16 個核心模組。")
+
+    if st.button("🚀 儲存租戶授權並連動開通樂高模組", type="primary"):
+        st.success(f"🎉 租戶 [{tenant_name}] 已成功套用 [{assigned_edition}]，所有選定的樂高拼圖功能已為其即時串連開通！")
+
+    st.markdown("---")
+    st.markdown("#### 📋 全球租戶版本與樂高授權總覽")
+    summary_df = pd.DataFrame([
+        {"tenant_id": "TENANT-001", "company": "裕豐電機工業", "edition": "旗艦企業版", "monthly_fee_usd": 2500, "status": "🟢 運營中", "linked_modules": "16 模組已串連"},
+        {"tenant_id": "TENANT-002", "company": "亞太精密科技", "edition": "正式商務版", "monthly_fee_usd": 1200, "status": "🟡 試用", "linked_modules": "8 模組已串連"}
+    ])
+    st.dataframe(summary_df, use_container_width=True)
 
 # --- TAB 3: 財務 AR/AP 與內部免計費專區 ---
 with tab3:
-    st.markdown("### 📊 SaaS 財務 AR/AP 中心與內部免計費專區")
-    tab_f1, tab_f2 = st.tabs(["💰 財務應收/應付帳款 (AR/AP)", "🏠 內部主公司營運專區 (免計費)"])
+    st.markdown("### 📊 SaaS 財務 AR/AP 中心與內部主公司專區")
+    f_tab1, f_tab2 = st.tabs(["💰 財務應收/應付帳款 (AR/AP)", "🏠 內部主公司營運專區 (免計費)"])
     
-    with tab_f1:
-        st.markdown("#### 💳 全球租戶應收帳款 (AR) 與營收統計")
-        fcol1, fcol2 = st.columns(2)
-        with fcol1:
+    with f_tab1:
+        st.markdown("#### 💳 全球租戶應收帳款 (AR) 與營收總覽")
+        mc1, mc2 = st.columns(2)
+        with mc1:
             st.metric(label="🌐 總預估月營收 (USD)", value="$ 3,700", delta="+12%")
-        with fcol2:
+        with mc2:
             st.metric(label="📋 本月待收帳款 (AR)", value="$ 1,200", delta="1 筆待催收")
             
         ar_table = pd.DataFrame([
-            {"tenant_id": "TENANT-001", "company": "裕豐電機工業", "version": "旗艦企業版", "amount_usd": 2500, "ar_status": "🟢 已收款 (Paid)"},
-            {"tenant_id": "TENANT-002", "company": "亞太精密科技", "version": "正式商務版", "amount_usd": 1200, "ar_status": "🟡 待收款 (Pending)"}
+            {"tenant_id": "TENANT-001", "company": "裕豐電機工業", "edition": "旗艦企業版", "amount_usd": 2500, "ar_status": "🟢 已收款 (Paid)"},
+            {"tenant_id": "TENANT-002", "company": "亞太精密科技", "edition": "正式商務版", "amount_usd": 1200, "ar_status": "🟡 待收款 (Pending)"}
         ])
         st.dataframe(ar_table, use_container_width=True)
         
-    with tab_f2:
+    with f_tab2:
         st.markdown("#### 🏠 內部總公司專區（使用 ERP 功能，但不列入營收與 AR 計算）")
         st.info("💡 *我們自己的團隊可在此完整操作所有 ERP 模組，系統會自動在財會計費中將本區排除。*")
         internal_mod = st.selectbox("選擇內部作業模組：", ["員工與薪資管理", "總務採購", "全球供應鏈倉儲 (WMS)", "企業戰情室"])
@@ -207,13 +205,13 @@ with tab3:
         else:
             safe_call_module(dashboard_bi.render_dashboard_bi, internal_tenant, ["admin"])
 
-# --- TAB 4: 總控權限與存取設定 ---
+# --- TAB 4: 總控權限與人員設定 ---
 with tab4:
     st.markdown("### 🔐 總控中心存取權限與人員設定")
-    st.info("💡 *嚴格控管哪些內部管理員具備開啟、修改與操作本「SaaS 總控中心」的最高權限。*")
+    st.info("💡 *嚴格控管哪些內部管理員具備開啟、修改與操作本「SaaS 樂高總控中心」的最高權限。*")
     
     with st.form("control_access_form"):
         st.text_input("授權管理員帳號 / Email", placeholder="輸入總控人員帳號...")
-        st.multiselect("授權管理級別", ["超級總控架構師 (Super Admin)", "財務 AR/AP 審核員", "銷售與租戶配置專員"], default=["超級總控架構師 (Super Admin)"])
+        st.multiselect("授權管理級別", ["超級總控架構師 (Super Admin)", "財務 AR/AP 審核員", "銷售與樂高拼圖配置專員"], default=["超級總控架構師 (Super Admin)"])
         if st.form_submit_button("🛡️ 儲存總控存取權限", type="primary"):
             st.success("🎉 總控存取權限已成功儲存！")
