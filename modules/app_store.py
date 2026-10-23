@@ -57,6 +57,7 @@ def render_app_store(current_tenant=None, all_departments=None):
             with c_d2:
                 if st.button("🗑️ 刪除", key=f"del_dept_{current_tenant}_{idx}"):
                     current_org_list.pop(idx)
+                    tenant_data["custom_org_chart"] = current_org_list
                     st.session_state.global_tenants_db[current_tenant] = tenant_data
                     st.rerun()
                     
