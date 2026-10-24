@@ -1,9 +1,9 @@
-# modules/app_store.py - 產業動態過濾與多維度功能拼圖市集（升級版）
+# modules/app_store.py - 企業實務功能模組包市集與動態費用試算引擎
 import streamlit as st
 import pandas as pd
 
 def render_app_store(current_tenant=None, all_departments=None):
-    st.info("💡 *說明：請先設定該租戶的【所屬產業別】，接著在上方自由建構組織部門，並點選對應部門勾選該單位的專屬功能拼圖！*")
+    st.info("💡 *說明：請在此先設定該租戶的所屬產業別，並在上方自由建構組織部門。接著在下方點選目標部門，勾選對應的企業實務功能模組包，系統將自動進行動態費用結算！*")
     
     if "global_tenants_db" not in st.session_state:
         st.session_state.global_tenants_db = {}
@@ -14,27 +14,30 @@ def render_app_store(current_tenant=None, all_departments=None):
     if current_tenant not in st.session_state.global_tenants_db:
         st.session_state.global_tenants_db[current_tenant] = {
             "edition_name": "🚀 旗艦企業版 (Enterprise)",
-            "price_usd": 2500.0,
+            "base_price_usd": 1500.0,
             "industry_type": "🏭 製造與工程重工業 (Manufacturing & Engineering)",
-            "custom_org_chart": ["👑 董事會 / CEO Office", "🛠️ 工程部", "🏭 生產部", "📦 倉庫組"],
+            "custom_org_chart": ["👑 董事會 / CEO Office", "👥 管理部 (Management)", "📋 電子簽核中心", "📐 工程與設計管理中心", "🏭 生產部 (Production)"],
             "dept_modules_db": {}
         }
         
     tenant_data = st.session_state.global_tenants_db[current_tenant]
     
+    # 確保基本欄位存在
     if "industry_type" not in tenant_data:
         tenant_data["industry_type"] = "🏭 製造與工程重工業 (Manufacturing & Engineering)"
     if "custom_org_chart" not in tenant_data:
-        tenant_data["custom_org_chart"] = ["👑 董事會 / CEO Office", "🛠️ 工程部", "🏭 生產部"]
+        tenant_data["custom_org_chart"] = ["👑 董事會 / CEO Office", "👥 管理部 (Management)", "📐 工程與設計管理中心", "🏭 生產部 (Production)"]
     if "dept_modules_db" not in tenant_data:
         tenant_data["dept_modules_db"] = {}
+    if "base_price_usd" not in tenant_data:
+        tenant_data["base_price_usd"] = 1500.0
 
     st.markdown("---")
     
     # ==========================================================
-    # 🌟 第零步：選擇企業所屬產業別
+    # 🌐 第零步：選擇企業所屬產業別
     # ==========================================================
-    st.markdown("### 🌐 第零步：設定企業所屬產業別（決定底層可用功能庫）")
+    st.markdown("### 🌐 第零步：設定企業所屬產業別")
     industries_list = [
         "🏭 製造與工程重工業 (Manufacturing & Engineering)",
         "💻 科技軟體與 SaaS 服務業 (Tech & Software)",
@@ -48,7 +51,7 @@ def render_app_store(current_tenant=None, all_departments=None):
     if selected_industry != current_ind:
         tenant_data["industry_type"] = selected_industry
         st.session_state.global_tenants_db[current_tenant] = tenant_data
-        st.success("🎉 產業別已更新，功能拼圖庫已自動切換！")
+        st.success("🎉 產業別已更新！")
         st.rerun()
 
     st.markdown("---")
@@ -77,7 +80,7 @@ def render_app_store(current_tenant=None, all_departments=None):
     with col_b2:
         st.markdown("➕ **新增自訂部門 / 單位**")
         with st.form(f"add_dept_form_{current_tenant}"):
-            new_dept_name = st.text_input("輸入部門或組別名稱", placeholder="例如：塗裝組 / 外地施工隊")
+            new_dept_name = st.text_input("輸入部門或組別名稱", placeholder="例如：資訊管理部 / 塗裝組")
             if st.form_submit_button("➕ 加入組織圖拼圖板", type="primary", use_container_width=True):
                 if new_dept_name and new_dept_name not in current_org_list:
                     current_org_list.append(new_dept_name)
@@ -91,55 +94,75 @@ def render_app_store(current_tenant=None, all_departments=None):
     st.markdown("---")
     
     # ==========================================================
-    # 🛒 第二步：根據產業與部門，動態勾選功能拼圖
+    # 🛒 第二步：配置四大核心模組包與實務功能
     # ==========================================================
-    st.markdown("### 🛒 第二步：點選目標部門，為其配置專屬 ERP 功能拼圖")
+    st.markdown("### 🛒 第二步：點選目標部門，為其配置企業實務 ERP 功能拼圖包")
     
     if current_org_list:
         selected_target_dept = st.selectbox("🎯 請選擇要配置功能的目標部門/單位", current_org_list, key=f"target_dept_sel_{current_tenant}")
         
-        # 依據產業別提供精準的模組清單（包含您要求的各項新功能）
-        industry_modules_mapping = {
-            "🏭 製造與工程重工業 (Manufacturing & Engineering)": [
-                "👑 老闆專屬現金流與 AR/AP 逾期預警看板",
-                "📊 即時綜合損益與動態成本分攤 (P&L)",
-                "📦 倉庫管理與多據點條碼掃描入庫/出庫 (WMS)",
-                "🔬 階層式物料清單 (BOM) 與版本控管",
-                "🏭 生產工單派發、製程報工與機台稼動率 (MES)",
-                "📐 工程設計圖上傳與主管線上審閱中心",
-                "📍 工程/外地人員 GPS 定位打卡與工時回報 (選配)",
-                "👥 員工上班資料、出勤與人事薪資管理",
-                "📝 全方位數位簽核中心與多級呈核路由 (BPM)"
+        # 對應您實際開發的四大核心模組包與豐富細項
+        comprehensive_modules_suites = {
+            "👑 總經理室 / 董事會戰情室模組包": [
+                "原料價格與 Gemini 智慧採購顧問 (LME銅價與匯率避險)",
+                "財務類顯示資料 (AR/AP 應收應付總額與毛利稅後淨利)",
+                "工程專案進度與現場異常監控看板"
             ],
-            "💻 科技軟體與 SaaS 服務業 (Tech & Software)": [
-                "👑 老闆專屬 ARR/MRR 訂閱營收與現金流看板",
-                "💻 研發專案分工與 Jira/GitHub 整合看板",
-                "📍 遠距/外地員工彈性 GPS 打卡與工時回報",
-                "👥 員工上班資料、出勤與人事薪資管理",
-                "🌟 客戶成功 (CS) 續約率追蹤與支援服務系統",
-                "📝 全方位數位簽核中心 (BPM)"
+            "👥 管理部與跨國人事薪資模組包 (含越南法規)": [
+                "公司重要公告與佈告欄管理",
+                "員工個人檔案與人事管理 (含越南勞動法稅號與登記醫院)",
+                "廠內員工固定打卡與出勤紀錄",
+                "外勤出勤統計與工地人數監控 (含GPS拍照防呆)",
+                "幹部宿舍伙食與採購控管",
+                "廠區與工作廠區管理 / 廠區車輛進出口門禁與派車審核",
+                "車輛維修保養紀錄 / 固定資產與設備管理",
+                "採購與應付帳款 (AP) / 應收帳款與對帳管理中心",
+                "越南稅務標準財務報表 (Thông tư 200) / 電子發票綜合管理",
+                "員工薪資計算與保險扣除 (支援外派雙薪與第二幣別)"
             ],
-            "🏗️ 營造與大型工程專案業 (Construction & Projects)": [
-                "👑 老闆專屬工程專案總預算與現金流看板",
-                "🏗️ 工程專案 WBS 合約、進度與下包商點工計價",
-                "📐 施工設計圖上傳與主管線上批示審閱",
-                "📍 工地現場人員 GPS 打卡與出勤回報 (選配)",
-                "📦 工地材料倉儲與機具進出管理 (WMS)",
-                "👥 員工上班資料、出勤與人事薪資管理"
+            "📋 全公司電子簽核中心模組包": [
+                "提交請假、採購請 PR、公務派車與專案報撥",
+                "待審核案件審查 (主管專用區)",
+                "簽核進度即時追蹤 / 保全門禁車輛放行查驗"
+            ],
+            "📐 工程與設計管理中心模組包": [
+                "工程主管戰情室與案場管理 (合約總額與案場一覽)",
+                "工程專案報價系統 (支援多幣別 VND/USD/RMB/TWD)",
+                "現場外勤打卡與作業登記 (GPS定位與強制拍照)",
+                "施工日報表與點工點料登記",
+                "AI 施工照片辨識與安衛稽核",
+                "工程師證照與施工機具檢驗到期預警",
+                "配電盤電氣與機構設計圖庫 Storage 與生產下發",
+                "配電盤 BOM 零件自動展開與採購連動",
+                "外包商計價與工進估驗管理 (勞動法計薪)",
+                "FAT / SAT 出廠與現場驗收管理 (QR Code 驗收)"
+            ],
+            "🏭 生產製造與廠區品管模組包": [
+                "倉庫庫存與資材條碼管理 (WMS)",
+                "板金加工組工單與條碼管理 (進度燈號與圖面附檔)",
+                "粉體塗裝烤漆組品管與製程追蹤 (水池管制與烤箱固化)",
+                "配電盤組裝配線組與拍照入庫 (完工拍照自動入庫)"
+            ],
+            "⚙️ IT 系統管理與動態設定模組包": [
+                "系統角色權限與模組開關設定 (RBAC)",
+                "客戶 ERP 模組授權與功能開關",
+                "系統雲端 Storage 儲存庫路徑與 API 串聯動態設定"
             ]
         }
         
-        available_modules = industry_modules_mapping.get(selected_industry, industry_modules_mapping["🏭 製造與工程重工業 (Manufacturing & Engineering)"])
         saved_mods = tenant_data["dept_modules_db"].get(selected_target_dept, [])
         
         with st.form(f"form_modules_{current_tenant}_{selected_target_dept}"):
-            st.markdown(f"#### 📌 為【{selected_target_dept}】勾選專屬 ERP 功能拼圖：")
+            st.markdown(f"#### 📌 為【{selected_target_dept}】勾選實務 ERP 功能模組包：")
             
             temp_selected = []
-            for mod in available_modules:
-                is_checked = mod in saved_mods
-                if st.checkbox(mod, value=is_checked, key=f"mod_chk_{current_tenant}_{selected_target_dept}_{mod}"):
-                    temp_selected.append(mod)
+            for suite_name, mod_list in comprehensive_modules_suites.items():
+                st.markdown(f"##### **{suite_name}**")
+                for mod in mod_list:
+                    is_checked = mod in saved_mods
+                    if st.checkbox(mod, value=is_checked, key=f"mod_chk_{current_tenant}_{selected_target_dept}_{mod}"):
+                        temp_selected.append(mod)
+                st.markdown("")
             
             st.markdown("---")
             if st.form_submit_button(f"💾 儲存【{selected_target_dept}】的功能配置", type="primary", use_container_width=True):
@@ -172,8 +195,8 @@ def render_app_store(current_tenant=None, all_departments=None):
         st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
         
     # 動態模組費用試算
-    base_fee = 1500.0  # 基礎平台費
-    addon_fee_per_module = 150.0  # 每個勾選的功能拼圖單價
+    base_fee = float(tenant_data.get("base_price_usd", 1500.0))
+    addon_fee_per_module = 50.0  # 每個細項實務模組單價
     calculated_total_price = base_fee + (total_selected_modules_count * addon_fee_per_module)
     
-    st.info(f"💰 **系統即時訂閱費用試算**：基礎平台費 ($ {base_fee} USD) + 已選配拼圖 ({total_selected_modules_count} 項 × $ {addon_fee_per_module} USD) = **總計每月 $ {calculated_total_price} USD**")
+    st.info(f"💰 **系統即時訂閱費用試算**：基礎平台費 ($ {base_fee} USD) + 已選配實務功能 ({total_selected_modules_count} 項 × $ {addon_fee_per_module} USD) = **總計每月 $ {calculated_total_price} USD**")
